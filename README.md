@@ -2,7 +2,7 @@
 
 A concise, production-ready core banking system built in Go, featuring essential banking operations similar to Apache Fineract. This application provides RESTful APIs for customer management, account operations, transaction processing, and loan management.
 
-## 🏦 Core Banking Features
+##� Core Banking Features
 
 - **Customer Management**: Complete customer onboarding and data management
 - **Account Operations**: Create and manage checking/savings accounts  
@@ -11,7 +11,7 @@ A concise, production-ready core banking system built in Go, featuring essential
 - **Security**: JWT-based authentication with role-based access control
 - **Audit Trails**: Complete transaction history and balance tracking
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -64,13 +64,13 @@ Authorization: Bearer <your-jwt-token>
 
 ### Endpoints Overview
 
-#### 🏥 Health Check
+#### Health Check
 ```http
 GET /health
 ```
 Returns application health status.
 
-#### 👥 Customer Management
+#### Customer Management
 
 ##### Get All Customers
 ```http
@@ -138,7 +138,7 @@ DELETE /api/v1/customers/:id
 ```
 *Note: Cannot delete customers with active accounts*
 
-#### 💰 Account Management
+#### Account Management
 
 ##### Get All Accounts
 ```http
@@ -383,7 +383,7 @@ export DB_PATH="/var/lib/banking/app.db"
 export PORT="8080"
 ```
 
-## 🚨 Important Notes
+## Important Notes
 
 ### Production Considerations
 
@@ -411,7 +411,7 @@ export PORT="8080"
 - Database constraint violation handling
 - Validation error reporting
 
-## 🧪 Testing
+## Testing
 
 ### API Testing Examples
 
@@ -438,7 +438,7 @@ curl -X POST http://localhost:8080/api/v1/transactions \
 curl http://localhost:8080/api/v1/accounts/1/balance
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 banking-app/
@@ -455,20 +455,20 @@ banking-app/
 └── README.md           # This documentation
 ```
 
-## 🎯 Key Features Implemented
+## Key Features Implemented
 
-✅ **Customer Management** - Complete CRUD operations  
-✅ **Account Operations** - Create, manage, and query accounts  
-✅ **Transaction Processing** - Deposits, withdrawals, transfers  
-✅ **Loan Management** - Loan origination with amortization  
-✅ **Authentication** - JWT-based security  
-✅ **Data Integrity** - Database transactions and constraints  
-✅ **Audit Trails** - Complete transaction history  
-✅ **RESTful APIs** - Standard HTTP operations  
-✅ **Error Handling** - Comprehensive error management  
-✅ **Documentation** - Complete API documentation  
+ **Customer Management** - Complete CRUD operations  
+**Account Operations** - Create, manage, and query accounts  
+**Transaction Processing** - Deposits, withdrawals, transfers  
+**Loan Management** - Loan origination with amortization  
+**Authentication** - JWT-based security  
+**Data Integrity** - Database transactions and constraints  
+**Audit Trails** - Complete transaction history  
+**RESTful APIs** - Standard HTTP operations  
+**Error Handling** - Comprehensive error management  
+**Documentation** - Complete API documentation  
 
-## 🔮 Future Enhancements
+##  To Do
 
 - **Account Types**: Savings, checking, money market, CDs
 - **Interest Calculation**: Daily balance interest computation  
@@ -483,4 +483,4 @@ banking-app/
 
 ---
 
-**Built with ❤️ in Go for robust, scalable core banking operations**
+**Built in Go for robust, scalable core banking operations**

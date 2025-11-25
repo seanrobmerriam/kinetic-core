@@ -5,7 +5,7 @@
 
 BASE_URL="http://localhost:8080/api/v1"
 
-echo "🏦 Core Banking Application - Test Demo"
+echo " Core Banking Application - Test Demo"
 echo "======================================"
 
 # Function to make API calls and display results
@@ -120,9 +120,9 @@ curl -s "$BASE_URL/customers/1" | python3 -m json.tool 2>/dev/null || echo "Erro
 echo -e "\n"
 
 # Summary
-echo "✅ Demo completed successfully!"
+echo " Demo completed successfully"
 echo "======================================"
-echo "This demonstration showed:"
+echo "Results:"
 echo "• Customer creation and management"
 echo "• Account opening for different types" 
 echo "• Transaction processing (deposits & withdrawals)"
@@ -130,5 +130,5 @@ echo "• Real-time balance inquiries"
 echo "• Loan origination with amortization"
 echo "• Complete audit trails and transaction history"
 echo ""
-echo "💡 Tip: Check the SQLite database file 'banking.db' to see all stored data."
-echo "🔍 To explore more: Use the README.md documentation for complete API reference."
+echo " Tip: Check the SQLite database file 'banking.db' to see all stored data."
+echo " To explore more: Use the README.md documentation for complete API reference."

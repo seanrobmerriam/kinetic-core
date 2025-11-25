@@ -1,4 +1,4 @@
-# Core Banking Web Application
+# Kinetic Core Banking Web Application
 
 A concise, production-ready core banking system built in Go, featuring essential banking operations similar to Apache Fineract. This application provides RESTful APIs for customer management, account operations, transaction processing, and loan management.
 

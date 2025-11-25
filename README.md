@@ -22,7 +22,7 @@ A concise, production-ready core banking system built in Go, featuring essential
 
 ## In your terminal of choice:
 
-# Clone the repository (if from git)
+# Clone the repository
 ```bash
 git clone https://github.com/seanrobmerriam/banking-app
 cd banking-app

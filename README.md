@@ -57,15 +57,15 @@ IronLedger is a prototype core banking system that demonstrates:
 ```
 ironledger/
 ├── apps/
-│   ├── cb_accounts/        # Account lifecycle management
+│   ├── cb_accounts/        # Account lifecycle management (OTP active app)
 │   ├── cb_dashboard/       # Go/Wasm browser dashboard
-│   ├── cb_integration/     # HTTP API (Cowboy, routing, handlers)
-│   ├── cb_ledger/          # Double-entry ledger engine
-│   ├── cb_party/           # Party (customer) management
-│   └── cb_payments/        # Transfer orchestration & idempotency
+│   ├── cb_integration/     # HTTP API (Cowboy, routing, handlers) - OTP active app
+│   ├── cb_ledger/          # Double-entry ledger engine (OTP library app)
+│   ├── cb_party/           # Party (customer) management (OTP library app)
+│   └── cb_payments/        # Transfer orchestration & idempotency (OTP active app)
 ├── config/
 │   ├── sys.config          # Application configuration
-│   └── vm.args             # VM arguments
+│   └── vm.args             # VM arguments (node name, cookie, heart)
 ├── docs/
 │   ├── api-contract.yaml   # OpenAPI 3.1 specification
 │   ├── data-schema.md      # Mnesia table schemas
@@ -73,9 +73,28 @@ ironledger/
 │   ├── error-catalogue.md  # Error atoms and meanings
 │   ├── testing-strategy.md # Testing approach
 │   └── adrs/               # Architecture Decision Records
-├── rebar.config            # Build configuration
+├── rebar.config            # Build configuration with relx release
 └── README.md               # This file
 ```
+
+### OTP Application Structure
+
+IronLedger follows OTP application standards:
+
+| Application | Type | Description |
+|-------------|------|-------------|
+| `cb_integration` | **permanent** | Core HTTP API - node restarts if it fails |
+| `cb_accounts` | temporary | Account management supervision tree |
+| `cb_payments` | temporary | Payment processing supervision tree |
+| `cb_ledger` | library | Pure functions for ledger operations |
+| `cb_party` | library | Pure functions for party operations |
+| `sasl` | permanent | OTP System Architecture Support |
+
+All active applications implement the `application` behaviour with:
+- `start/2` - Starts top-level supervisor
+- `stop/1` - Cleanup on shutdown
+- `prep_stop/1` - Drain work before shutdown (cb_integration)
+- `config_change/3` - Runtime configuration change handling
 
 ## Quick Start
 
@@ -115,12 +134,37 @@ rebar3 dialyzer && rebar3 ct && rebar3 proper
 ### Start the Application
 
 ```bash
-# Start interactive shell
+# Start interactive shell (development)
 rebar3 shell
 
-# The HTTP server will start on port 8081
+# The HTTP server will start on port 8081 (configurable in config/sys.config)
 # API base URL: http://localhost:8081/api/v1
 ```
+
+### Build and Run a Release
+
+```bash
+# Build a production release
+rebar3 release
+
+# Run the release
+_build/default/rel/ironledger/bin/ironledger foreground
+
+# Or start in daemon mode
+_build/default/rel/ironledger/bin/ironledger start
+```
+
+### Configuration
+
+Application configuration is managed through:
+
+- `config/sys.config` - Application environment variables
+- `config/vm.args` - VM arguments (node name, cookie, heart, process limits)
+
+Key configuration values:
+- `cb_integration.http_port` - HTTP server port (default: 8081)
+- `cb_integration.http_acceptors` - Number of HTTP acceptors (default: 10)
+- `mnesia.dir` - Mnesia data directory (default: /tmp/ironledger_mnesia)
 
 ### Serve the Dashboard
 
@@ -168,6 +212,16 @@ go run serve.go
 |--------|----------|-------------|
 | GET | `/api/v1/ledger/entries/transaction/:id` | Get entries for transaction |
 | GET | `/api/v1/ledger/entries/account/:id` | Get entries for account |
+
+## OTP Compliance
+
+IronLedger adheres to Erlang/OTP application standards:
+
+- **Application Resource Files**: All `.app.src` files properly declare `mod`, `registered`, `applications`, and use `{modules, []}` for rebar3 auto-fill
+- **Start Types**: Explicit start types in release configuration (`permanent` for core, `temporary` for supporting apps)
+- **Callback Modules**: All active applications implement `start/2`, `stop/1`, `prep_stop/1`, and `config_change/3`
+- **VM Configuration**: `vm.args` configures node name, cookie, kernel polling, and heartbeat monitoring
+- **Supervision Trees**: Each active application has a top-level supervisor with proper child specs
 
 ## Key Design Principles
 

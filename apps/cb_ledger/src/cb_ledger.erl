@@ -10,7 +10,7 @@
 
 %% @doc Post a debit/credit pair atomically inside a Mnesia transaction.
 %% This function must be called from within an existing mnesia:transaction/1.
--spec post_entries(#ledger_entry{}, #ledger_entry{}) -> ok | {error, atom()}.
+-spec post_entries(#ledger_entry{}, #ledger_entry{}) -> ok | {error, currency_mismatch | invalid_entry_types | ledger_imbalance | zero_amount}.
 post_entries(DebitEntry, CreditEntry) ->
     %% Validate entry types
     case {DebitEntry#ledger_entry.entry_type, CreditEntry#ledger_entry.entry_type} of

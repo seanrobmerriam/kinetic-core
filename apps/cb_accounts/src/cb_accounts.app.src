@@ -2,7 +2,7 @@
  [
   {description, "IronLedger Account Management"},
   {vsn, "0.1.0"},
-  {registered, []},
+  {registered, [cb_accounts_sup]},
   {applications, [
                   kernel,
                   stdlib,
@@ -11,7 +11,8 @@
                   cb_party
                  ]},
   {env, []},
-  {modules, [cb_accounts]},
+  {modules, []},
+  {mod, {cb_accounts_app, []}},
   {licenses, ["Apache-2.0"]},
   {links, []}
  ]}.

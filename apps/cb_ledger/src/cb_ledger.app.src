@@ -9,7 +9,7 @@
                   mnesia
                  ]},
   {env, []},
-  {modules, [cb_ledger]},
+  {modules, []},
   {licenses, ["Apache-2.0"]},
   {links, []}
  ]}.

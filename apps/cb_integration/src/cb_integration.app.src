@@ -2,7 +2,7 @@
  [
   {description, "IronLedger HTTP API Integration Layer"},
   {vsn, "0.1.0"},
-  {registered, []},
+  {registered, [cb_integration_sup, ironledger_http]},
   {applications, [
                   kernel,
                   stdlib,
@@ -15,16 +15,8 @@
                   cb_payments
                  ]},
   {env, []},
-  {modules, [
-      cb_integration_app,
-      cb_integration_sup,
-      cb_schema,
-      cb_router,
-      cb_http_errors,
-      cb_parties_handler,
-      cb_accounts_handler,
-      cb_transactions_handler
-  ]},
+  {modules, []},
+  {mod, {cb_integration_app, []}},
   {licenses, ["Apache-2.0"]},
   {links, []}
  ]}.

@@ -37,16 +37,22 @@ func fetch(method, url string, body interface{}) (js.Value, error) {
 		response := args[0]
 		if !response.Get("ok").Bool() {
 			// Read error response
-			response.Call("json").Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			var errJsonFunc js.Func
+			errJsonFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				defer errJsonFunc.Release()
 				errCh <- fmt.Errorf("API error: %s", args[0].Get("message").String())
 				return nil
-			}))
+			})
+			response.Call("json").Call("then", errJsonFunc)
 			return nil
 		}
-		response.Call("json").Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		var okJsonFunc js.Func
+		okJsonFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			defer okJsonFunc.Release()
 			resultCh <- args[0]
 			return nil
-		}))
+		})
+		response.Call("json").Call("then", okJsonFunc)
 		return nil
 	})
 	defer thenFunc.Release()
@@ -86,10 +92,13 @@ func (a *App) CreateParty(this js.Value, args []js.Value) interface{} {
 	}
 
 	go func() {
+		logMsg(INFO, "API request", map[string]interface{}{"method": "POST", "url": apiBaseURL + "/parties"})
 		_, err := fetch("POST", apiBaseURL+"/parties", body)
 		if err != nil {
+			logMsg(ERROR, "API request failed", map[string]interface{}{"error": err.Error()})
 			a.Error = err.Error()
 		} else {
+			logMsg(INFO, "API request succeeded", map[string]interface{}{"action": "createParty"})
 			a.Error = ""
 			a.ListParties(js.Value{}, nil)
 		}
@@ -102,14 +111,17 @@ func (a *App) CreateParty(this js.Value, args []js.Value) interface{} {
 // ListParties fetches all parties
 func (a *App) ListParties(this js.Value, args []js.Value) interface{} {
 	go func() {
+		logMsg(INFO, "API request", map[string]interface{}{"method": "GET", "url": apiBaseURL + "/parties"})
 		result, err := fetch("GET", apiBaseURL+"/parties", nil)
 		if err != nil {
+			logMsg(ERROR, "API request failed", map[string]interface{}{"error": err.Error()})
 			a.Error = err.Error()
 		} else {
 			a.Error = ""
-			// Parse result
-			itemsJSON := result.Get("items").String()
+			// Parse result using JSON.stringify to properly convert JS array to JSON
+			itemsJSON := js.Global().Get("JSON").Call("stringify", result.Get("items")).String()
 			json.Unmarshal([]byte(itemsJSON), &a.Parties)
+			logMsg(INFO, "API request succeeded", map[string]interface{}{"action": "listParties", "count": len(a.Parties)})
 		}
 		a.Render()
 	}()
@@ -205,7 +217,7 @@ func (a *App) ListAccounts(this js.Value, args []js.Value) interface{} {
 			a.Error = err.Error()
 		} else {
 			a.Error = ""
-			itemsJSON := result.Get("items").String()
+			itemsJSON := js.Global().Get("JSON").Call("stringify", result.Get("items")).String()
 			json.Unmarshal([]byte(itemsJSON), &a.Accounts)
 		}
 		a.Render()
@@ -301,7 +313,7 @@ func (a *App) GetBalance(this js.Value, args []js.Value) interface{} {
 		} else {
 			a.Error = ""
 			var balance BalanceResponse
-			resultJSON := result.String()
+			resultJSON := js.Global().Get("JSON").Call("stringify", result).String()
 			json.Unmarshal([]byte(resultJSON), &balance)
 			// Show balance alert
 			js.Global().Call("alert", fmt.Sprintf("Balance: %s (%d %s)",

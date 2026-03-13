@@ -7,12 +7,13 @@
 -spec init(cowboy_req:req(), any()) -> {ok, cowboy_req:req(), any()}.
 init(Req, State) ->
     Method = cowboy_req:method(Req),
-    PartyId = cowboy_req:binding(<<"party_id">>, Req),
+    PartyId = cowboy_req:binding(party_id, Req),
     handle(Method, PartyId, Req, State).
 
 handle(<<"GET">>, PartyId, Req, State) ->
-    Page = binary_to_integer(cowboy_req:binding(<<"page">>, Req, <<"1">>)),
-    PageSize = binary_to_integer(cowboy_req:binding(<<"page_size">>, Req, <<"20">>)),
+    Qs = cowboy_req:parse_qs(Req),
+    Page = binary_to_integer(proplists:get_value(<<"page">>, Qs, <<"1">>)),
+    PageSize = binary_to_integer(proplists:get_value(<<"page_size">>, Qs, <<"20">>)),
     case cb_accounts:list_accounts_for_party(PartyId, Page, PageSize) of
         {ok, Result} ->
             Resp = #{
@@ -21,17 +22,24 @@ handle(<<"GET">>, PartyId, Req, State) ->
                 page => maps:get(page, Result),
                 page_size => maps:get(page_size, Result)
             },
-            Req2 = cowboy_req:reply(200, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req),
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
             {ok, Req2, State};
         {error, Reason} ->
             {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
             Resp = #{error => ErrorAtom, message => Message},
-            Req2 = cowboy_req:reply(Status, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req),
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req),
             {ok, Req2, State}
     end;
 
+handle(<<"OPTIONS">>, _PartyId, Req, State) ->
+    Req2 = cb_cors:reply_preflight(Req),
+    {ok, Req2, State};
+
 handle(_, _PartyId, Req, State) ->
-    Req2 = cowboy_req:reply(405, #{<<"content-type">> => <<"application/json">>}, <<"{\"error\": \"method_not_allowed\"}">>, Req),
+    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\": \"method_not_allowed\"}">>, Req),
     {ok, Req2, State}.
 
 account_to_json(Account) ->

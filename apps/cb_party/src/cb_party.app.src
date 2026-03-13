@@ -10,7 +10,7 @@
                   cb_ledger
                  ]},
   {env, []},
-  {modules, [cb_party]},
+  {modules, []},
   {licenses, ["Apache-2.0"]},
   {links, []}
  ]}.

@@ -8,5 +8,6 @@ init(Req, State) ->
         error => <<"not_found">>,
         message => <<"Resource not found">>
     }),
-    Req2 = cowboy_req:reply(404, #{<<"content-type">> => <<"application/json">>}, Body, Req),
+    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+    Req2 = cowboy_req:reply(404, Headers, Body, Req),
     {ok, Req2, State}.

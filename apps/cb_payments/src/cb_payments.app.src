@@ -2,7 +2,7 @@
  [
   {description, "IronLedger Payments & Transfers"},
   {vsn, "0.1.0"},
-  {registered, []},
+  {registered, [cb_payments_sup]},
   {applications, [
                   kernel,
                   stdlib,
@@ -11,7 +11,8 @@
                   cb_accounts
                  ]},
   {env, []},
-  {modules, [cb_payments]},
+  {modules, []},
+  {mod, {cb_payments_app, []}},
   {licenses, ["Apache-2.0"]},
   {links, []}
  ]}.

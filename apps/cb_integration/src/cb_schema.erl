@@ -12,7 +12,7 @@ create_tables() ->
     ok.
 
 %% @private Create a single table if it doesn't exist.
--spec create_if_not_exists(atom()) -> ok.
+-spec create_if_not_exists(party | account | transaction | ledger_entry) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
         {atomic, ok} ->
@@ -24,7 +24,11 @@ create_if_not_exists(TableName) ->
     end.
 
 %% @private Table specifications from docs/data-schema.md.
--spec table_spec(atom()) -> list().
+-spec table_spec(party | account | transaction | ledger_entry) ->
+    [{'attributes',[atom(),...]} |
+     {'index',['account_id' | 'dest_account_id' | 'email' | 'idempotency_key' |
+              'party_id' | 'source_account_id' | 'status' | 'txn_id',...]} |
+     {'ram_copies',[atom(),...]},...].
 table_spec(party) ->
     [
         {ram_copies, [node()]},

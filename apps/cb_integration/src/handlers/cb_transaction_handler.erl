@@ -7,24 +7,31 @@
 -spec init(cowboy_req:req(), any()) -> {ok, cowboy_req:req(), any()}.
 init(Req, State) ->
     Method = cowboy_req:method(Req),
-    TxnId = cowboy_req:binding(<<"txn_id">>, Req),
+    TxnId = cowboy_req:binding(txn_id, Req),
     handle(Method, TxnId, Req, State).
 
 handle(<<"GET">>, TxnId, Req, State) ->
     case cb_payments:get_transaction(TxnId) of
         {ok, Txn} ->
             Resp = transaction_to_json(Txn),
-            Req2 = cowboy_req:reply(200, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req),
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
             {ok, Req2, State};
         {error, Reason} ->
             {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
             Resp = #{error => ErrorAtom, message => Message},
-            Req2 = cowboy_req:reply(Status, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req),
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req),
             {ok, Req2, State}
     end;
 
+handle(<<"OPTIONS">>, _TxnId, Req, State) ->
+    Req2 = cb_cors:reply_preflight(Req),
+    {ok, Req2, State};
+
 handle(_, _TxnId, Req, State) ->
-    Req2 = cowboy_req:reply(405, #{<<"content-type">> => <<"application/json">>}, <<"{\"error\": \"method_not_allowed\"}">>, Req),
+    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\": \"method_not_allowed\"}">>, Req),
     {ok, Req2, State}.
 
 transaction_to_json(Txn) ->

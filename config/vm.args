@@ -1,0 +1,16 @@
+## IronLedger VM Configuration
+## Node name and cookie for distributed Erlang
+-name ironledger@127.0.0.1
+-setcookie ironledger_secret_cookie
+
+## Enable kernel polling for better I/O performance
++K true
+
+## Enable heartbeat monitoring for permanent applications
+-heart
+
+## Process limit
++P 1000000
+
+## Port range for distributed Erlang
+-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9150

@@ -58,7 +58,7 @@ get_party(PartyId) ->
     {error, atom()}.
 list_parties(Page, PageSize) when Page >= 1, PageSize >= 1, PageSize =< 100 ->
     F = fun() ->
-        AllParties = mnesia:match_object(party, #party{_ = '_'}, read),
+        AllParties = mnesia:select(party, [{'_', [], ['$_']}]),
         Sorted = lists:sort(
             fun(A, B) -> A#party.created_at >= B#party.created_at end,
             AllParties

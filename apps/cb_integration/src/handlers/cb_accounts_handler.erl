@@ -18,23 +18,31 @@ handle(<<"POST">>, Req, State) ->
             case cb_accounts:create_account(PartyId, Name, Currency) of
                 {ok, Account} ->
                     Resp = account_to_json(Account),
-                    Req3 = cowboy_req:reply(201, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req2),
+                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
                     {ok, Req3, State};
                 {error, Reason} ->
                     {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
                     Resp = #{error => ErrorAtom, message => Message},
-                    Req3 = cowboy_req:reply(Status, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req2),
+                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
                     {ok, Req3, State}
             end;
         _ ->
             {Status, ErrorAtom, Message} = cb_http_errors:to_response(missing_required_field),
             Resp = #{error => ErrorAtom, message => Message},
-            Req3 = cowboy_req:reply(Status, #{<<"content-type">> => <<"application/json">>}, jsone:encode(Resp), Req2),
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
             {ok, Req3, State}
     end;
 
+handle(<<"OPTIONS">>, Req, State) ->
+    Req2 = cb_cors:reply_preflight(Req),
+    {ok, Req2, State};
+
 handle(_, Req, State) ->
-    Req2 = cowboy_req:reply(405, #{<<"content-type">> => <<"application/json">>}, <<"{\"error\": \"method_not_allowed\"}">>, Req),
+    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\": \"method_not_allowed\"}">>, Req),
     {ok, Req2, State}.
 
 account_to_json(Account) ->

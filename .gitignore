@@ -37,6 +37,7 @@ apps/cb_dashboard/dist/wasm_exec.js
 *~
 .DS_Store
 AGENTS.md
+feature-prd.md
 
 # OS
 Thumbs.db

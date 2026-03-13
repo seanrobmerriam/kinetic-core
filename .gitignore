@@ -1,0 +1,54 @@
+# Erlang / rebar3
+_build/
+rebar3.crashdump
+*.beam
+*.plt
+*.plt.hash
+.eunit/
+.rebar/
+rebar.lock
+
+# Mnesia data files (if using disc copies)
+Mnesia*/
+*.DAT
+
+# Erlang crash dumps
+erl_crash.dump
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+
+# Go build artifacts (but keep dist/ structure for dashboard)
+apps/cb_dashboard/dist/*.wasm
+apps/cb_dashboard/dist/wasm_exec.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+AGENTS.md
+
+# OS
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+/tmp/
+*.tmp
+
+# Test output
+ct_logs/
+.test/

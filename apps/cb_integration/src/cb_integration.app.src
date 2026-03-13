@@ -1,0 +1,30 @@
+{application, cb_integration,
+ [
+  {description, "IronLedger HTTP API Integration Layer"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  cowboy,
+                  jsone,
+                  cb_ledger,
+                  cb_party,
+                  cb_accounts,
+                  cb_payments
+                 ]},
+  {env, []},
+  {modules, [
+      cb_integration_app,
+      cb_integration_sup,
+      cb_schema,
+      cb_router,
+      cb_http_errors,
+      cb_parties_handler,
+      cb_accounts_handler,
+      cb_transactions_handler
+  ]},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

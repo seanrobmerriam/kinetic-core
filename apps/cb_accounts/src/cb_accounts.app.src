@@ -1,0 +1,17 @@
+{application, cb_accounts,
+ [
+  {description, "IronLedger Account Management"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  cb_ledger,
+                  cb_party
+                 ]},
+  {env, []},
+  {modules, [cb_accounts]},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

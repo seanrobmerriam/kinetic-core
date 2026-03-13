@@ -1,0 +1,437 @@
+openapi: 3.1.0
+info:
+  title: IronLedger API
+  version: 0.1.0
+  description: >
+    Core banking REST API for IronLedger. All monetary amounts are integers in minor
+    units (cents for USD/EUR/GBP/CHF; whole units for JPY). Dates are Unix epoch
+    milliseconds as integers.
+
+servers:
+  - url: http://localhost:8081/api/v1
+    description: Local development
+
+# ─────────────────────────────────────────────
+# REUSABLE COMPONENTS
+# ─────────────────────────────────────────────
+components:
+  schemas:
+
+    UUID:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    Amount:
+      type: integer
+      minimum: 0
+      description: Monetary amount in minor units (e.g. cents). Never a float.
+      example: 10000
+
+    Currency:
+      type: string
+      enum: [USD, EUR, GBP, JPY, CHF]
+      example: USD
+
+    TimestampMs:
+      type: integer
+      description: Unix epoch milliseconds
+      example: 1700000000000
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error atom (see error-catalogue.md)
+          example: insufficient_funds
+        message:
+          type: string
+          description: Human-readable description
+          example: "Account has insufficient funds for this transfer"
+
+    # ── Party ──────────────────────────────────
+    Party:
+      type: object
+      required: [party_id, full_name, email, status, created_at, updated_at]
+      properties:
+        party_id:     { $ref: '#/components/schemas/UUID' }
+        full_name:    { type: string, example: "Alice Nguyen" }
+        email:        { type: string, format: email, example: "alice@example.com" }
+        status:       { type: string, enum: [active, suspended, closed] }
+        created_at:   { $ref: '#/components/schemas/TimestampMs' }
+        updated_at:   { $ref: '#/components/schemas/TimestampMs' }
+
+    CreatePartyRequest:
+      type: object
+      required: [full_name, email]
+      properties:
+        full_name:  { type: string, example: "Alice Nguyen" }
+        email:      { type: string, format: email, example: "alice@example.com" }
+
+    PartyList:
+      type: object
+      required: [items, total, page, page_size]
+      properties:
+        items:      { type: array, items: { $ref: '#/components/schemas/Party' } }
+        total:      { type: integer }
+        page:       { type: integer }
+        page_size:  { type: integer }
+
+    # ── Account ────────────────────────────────
+    Account:
+      type: object
+      required: [account_id, party_id, name, currency, balance, status, created_at, updated_at]
+      properties:
+        account_id:   { $ref: '#/components/schemas/UUID' }
+        party_id:     { $ref: '#/components/schemas/UUID' }
+        name:         { type: string, example: "Main Checking" }
+        currency:     { $ref: '#/components/schemas/Currency' }
+        balance:      { $ref: '#/components/schemas/Amount' }
+        status:       { type: string, enum: [active, frozen, closed] }
+        created_at:   { $ref: '#/components/schemas/TimestampMs' }
+        updated_at:   { $ref: '#/components/schemas/TimestampMs' }
+
+    CreateAccountRequest:
+      type: object
+      required: [party_id, currency, name]
+      properties:
+        party_id:   { $ref: '#/components/schemas/UUID' }
+        currency:   { $ref: '#/components/schemas/Currency' }
+        name:       { type: string, example: "Main Checking" }
+
+    AccountList:
+      type: object
+      required: [items, total, page, page_size]
+      properties:
+        items:      { type: array, items: { $ref: '#/components/schemas/Account' } }
+        total:      { type: integer }
+        page:       { type: integer }
+        page_size:  { type: integer }
+
+    BalanceResponse:
+      type: object
+      required: [account_id, currency, balance, balance_formatted]
+      properties:
+        account_id:         { $ref: '#/components/schemas/UUID' }
+        currency:           { $ref: '#/components/schemas/Currency' }
+        balance:            { $ref: '#/components/schemas/Amount' }
+        balance_formatted:  { type: string, example: "$100.00" }
+
+    # ── Transaction ────────────────────────────
+    Transaction:
+      type: object
+      required: [txn_id, idempotency_key, txn_type, status, amount, currency, description, created_at]
+      properties:
+        txn_id:             { $ref: '#/components/schemas/UUID' }
+        idempotency_key:    { type: string, example: "pay-20240101-abc123" }
+        txn_type:           { type: string, enum: [transfer, deposit, withdrawal, adjustment] }
+        status:             { type: string, enum: [pending, posted, failed, reversed] }
+        amount:             { $ref: '#/components/schemas/Amount' }
+        currency:           { $ref: '#/components/schemas/Currency' }
+        source_account_id:  { $ref: '#/components/schemas/UUID', nullable: true }
+        dest_account_id:    { $ref: '#/components/schemas/UUID', nullable: true }
+        description:        { type: string, example: "Rent payment" }
+        created_at:         { $ref: '#/components/schemas/TimestampMs' }
+        posted_at:          { $ref: '#/components/schemas/TimestampMs', nullable: true }
+
+    TransferRequest:
+      type: object
+      required: [idempotency_key, source_account_id, dest_account_id, amount, currency, description]
+      properties:
+        idempotency_key:    { type: string }
+        source_account_id:  { $ref: '#/components/schemas/UUID' }
+        dest_account_id:    { $ref: '#/components/schemas/UUID' }
+        amount:             { $ref: '#/components/schemas/Amount' }
+        currency:           { $ref: '#/components/schemas/Currency' }
+        description:        { type: string }
+
+    DepositRequest:
+      type: object
+      required: [idempotency_key, dest_account_id, amount, currency, description]
+      properties:
+        idempotency_key:  { type: string }
+        dest_account_id:  { $ref: '#/components/schemas/UUID' }
+        amount:           { $ref: '#/components/schemas/Amount' }
+        currency:         { $ref: '#/components/schemas/Currency' }
+        description:      { type: string }
+
+    WithdrawalRequest:
+      type: object
+      required: [idempotency_key, source_account_id, amount, currency, description]
+      properties:
+        idempotency_key:    { type: string }
+        source_account_id:  { $ref: '#/components/schemas/UUID' }
+        amount:             { $ref: '#/components/schemas/Amount' }
+        currency:           { $ref: '#/components/schemas/Currency' }
+        description:        { type: string }
+
+    TransactionList:
+      type: object
+      required: [items, total, page, page_size]
+      properties:
+        items:      { type: array, items: { $ref: '#/components/schemas/Transaction' } }
+        total:      { type: integer }
+        page:       { type: integer }
+        page_size:  { type: integer }
+
+    # ── Ledger Entry ───────────────────────────
+    LedgerEntry:
+      type: object
+      required: [entry_id, txn_id, account_id, entry_type, amount, currency, description, posted_at]
+      properties:
+        entry_id:     { $ref: '#/components/schemas/UUID' }
+        txn_id:       { $ref: '#/components/schemas/UUID' }
+        account_id:   { $ref: '#/components/schemas/UUID' }
+        entry_type:   { type: string, enum: [debit, credit] }
+        amount:       { $ref: '#/components/schemas/Amount' }
+        currency:     { $ref: '#/components/schemas/Currency' }
+        description:  { type: string }
+        posted_at:    { $ref: '#/components/schemas/TimestampMs' }
+
+    LedgerEntryList:
+      type: object
+      required: [items, total, page, page_size]
+      properties:
+        items:      { type: array, items: { $ref: '#/components/schemas/LedgerEntry' } }
+        total:      { type: integer }
+        page:       { type: integer }
+        page_size:  { type: integer }
+
+# ─────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────
+paths:
+
+  # ── Parties ──────────────────────────────────────────────
+  /parties:
+    post:
+      summary: Create a party
+      operationId: createParty
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePartyRequest' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Party' } } } }
+        '409': { description: Email already exists, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '422': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    get:
+      summary: List all parties
+      operationId: listParties
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PartyList' } } } }
+
+  /parties/{party_id}:
+    parameters:
+      - { name: party_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: Get a party
+      operationId: getParty
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Party' } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /parties/{party_id}/suspend:
+    parameters:
+      - { name: party_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    post:
+      summary: Suspend a party
+      operationId: suspendParty
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Party' } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '409': { description: Already suspended or closed, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /parties/{party_id}/close:
+    parameters:
+      - { name: party_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    post:
+      summary: Close a party
+      operationId: closeParty
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Party' } } } }
+        '409': { description: Party has active accounts, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  # ── Accounts ─────────────────────────────────────────────
+  /accounts:
+    post:
+      summary: Create an account
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAccountRequest' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '404': { description: Party not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '422': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: Get an account
+      operationId: getAccount
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}/balance:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: Get account balance
+      operationId: getBalance
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/BalanceResponse' } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}/freeze:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    post:
+      summary: Freeze an account
+      operationId: freezeAccount
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '409': { description: Already frozen or closed, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}/unfreeze:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    post:
+      summary: Unfreeze an account
+      operationId: unfreezeAccount
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '409': { description: Not frozen, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}/close:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    post:
+      summary: Close an account (balance must be zero)
+      operationId: closeAccount
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '409': { description: Account has non-zero balance, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /parties/{party_id}/accounts:
+    parameters:
+      - { name: party_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: List accounts for a party
+      operationId: listAccountsForParty
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AccountList' } } } }
+        '404': { description: Party not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  # ── Transactions ─────────────────────────────────────────
+  /transactions/transfer:
+    post:
+      summary: Transfer between two accounts
+      operationId: createTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferRequest' }
+      responses:
+        '201': { description: Created (or existing idempotent result), content: { application/json: { schema: { $ref: '#/components/schemas/Transaction' } } } }
+        '402': { description: Insufficient funds, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '404': { description: Account not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '409': { description: Currency mismatch or frozen account, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /transactions/deposit:
+    post:
+      summary: Deposit funds into an account
+      operationId: createDeposit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DepositRequest' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Transaction' } } } }
+        '404': { description: Account not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '409': { description: Account frozen or closed, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /transactions/withdraw:
+    post:
+      summary: Withdraw funds from an account
+      operationId: createWithdrawal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WithdrawalRequest' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Transaction' } } } }
+        '402': { description: Insufficient funds, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '404': { description: Account not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /transactions/{txn_id}:
+    parameters:
+      - { name: txn_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: Get a transaction
+      operationId: getTransaction
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Transaction' } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /transactions/{txn_id}/reverse:
+    parameters:
+      - { name: txn_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    post:
+      summary: Reverse a posted transaction
+      operationId: reverseTransaction
+      responses:
+        '201': { description: Reversal transaction created, content: { application/json: { schema: { $ref: '#/components/schemas/Transaction' } } } }
+        '409': { description: Transaction not in posted state, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}/transactions:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: List transactions for an account
+      operationId: listTransactionsForAccount
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TransactionList' } } } }
+
+  # ── Ledger Entries ───────────────────────────────────────
+  /transactions/{txn_id}/entries:
+    parameters:
+      - { name: txn_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: Get ledger entries for a transaction
+      operationId: getEntriesForTransaction
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/LedgerEntryList' } } } }
+        '404': { description: Transaction not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /accounts/{account_id}/entries:
+    parameters:
+      - { name: account_id, in: path, required: true, schema: { $ref: '#/components/schemas/UUID' } }
+    get:
+      summary: Get ledger entries for an account
+      operationId: getEntriesForAccount
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/LedgerEntryList' } } } }
+        '404': { description: Account not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }

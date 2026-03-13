@@ -1,0 +1,15 @@
+{application, cb_ledger,
+ [
+  {description, "IronLedger Double-Entry Ledger Engine"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia
+                 ]},
+  {env, []},
+  {modules, [cb_ledger]},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

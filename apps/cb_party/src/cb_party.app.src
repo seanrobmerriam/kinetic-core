@@ -1,0 +1,16 @@
+{application, cb_party,
+ [
+  {description, "IronLedger Party Management"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  cb_ledger
+                 ]},
+  {env, []},
+  {modules, [cb_party]},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

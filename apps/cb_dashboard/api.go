@@ -546,7 +546,14 @@ func (a *App) FetchDashboardStats(this js.Value, args []js.Value) interface{} {
 		}
 
 		// Fetch all accounts - we'll need to iterate through parties
-		partiesResult2, _ := fetch("GET", apiBaseURL+"/parties", nil)
+		partiesResult2, partiesErr2 := fetch("GET", apiBaseURL+"/parties", nil)
+		if partiesErr2 != nil {
+			a.Stats = DashboardStats{}
+			a.Loading = false
+			a.Render()
+			return
+		}
+
 		var allAccounts []Account
 		if partiesResult2.Get("items").Truthy() {
 			itemsJSON := js.Global().Get("JSON").Call("stringify", partiesResult2.Get("items")).String()
@@ -554,13 +561,14 @@ func (a *App) FetchDashboardStats(this js.Value, args []js.Value) interface{} {
 			json.Unmarshal([]byte(itemsJSON), &parties)
 
 			for _, party := range parties {
-				accResult, _ := fetch("GET", apiBaseURL+"/parties/"+party.PartyID+"/accounts", nil)
-				if accResult.Get("items").Truthy() {
-					accItemsJSON := js.Global().Get("JSON").Call("stringify", accResult.Get("items")).String()
-					var accounts []Account
-					json.Unmarshal([]byte(accItemsJSON), &accounts)
-					allAccounts = append(allAccounts, accounts...)
+				accResult, accErr := fetch("GET", apiBaseURL+"/parties/"+party.PartyID+"/accounts", nil)
+				if accErr != nil || !accResult.Get("items").Truthy() {
+					continue
 				}
+				accItemsJSON := js.Global().Get("JSON").Call("stringify", accResult.Get("items")).String()
+				var accounts []Account
+				json.Unmarshal([]byte(accItemsJSON), &accounts)
+				allAccounts = append(allAccounts, accounts...)
 			}
 		}
 		a.Stats.TotalAccounts = len(allAccounts)

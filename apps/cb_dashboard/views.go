@@ -58,7 +58,7 @@ func (a *App) renderDashboardHome() js.Value {
 		cardContent := doc.Call("createElement", "div")
 		cardContent.Set("className", "card-content")
 
-		valueEl := doc.Call("div")
+		valueEl := doc.Call("createElement", "div")
 		valueEl.Set("className", "card-value")
 		if card.stat > 0 && card.value == "" {
 			valueEl.Set("textContent", formatNumber(card.stat))
@@ -67,7 +67,7 @@ func (a *App) renderDashboardHome() js.Value {
 		}
 		cardContent.Call("appendChild", valueEl)
 
-		titleEl := doc.Call("div")
+		titleEl := doc.Call("createElement", "div")
 		titleEl.Set("className", "card-title")
 		titleEl.Set("textContent", card.title)
 		cardContent.Call("appendChild", titleEl)
@@ -89,7 +89,7 @@ func (a *App) renderDashboardHome() js.Value {
 	activityHeader := doc.Call("createElement", "div")
 	activityHeader.Set("className", "card-header-row")
 
-	activityTitle := doc.Call("h3")
+	activityTitle := doc.Call("createElement", "h3")
 	activityTitle.Set("textContent", "Recent Activity")
 	activityHeader.Call("appendChild", activityTitle)
 
@@ -150,12 +150,12 @@ func (a *App) renderDashboardHome() js.Value {
 			content := doc.Call("createElement", "div")
 			content.Set("className", "activity-content")
 
-			desc := doc.Call("div")
+			desc := doc.Call("createElement", "div")
 			desc.Set("className", "activity-desc")
 			desc.Set("textContent", item.Description)
 			content.Call("appendChild", desc)
 
-			meta := doc.Call("div")
+			meta := doc.Call("createElement", "div")
 			meta.Set("className", "activity-meta")
 			meta.Set("textContent", formatTimestamp(item.Timestamp)+" • "+FormatAmount(item.Amount, item.Currency))
 			content.Call("appendChild", meta)
@@ -172,7 +172,7 @@ func (a *App) renderDashboardHome() js.Value {
 	quickCol := doc.Call("createElement", "div")
 	quickCol.Set("className", "dashboard-card")
 
-	quickTitle := doc.Call("h3")
+	quickTitle := doc.Call("createElement", "h3")
 	quickTitle.Set("textContent", "Quick Actions")
 	quickCol.Call("appendChild", quickTitle)
 
@@ -213,11 +213,11 @@ func (a *App) renderDashboardHome() js.Value {
 		iconSvg.Call("appendChild", iconPath)
 		actionIcon.Call("appendChild", iconSvg)
 
-		actionLabel := doc.Call("div")
+		actionLabel := doc.Call("createElement", "div")
 		actionLabel.Set("className", "action-label")
 		actionLabel.Set("textContent", action.label)
 
-		actionDesc := doc.Call("div")
+		actionDesc := doc.Call("createElement", "div")
 		actionDesc.Set("className", "action-desc")
 		actionDesc.Set("textContent", action.desc)
 
@@ -306,7 +306,7 @@ func (a *App) renderCustomersView() js.Value {
 	formCard := doc.Call("createElement", "div")
 	formCard.Set("className", "form-card")
 
-	formTitle := doc.Call("h3")
+	formTitle := doc.Call("createElement", "h3")
 	formTitle.Set("textContent", "New Customer")
 	formCard.Call("appendChild", formTitle)
 
@@ -618,7 +618,7 @@ func (a *App) renderAccountDetailView() js.Value {
 	headerTop := doc.Call("createElement", "div")
 	headerTop.Set("className", "account-header-top")
 
-	accountName := doc.Call("h2")
+	accountName := doc.Call("createElement", "h2")
 	accountName.Set("className", "account-name")
 	accountName.Set("textContent", account.Name)
 	headerTop.Call("appendChild", accountName)
@@ -630,7 +630,7 @@ func (a *App) renderAccountDetailView() js.Value {
 
 	headerCard.Call("appendChild", headerTop)
 
-	accountID := doc.Call("div")
+	accountID := doc.Call("createElement", "div")
 	accountID.Set("className", "account-id")
 	accountID.Set("textContent", "Account ID: "+account.AccountID)
 	headerCard.Call("appendChild", accountID)
@@ -643,11 +643,11 @@ func (a *App) renderAccountDetailView() js.Value {
 
 	balanceStat := doc.Call("createElement", "div")
 	balanceStat.Set("className", "detail-stat")
-	balanceLabel := doc.Call("div")
+	balanceLabel := doc.Call("createElement", "div")
 	balanceLabel.Set("className", "stat-label")
 	balanceLabel.Set("textContent", "Current Balance")
 	balanceStat.Call("appendChild", balanceLabel)
-	balanceValue := doc.Call("div")
+	balanceValue := doc.Call("createElement", "div")
 	balanceValue.Set("className", "stat-value-lg")
 	balanceValue.Set("textContent", FormatAmount(account.Balance, account.Currency))
 	balanceStat.Call("appendChild", balanceValue)
@@ -655,11 +655,11 @@ func (a *App) renderAccountDetailView() js.Value {
 
 	currencyStat := doc.Call("createElement", "div")
 	currencyStat.Set("className", "detail-stat")
-	currencyLabel := doc.Call("div")
+	currencyLabel := doc.Call("createElement", "div")
 	currencyLabel.Set("className", "stat-label")
 	currencyLabel.Set("textContent", "Currency")
 	currencyStat.Call("appendChild", currencyLabel)
-	currencyValue := doc.Call("div")
+	currencyValue := doc.Call("createElement", "div")
 	currencyValue.Set("className", "stat-value")
 	currencyValue.Set("textContent", account.Currency)
 	currencyStat.Call("appendChild", currencyValue)
@@ -667,11 +667,11 @@ func (a *App) renderAccountDetailView() js.Value {
 
 	createdStat := doc.Call("createElement", "div")
 	createdStat.Set("className", "detail-stat")
-	createdLabel := doc.Call("div")
+	createdLabel := doc.Call("createElement", "div")
 	createdLabel.Set("className", "stat-label")
 	createdLabel.Set("textContent", "Created")
 	createdStat.Call("appendChild", createdLabel)
-	createdValue := doc.Call("div")
+	createdValue := doc.Call("createElement", "div")
 	createdValue.Set("className", "stat-value")
 	createdValue.Set("textContent", formatDate(account.CreatedAt))
 	createdStat.Call("appendChild", createdValue)
@@ -720,7 +720,7 @@ func (a *App) renderAccountDetailView() js.Value {
 	txnSection := doc.Call("createElement", "div")
 	txnSection.Set("className", "detail-section")
 
-	txnTitle := doc.Call("h3")
+	txnTitle := doc.Call("createElement", "h3")
 	txnTitle.Set("textContent", "Recent Transactions")
 	txnSection.Call("appendChild", txnTitle)
 
@@ -947,10 +947,10 @@ func (a *App) renderLedgerView() js.Value {
 	container := doc.Call("createElement", "div")
 	container.Set("className", "ledger-view")
 
-	header := doc.Call("div")
+	header := doc.Call("createElement", "div")
 	header.Set("className", "section-header")
 
-	title := doc.Call("h3")
+	title := doc.Call("createElement", "h3")
 	title.Set("textContent", "Ledger Entries")
 	header.Call("appendChild", title)
 
@@ -1065,7 +1065,7 @@ func (a *App) renderSettingsView() js.Value {
 	container := doc.Call("createElement", "div")
 	container.Set("className", "settings-view")
 
-	title := doc.Call("h2")
+	title := doc.Call("createElement", "h2")
 	title.Set("textContent", "Settings")
 	container.Call("appendChild", title)
 
@@ -1075,19 +1075,19 @@ func (a *App) renderSettingsView() js.Value {
 	settingItem := doc.Call("createElement", "div")
 	settingItem.Set("className", "setting-item")
 
-	settingLabel := doc.Call("div")
+	settingLabel := doc.Call("createElement", "div")
 	settingLabel.Set("className", "setting-label")
-	labelTitle := doc.Call("h4")
+	labelTitle := doc.Call("createElement", "h4")
 	labelTitle.Set("textContent", "API Endpoint")
 	settingLabel.Call("appendChild", labelTitle)
-	labelDesc := doc.Call("p")
+	labelDesc := doc.Call("createElement", "p")
 	labelDesc.Set("textContent", "The backend API URL")
 	settingLabel.Call("appendChild", labelDesc)
 	settingItem.Call("appendChild", settingLabel)
 
-	settingValue := doc.Call("div")
+	settingValue := doc.Call("createElement", "div")
 	settingValue.Set("className", "setting-value")
-	endpoint := doc.Call("code")
+	endpoint := doc.Call("createElement", "code")
 	endpoint.Set("textContent", apiBaseURL)
 	settingValue.Call("appendChild", endpoint)
 	settingItem.Call("appendChild", settingValue)
@@ -1097,19 +1097,19 @@ func (a *App) renderSettingsView() js.Value {
 	settingItem2 := doc.Call("createElement", "div")
 	settingItem2.Set("className", "setting-item")
 
-	settingLabel2 := doc.Call("div")
+	settingLabel2 := doc.Call("createElement", "div")
 	settingLabel2.Set("className", "setting-label")
-	labelTitle2 := doc.Call("h4")
+	labelTitle2 := doc.Call("createElement", "h4")
 	labelTitle2.Set("textContent", "Application Version")
 	settingLabel2.Call("appendChild", labelTitle2)
-	labelDesc2 := doc.Call("p")
+	labelDesc2 := doc.Call("createElement", "p")
 	labelDesc2.Set("textContent", "Current dashboard version")
 	settingLabel2.Call("appendChild", labelDesc2)
 	settingItem2.Call("appendChild", settingLabel2)
 
-	settingValue2 := doc.Call("div")
+	settingValue2 := doc.Call("createElement", "div")
 	settingValue2.Set("className", "setting-value")
-	version := doc.Call("span")
+	version := doc.Call("createElement", "span")
 	version.Set("textContent", "1.0.0")
 	settingValue2.Call("appendChild", version)
 	settingItem2.Call("appendChild", settingValue2)
@@ -1137,7 +1137,7 @@ func (a *App) renderTransferView() js.Value {
 	}))
 	container.Call("appendChild", backBtn)
 
-	header := doc.Call("h2")
+	header := doc.Call("createElement", "h2")
 	header.Set("textContent", "Transfer Funds")
 	container.Call("appendChild", header)
 
@@ -1257,7 +1257,7 @@ func (a *App) renderDepositView() js.Value {
 	}))
 	container.Call("appendChild", backBtn)
 
-	header := doc.Call("h2")
+	header := doc.Call("createElement", "h2")
 	header.Set("textContent", "Deposit / Withdraw")
 	container.Call("appendChild", header)
 
@@ -1268,7 +1268,7 @@ func (a *App) renderDepositView() js.Value {
 	depositCard := doc.Call("createElement", "div")
 	depositCard.Set("className", "form-card")
 
-	depositTitle := doc.Call("h3")
+	depositTitle := doc.Call("createElement", "h3")
 	depositTitle.Set("textContent", "Deposit")
 	depositCard.Call("appendChild", depositTitle)
 
@@ -1356,7 +1356,7 @@ func (a *App) renderDepositView() js.Value {
 	withdrawCard := doc.Call("createElement", "div")
 	withdrawCard.Set("className", "form-card")
 
-	withdrawTitle := doc.Call("h3")
+	withdrawTitle := doc.Call("createElement", "h3")
 	withdrawTitle.Set("textContent", "Withdraw")
 	withdrawCard.Call("appendChild", withdrawTitle)
 

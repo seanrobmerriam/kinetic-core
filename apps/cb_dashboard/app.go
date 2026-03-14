@@ -155,7 +155,7 @@ func (a *App) Render() {
 	mainContent.Call("appendChild", header)
 
 	// Content area
-	content := doc.Call("div")
+	content := doc.Call("createElement", "div")
 	content.Set("className", "content-area")
 
 	// Loading indicator
@@ -223,7 +223,7 @@ func (a *App) renderSidebar() js.Value {
 	brandText.Set("textContent", "IronLedger")
 	brandText.Set("className", "brand-title")
 	brand.Call("appendChild", brandText)
-	brandSubtitle := doc.Call("span")
+	brandSubtitle := doc.Call("createElement", "span")
 	brandSubtitle.Set("textContent", "Core Banking")
 	brandSubtitle.Set("className", "brand-subtitle")
 	brand.Call("appendChild", brandSubtitle)
@@ -338,10 +338,10 @@ func (a *App) renderHeader() js.Value {
 	header.Set("className", "main-header")
 
 	// Page title
-	title := doc.Call("div")
+	title := doc.Call("createElement", "div")
 	title.Set("className", "header-title")
 
-	pageTitle := doc.Call("h2")
+	pageTitle := doc.Call("createElement", "h2")
 	pageTitle.Set("textContent", a.getPageTitle())
 	pageTitle.Set("className", "page-title")
 	title.Call("appendChild", pageTitle)
@@ -349,7 +349,7 @@ func (a *App) renderHeader() js.Value {
 	header.Call("appendChild", title)
 
 	// Header actions
-	headerActions := doc.Call("div")
+	headerActions := doc.Call("createElement", "div")
 	headerActions.Set("className", "header-actions")
 
 	// Refresh button

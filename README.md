@@ -1,10 +1,9 @@
 # IronLedger
 
+<img width="1376" height="525" alt="image" src="https://github.com/user-attachments/assets/d53bb17f-88e0-4004-b625-ead3ef8d3d2e" />
+
+
 A core banking application built with Erlang/OTP 25.3, featuring double-entry bookkeeping, REST API, and a WebAssembly dashboard.
-
-Documentation can be found here:
-
-https://beautiful-blancmange-5d7079.netlify.app/
 
 ## Overview
 
@@ -16,6 +15,7 @@ IronLedger is a Dockerized core banking system that provides:
 - **Payment Processing**: Transfers, deposits, and withdrawals with idempotency
 - **REST API**: Cowboy-based HTTP interface
 - **WebAssembly Dashboard**: Go-compiled browser UI with locally packaged fonts and icons
+
 
 ## Architecture
 

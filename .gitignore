@@ -61,3 +61,7 @@ ct_logs/
 
 # Non-public Tests
 non-public-tests/
+
+#non-public docs
+
+.docs/

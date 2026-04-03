@@ -81,7 +81,7 @@ start(_StartType, _StartArgs) ->
         [{port, Port}, {num_acceptors, Acceptors}],
         #{
             env => #{dispatch => Dispatch},
-            middlewares => [cowboy_router, cb_log_middleware, cb_cors_middleware, cowboy_handler]
+            middlewares => [cowboy_router, cb_log_middleware, cb_cors_middleware, cb_auth_middleware, cowboy_handler]
         }
     ),
 

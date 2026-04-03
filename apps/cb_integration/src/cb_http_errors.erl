@@ -60,7 +60,7 @@
 %% @param ErrorAtom The internal error atom from business logic
 %% @returns `{Status, ErrorAtom, Message}' tuple ready for HTTP response
 -spec to_response(term()) ->
-    {400 | 402 | 404 | 409 | 422 | 500 | 501,
+    {400 | 401 | 402 | 404 | 409 | 422 | 500 | 501,
      <<_:64, _:_*8>>,
      <<_:64, _:_*8>>}.
 
@@ -155,6 +155,10 @@ to_response(invalid_parameters) ->
     {422, <<"invalid_parameters">>, <<"Invalid parameters">>};
 
 %% Validation errors
+to_response(unauthorized) ->
+    {401, <<"unauthorized">>, <<"Authentication required">>};
+to_response(invalid_credentials) ->
+    {401, <<"invalid_credentials">>, <<"Invalid credentials">>};
 to_response(missing_required_field) ->
     {422, <<"missing_required_field">>, <<"Missing required field">>};
 to_response(invalid_uuid) ->

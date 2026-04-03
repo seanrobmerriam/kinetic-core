@@ -15,7 +15,8 @@
                   cb_payments,
                   cb_savings_products,
                   cb_loans,
-                  cb_interest
+                  cb_interest,
+                  cb_auth
                  ]},
   {env, []},
   {modules, []},

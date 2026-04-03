@@ -1,0 +1,16 @@
+{application, cb_approvals,
+ [
+  {description, "IronLedger Approvals"},
+  {vsn, "0.1.0"},
+  {registered, [cb_approvals_sup, cb_approvals]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_approvals_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

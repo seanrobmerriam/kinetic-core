@@ -36,14 +36,28 @@ async function waitForSuccess(page, text, timeout = 15000) {
     state: "visible",
     timeout
   });
+  await page.waitForLoadState("networkidle");
 }
 
 async function clickNav(page, view) {
   await page.locator(`[data-testid="nav-${view}"]`).click();
+  await page.waitForLoadState("networkidle");
+}
+
+async function login(page) {
+  const email = process.env.DASHBOARD_AUTH_EMAIL || "admin@example.com";
+  const password = process.env.DASHBOARD_AUTH_PASSWORD || "secret-pass";
+
+  await waitForVisible(page, '[data-testid="login-form"]');
+  await page.fill("#login-email", email);
+  await page.fill("#login-password", password);
+  await page.click("#login-submit");
+  await waitForVisible(page, '[data-testid="nav-customers"]');
 }
 
 async function main() {
   const dashboardURL = process.env.DASHBOARD_URL || "http://127.0.0.1:8080";
+  const dashboardAPIURL = process.env.DASHBOARD_API_URL || "";
   const suffix = Date.now();
   const customerName = `E2E Customer ${suffix}`;
   const customerEmail = `e2e-${suffix}@example.com`;
@@ -57,6 +71,20 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
+  if (dashboardAPIURL) {
+    await page.addInitScript((apiURL) => {
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        const url = typeof input === "string" ? input : input.url;
+        const rewritten = url.replace(/http:\/\/127\.0\.0\.1:8081\/api\/v1/, apiURL);
+        if (typeof input === "string") {
+          return originalFetch(rewritten, init);
+        }
+        return originalFetch(new Request(rewritten, input), init);
+      };
+    }, dashboardAPIURL);
+  }
+
   page.on("console", (msg) => {
     if (msg.type() === "error") {
       consoleErrors.push(msg.text());
@@ -68,7 +96,7 @@ async function main() {
 
   try {
     await page.goto(dashboardURL, { waitUntil: "domcontentloaded" });
-    await waitForVisible(page, '[data-testid="nav-customers"]');
+    await login(page);
 
     await clickNav(page, "customers");
     await page.fill("#customer-name", customerName);

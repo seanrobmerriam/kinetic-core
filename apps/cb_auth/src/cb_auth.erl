@@ -4,6 +4,7 @@
     create_user/3,
     get_user/1,
     authenticate/2,
+    ensure_bootstrap_users/0,
     create_session/1,
     get_session/1,
     delete_session/1
@@ -84,6 +85,11 @@ authenticate(Email, Password) when is_binary(Email), is_binary(Password) ->
         {aborted, _Reason} -> {error, database_error}
     end.
 
+-spec ensure_bootstrap_users() -> ok | {error, database_error}.
+ensure_bootstrap_users() ->
+    Users = application:get_env(cb_auth, bootstrap_users, []),
+    ensure_bootstrap_users(Users).
+
 -spec create_session(binary()) -> {ok, map()} | {error, user_not_found | database_error}.
 create_session(UserId) when is_binary(UserId) ->
     F = fun() ->
@@ -161,3 +167,22 @@ delete_session(SessionId) when is_binary(SessionId) ->
 
 password_hash(Password) ->
     crypto:hash(sha256, Password).
+
+ensure_bootstrap_users([]) ->
+    ok;
+ensure_bootstrap_users([{Email0, Password0, Role} | Rest]) ->
+    Email = to_binary(Email0),
+    Password = to_binary(Password0),
+    case create_user(Email, Password, Role) of
+        {ok, _UserId} ->
+            ensure_bootstrap_users(Rest);
+        {error, email_already_exists} ->
+            ensure_bootstrap_users(Rest);
+        {error, database_error} = Error ->
+            Error
+    end.
+
+to_binary(Value) when is_binary(Value) ->
+    Value;
+to_binary(Value) when is_list(Value) ->
+    unicode:characters_to_binary(Value).

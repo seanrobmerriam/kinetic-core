@@ -6,6 +6,8 @@ import (
 	"syscall/js"
 )
 
+var activeApp *App
+
 // DashboardStats represents summary statistics for the dashboard
 type DashboardStats struct {
 	TotalCustomers int   `json:"total_customers"`
@@ -25,6 +27,14 @@ type ActivityItem struct {
 	Currency    string `json:"currency"`
 }
 
+// AuthUser represents the authenticated dashboard user.
+type AuthUser struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	Status string `json:"status"`
+}
+
 // App represents the dashboard application state
 type App struct {
 	CurrentView     string
@@ -42,6 +52,9 @@ type App struct {
 	Error           string
 	Success         string
 	Loading         bool
+	Authenticated   bool
+	SessionID       string
+	CurrentUser     *AuthUser
 
 	// Dashboard specific
 	Stats           DashboardStats
@@ -174,7 +187,7 @@ type BalanceResponse struct {
 
 // NewApp creates a new App instance
 func NewApp() *App {
-	return &App{
+	app := &App{
 		CurrentView:     "dashboard",
 		Parties:         []Party{},
 		Accounts:        []Account{},
@@ -187,6 +200,8 @@ func NewApp() *App {
 		RecentActivity:  []ActivityItem{},
 		Stats:           DashboardStats{},
 	}
+	activeApp = app
+	return app
 }
 
 // Navigate changes the current view
@@ -210,6 +225,11 @@ func (a *App) Render() {
 
 	// Clear root
 	root.Set("innerHTML", "")
+
+	if !a.Authenticated {
+		root.Call("appendChild", a.renderLoginView())
+		return
+	}
 
 	// Create main layout with sidebar
 	layout := doc.Call("createElement", "div")
@@ -433,6 +453,14 @@ func (a *App) renderHeader() js.Value {
 	headerActions := doc.Call("createElement", "div")
 	headerActions.Set("className", "header-actions")
 
+	if a.CurrentUser != nil {
+		userBadge := doc.Call("createElement", "div")
+		userBadge.Set("className", "header-btn")
+		userBadge.Call("setAttribute", "data-testid", "current-user")
+		userBadge.Set("textContent", a.CurrentUser.Email+" ("+capitalize(a.CurrentUser.Role)+")")
+		headerActions.Call("appendChild", userBadge)
+	}
+
 	// Refresh button
 	refreshBtn := doc.Call("createElement", "button")
 	refreshBtn.Set("className", "header-btn")
@@ -448,9 +476,107 @@ func (a *App) renderHeader() js.Value {
 
 	headerActions.Call("appendChild", refreshBtn)
 
+	logoutBtn := doc.Call("createElement", "button")
+	logoutBtn.Set("className", "header-btn")
+	logoutBtn.Call("setAttribute", "title", "Sign out")
+	logoutBtn.Call("setAttribute", "data-testid", "logout-button")
+	logoutBtn.Call("appendChild", createMaterialIcon(doc, "logout", "header-icon"))
+	logoutBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.Logout(js.Value{}, nil)
+		return nil
+	}))
+	headerActions.Call("appendChild", logoutBtn)
+
 	header.Call("appendChild", headerActions)
 
 	return header
+}
+
+func (a *App) renderLoginView() js.Value {
+	doc := js.Global().Get("document")
+
+	container := doc.Call("createElement", "div")
+	container.Set("className", "app-layout")
+
+	mainContent := doc.Call("createElement", "div")
+	mainContent.Set("className", "main-content")
+
+	content := doc.Call("createElement", "div")
+	content.Set("className", "content-area")
+
+	card := doc.Call("createElement", "div")
+	card.Set("className", "dashboard-card")
+	card.Call("setAttribute", "data-testid", "login-form")
+
+	title := doc.Call("createElement", "h2")
+	title.Set("className", "page-title")
+	title.Set("textContent", "Dashboard Sign In")
+	card.Call("appendChild", title)
+
+	subtitle := doc.Call("createElement", "p")
+	subtitle.Set("textContent", "Use the configured IronLedger operator credentials to continue.")
+	card.Call("appendChild", subtitle)
+
+	if a.Error != "" {
+		errorDiv := doc.Call("createElement", "div")
+		errorDiv.Set("className", "alert alert-error")
+		errorDiv.Set("textContent", a.Error)
+		errorDiv.Call("setAttribute", "data-testid", "error-banner")
+		card.Call("appendChild", errorDiv)
+	}
+
+	if a.Loading {
+		loadingDiv := doc.Call("createElement", "div")
+		loadingDiv.Set("className", "loading-spinner")
+		loadingDiv.Set("textContent", "Signing in...")
+		loadingDiv.Call("setAttribute", "data-testid", "loading")
+		card.Call("appendChild", loadingDiv)
+	}
+
+	form := doc.Call("createElement", "form")
+
+	emailLabel := doc.Call("createElement", "label")
+	emailLabel.Set("textContent", "Email")
+	form.Call("appendChild", emailLabel)
+
+	emailInput := doc.Call("createElement", "input")
+	emailInput.Set("id", "login-email")
+	emailInput.Set("type", "email")
+	emailInput.Set("placeholder", "admin@example.com")
+	emailInput.Set("required", true)
+	form.Call("appendChild", emailInput)
+
+	passwordLabel := doc.Call("createElement", "label")
+	passwordLabel.Set("textContent", "Password")
+	form.Call("appendChild", passwordLabel)
+
+	passwordInput := doc.Call("createElement", "input")
+	passwordInput.Set("id", "login-password")
+	passwordInput.Set("type", "password")
+	passwordInput.Set("required", true)
+	form.Call("appendChild", passwordInput)
+
+	submitBtn := doc.Call("createElement", "button")
+	submitBtn.Set("id", "login-submit")
+	submitBtn.Set("className", "btn btn-primary")
+	submitBtn.Set("textContent", "Sign In")
+	submitBtn.Set("type", "submit")
+	form.Call("appendChild", submitBtn)
+
+	form.Call("addEventListener", "submit", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			args[0].Call("preventDefault")
+		}
+		a.Login(emailInput.Get("value").String(), passwordInput.Get("value").String())
+		return nil
+	}))
+
+	card.Call("appendChild", form)
+	content.Call("appendChild", card)
+	mainContent.Call("appendChild", content)
+	container.Call("appendChild", mainContent)
+
+	return container
 }
 
 func (a *App) getPageTitle() string {
@@ -506,6 +632,113 @@ func (a *App) RefreshCurrentView() {
 			a.GetAccountDetails(js.Value{}, []js.Value{js.ValueOf(a.SelectedAccount.AccountID)})
 		}
 	}
+	a.Render()
+}
+
+func (a *App) BootstrapSession() {
+	sessionID := loadStoredSessionID()
+	if sessionID == "" {
+		a.Loading = false
+		a.Authenticated = false
+		a.SessionID = ""
+		a.CurrentUser = nil
+		a.Error = ""
+		a.Render()
+		return
+	}
+
+	a.Loading = true
+	a.Error = ""
+	a.Render()
+	setSessionID(sessionID)
+
+	go func() {
+		result, err := fetch("GET", apiBaseURL+"/auth/me", nil)
+		if err != nil {
+			a.handleUnauthorized("Session expired. Please sign in again.")
+			return
+		}
+
+		userJSON := js.Global().Get("JSON").Call("stringify", result.Get("user")).String()
+		var user AuthUser
+		if err := json.Unmarshal([]byte(userJSON), &user); err != nil {
+			a.handleUnauthorized("Session expired. Please sign in again.")
+			return
+		}
+
+		a.finishLogin(sessionID, user)
+	}()
+}
+
+func (a *App) Login(email string, password string) {
+	if email == "" || password == "" {
+		a.Error = "Email and password are required"
+		a.Render()
+		return
+	}
+
+	a.Loading = true
+	a.Error = ""
+	a.Success = ""
+	a.Render()
+
+	go func() {
+		result, err := fetch("POST", apiBaseURL+"/auth/login", map[string]string{
+			"email":    email,
+			"password": password,
+		})
+		if err != nil {
+			a.Loading = false
+			a.Error = err.Error()
+			a.Render()
+			return
+		}
+
+		sessionID := result.Get("session_id").String()
+		userJSON := js.Global().Get("JSON").Call("stringify", result.Get("user")).String()
+		var user AuthUser
+		if err := json.Unmarshal([]byte(userJSON), &user); err != nil {
+			a.Loading = false
+			a.Error = "Invalid login response"
+			a.Render()
+			return
+		}
+
+		a.finishLogin(sessionID, user)
+	}()
+}
+
+func (a *App) Logout(this js.Value, args []js.Value) interface{} {
+	go func() {
+		_, _ = fetch("POST", apiBaseURL+"/auth/logout", nil)
+		a.handleUnauthorized("")
+	}()
+	return nil
+}
+
+func (a *App) finishLogin(sessionID string, user AuthUser) {
+	persistSessionID(sessionID)
+	setSessionID(sessionID)
+	a.Authenticated = true
+	a.SessionID = sessionID
+	a.CurrentUser = &user
+	a.CurrentView = "dashboard"
+	a.Error = ""
+	a.Success = ""
+	a.Loading = false
+	a.Render()
+	a.FetchDashboardStats(js.Value{}, nil)
+}
+
+func (a *App) handleUnauthorized(message string) {
+	clearStoredSessionID()
+	clearSessionID()
+	a.Authenticated = false
+	a.SessionID = ""
+	a.CurrentUser = nil
+	a.Loading = false
+	a.Success = ""
+	a.Error = message
 	a.Render()
 }
 

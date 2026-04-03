@@ -7,6 +7,9 @@ import (
 )
 
 var apiBaseURL = resolveAPIBaseURL()
+var authSessionID string
+
+const sessionStorageKey = "ironledger.session_id"
 
 func resolveAPIBaseURL() string {
 	location := js.Global().Get("window").Get("location")
@@ -35,9 +38,13 @@ func fetch(method, url string, body interface{}) (js.Value, error) {
 	// Create request options
 	opts := js.Global().Get("Object").New()
 	opts.Set("method", method)
-	opts.Set("headers", js.ValueOf(map[string]interface{}{
+	headers := map[string]interface{}{
 		"Content-Type": "application/json",
-	}))
+	}
+	if authSessionID != "" {
+		headers["Authorization"] = "Bearer " + authSessionID
+	}
+	opts.Set("headers", js.ValueOf(headers))
 
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -57,11 +64,19 @@ func fetch(method, url string, body interface{}) (js.Value, error) {
 	// Handle success
 	thenFunc := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		response := args[0]
+		status := response.Get("status").Int()
+		if status == 204 {
+			resultCh <- js.Null()
+			return nil
+		}
 		if !response.Get("ok").Bool() {
 			// Read error response
 			var errJsonFunc js.Func
 			errJsonFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 				defer errJsonFunc.Release()
+				if status == 401 && authSessionID != "" && !isLoginURL(url) && activeApp != nil {
+					activeApp.handleUnauthorized("Session expired. Please sign in again.")
+				}
 				errCh <- fmt.Errorf("API error: %s", args[0].Get("message").String())
 				return nil
 			})
@@ -95,6 +110,46 @@ func fetch(method, url string, body interface{}) (js.Value, error) {
 	case err := <-errCh:
 		return js.Value{}, err
 	}
+}
+
+func loadStoredSessionID() string {
+	storage := js.Global().Get("window").Get("localStorage")
+	if storage.IsUndefined() || storage.IsNull() {
+		return ""
+	}
+	value := storage.Call("getItem", sessionStorageKey)
+	if value.IsNull() || value.IsUndefined() {
+		return ""
+	}
+	return value.String()
+}
+
+func persistSessionID(sessionID string) {
+	storage := js.Global().Get("window").Get("localStorage")
+	if storage.IsUndefined() || storage.IsNull() {
+		return
+	}
+	storage.Call("setItem", sessionStorageKey, sessionID)
+}
+
+func clearStoredSessionID() {
+	storage := js.Global().Get("window").Get("localStorage")
+	if storage.IsUndefined() || storage.IsNull() {
+		return
+	}
+	storage.Call("removeItem", sessionStorageKey)
+}
+
+func setSessionID(sessionID string) {
+	authSessionID = sessionID
+}
+
+func clearSessionID() {
+	authSessionID = ""
+}
+
+func isLoginURL(url string) bool {
+	return url == apiBaseURL+"/auth/login"
 }
 
 // CreateParty creates a new party

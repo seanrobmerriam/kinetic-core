@@ -70,6 +70,7 @@ start(_StartType, _StartArgs) ->
 
     %% Create tables
     ok = cb_schema:create_tables(),
+    ok = cb_auth:ensure_bootstrap_users(),
 
     %% Start Cowboy HTTP server
     {ok, Port} = application:get_env(cb_integration, http_port),

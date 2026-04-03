@@ -150,11 +150,11 @@ GOARCH=wasm GOOS=js go build -o dist/ironledger.wasm .
 docker compose up --build
 
 # Dashboard: http://localhost:8080
-# API:       http://localhost:8081/api/v1
+# API:       http://localhost:18081/api/v1
 ```
 
 The compose setup starts:
-- `api` on port `8081`
+- `api` on port `18081`
 - `dashboard` on port `8080`
 - a named Docker volume for Mnesia data at `/tmp/ironledger_mnesia`
 
@@ -194,8 +194,9 @@ npm run test:e2e
 # Start interactive shell (development)
 rebar3 shell
 
-# The HTTP server will start on port 8081 (configurable in config/sys.config)
-# API base URL: http://localhost:8081/api/v1
+# The HTTP server will start on port 8081 inside the container/runtime
+# Docker Compose publishes it on host port 18081
+# API base URL: http://localhost:18081/api/v1
 ```
 
 ### Build and Run a Release

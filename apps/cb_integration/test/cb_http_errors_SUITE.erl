@@ -9,6 +9,7 @@
     maps_party_not_suspended/1,
     maps_product_errors/1,
     maps_loan_validation_errors/1,
+    maps_auth_errors/1,
     maps_generic_not_found/1,
     maps_unknown_to_internal_error/1
 ]).
@@ -18,6 +19,7 @@ all() ->
         maps_party_not_suspended,
         maps_product_errors,
         maps_loan_validation_errors,
+        maps_auth_errors,
         maps_generic_not_found,
         maps_unknown_to_internal_error
     ].
@@ -52,6 +54,16 @@ maps_loan_validation_errors(_Config) ->
     ?assertEqual(
         {409, <<"invalid_status">>, <<"Operation is not allowed in the current status">>},
         cb_http_errors:to_response(invalid_status)
+    ).
+
+maps_auth_errors(_Config) ->
+    ?assertEqual(
+        {401, <<"unauthorized">>, <<"Authentication required">>},
+        cb_http_errors:to_response(unauthorized)
+    ),
+    ?assertEqual(
+        {401, <<"invalid_credentials">>, <<"Invalid credentials">>},
+        cb_http_errors:to_response(invalid_credentials)
     ).
 
 maps_generic_not_found(_Config) ->

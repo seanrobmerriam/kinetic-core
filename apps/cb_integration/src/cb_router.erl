@@ -73,6 +73,11 @@ dispatch() ->
             %% Health check
             {<<"/health">>, cb_health_handler, []},
 
+            %% Authentication
+            {<<"/api/v1/auth/login">>, cb_login_handler, []},
+            {<<"/api/v1/auth/logout">>, cb_logout_handler, []},
+            {<<"/api/v1/auth/me">>, cb_me_handler, []},
+
             %% Parties
             {<<"/api/v1/parties">>, cb_parties_handler, []},
             {<<"/api/v1/parties/:party_id">>, cb_party_handler, []},

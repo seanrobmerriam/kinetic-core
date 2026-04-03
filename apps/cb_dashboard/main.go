@@ -46,14 +46,11 @@ func main() {
 		"disburseLoan":         js.FuncOf(app.DisburseLoan),
 		"listLoanRepayments":   js.FuncOf(app.ListLoanRepayments),
 		"recordLoanRepayment":  js.FuncOf(app.RecordLoanRepayment),
+		"logout":               js.FuncOf(app.Logout),
 	}))
 
-	// Render the UI immediately before fetching data
-	// This ensures the dashboard shows even if the API isn't available yet
 	app.Render()
-
-	// Fetch initial dashboard stats in the background
-	app.FetchDashboardStats(js.Value{}, nil)
+	app.BootstrapSession()
 
 	// Keep the program running
 	select {}

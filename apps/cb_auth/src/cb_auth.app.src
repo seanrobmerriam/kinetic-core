@@ -1,0 +1,18 @@
+{application, cb_auth,
+ [
+  {description, "IronLedger Authentication"},
+  {vsn, "0.1.0"},
+  {registered, [cb_auth_sup, cb_auth_sessions]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  crypto,
+                  uuid
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_auth_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

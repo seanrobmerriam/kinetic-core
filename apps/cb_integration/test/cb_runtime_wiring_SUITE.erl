@@ -25,9 +25,17 @@ init_per_suite(Config) ->
     cb_schema:create_tables(),
     {ok, _} = application:ensure_all_started(cb_interest),
     {ok, _} = application:ensure_all_started(cb_loans),
+    {ok, _} = application:ensure_all_started(cb_auth),
+    {ok, _} = application:ensure_all_started(cb_approvals),
+    {ok, _} = application:ensure_all_started(cb_events),
+    {ok, _} = application:ensure_all_started(cb_reporting),
     Config.
 
 end_per_suite(_Config) ->
+    ok = application:stop(cb_reporting),
+    ok = application:stop(cb_events),
+    ok = application:stop(cb_approvals),
+    ok = application:stop(cb_auth),
     ok = application:stop(cb_loans),
     ok = application:stop(cb_interest),
     ok = application:stop(cb_savings_products),
@@ -39,7 +47,10 @@ init_per_testcase(_TestCase, Config) ->
     lists:foreach(
         fun(Table) -> mnesia:clear_table(Table) end,
         [party, account, transaction, ledger_entry, savings_product,
-         loan_products, loan_accounts, loan_repayments, interest_accrual]
+         loan_products, loan_accounts, loan_repayments, interest_accrual,
+         auth_user, auth_session, audit_log, approval_request, approval_decision,
+         event_outbox, webhook_subscription, webhook_delivery,
+         report_statement, report_export]
     ),
     Config.
 
@@ -70,16 +81,64 @@ schema_creates_feature_tables(_Config) ->
         [account_id, status],
         lists:sort(index_names(interest_accrual))
     ),
+    ?assertEqual(
+        [email, role, status],
+        lists:sort(index_names(auth_user))
+    ),
+    ?assertEqual(
+        [expires_at, user_id],
+        lists:sort(index_names(auth_session))
+    ),
+    ?assertEqual(
+        [actor_user_id, entity_type],
+        lists:sort(index_names(audit_log))
+    ),
+    ?assertEqual(
+        [resource_id, resource_type, status],
+        lists:sort(index_names(approval_request))
+    ),
+    ?assertEqual(
+        [approved_by, request_id],
+        lists:sort(index_names(approval_decision))
+    ),
+    ?assertEqual(
+        [event_type, status],
+        lists:sort(index_names(event_outbox))
+    ),
+    ?assertEqual(
+        [event_type, status],
+        lists:sort(index_names(webhook_subscription))
+    ),
+    ?assertEqual(
+        [attempt_status, subscription_id],
+        lists:sort(index_names(webhook_delivery))
+    ),
+    ?assertEqual(
+        [account_id, generated_at],
+        lists:sort(index_names(report_statement))
+    ),
+    ?assertEqual(
+        [export_type, status],
+        lists:sort(index_names(report_export))
+    ),
     ok.
 
 applications_start_feature_workers(_Config) ->
     RunningApps = [App || {App, _Description, _Vsn} <- application:which_applications()],
+    ?assert(lists:member(cb_auth, RunningApps)),
+    ?assert(lists:member(cb_approvals, RunningApps)),
+    ?assert(lists:member(cb_events, RunningApps)),
+    ?assert(lists:member(cb_reporting, RunningApps)),
     ?assert(lists:member(cb_interest, RunningApps)),
     ?assert(lists:member(cb_savings_products, RunningApps)),
     ?assert(lists:member(cb_loans, RunningApps)),
     ?assertMatch(Pid when is_pid(Pid), whereis(cb_loan_products)),
     ?assertMatch(Pid when is_pid(Pid), whereis(cb_loan_accounts)),
     ?assertMatch(Pid when is_pid(Pid), whereis(cb_loan_repayments)),
+    ?assertMatch(Pid when is_pid(Pid), whereis(cb_auth_sessions)),
+    ?assertMatch(Pid when is_pid(Pid), whereis(cb_approvals)),
+    ?assertMatch(Pid when is_pid(Pid), whereis(cb_events)),
+    ?assertMatch(Pid when is_pid(Pid), whereis(cb_reporting)),
     ok.
 
 feature_lifecycle_ok(_Config) ->

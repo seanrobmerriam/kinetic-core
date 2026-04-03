@@ -1,0 +1,16 @@
+{application, cb_events,
+ [
+  {description, "IronLedger Events"},
+  {vsn, "0.1.0"},
+  {registered, [cb_events_sup, cb_events]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_events_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

@@ -1,0 +1,16 @@
+{application, cb_reporting,
+ [
+  {description, "IronLedger Reporting"},
+  {vsn, "0.1.0"},
+  {registered, [cb_reporting_sup, cb_reporting]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_reporting_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

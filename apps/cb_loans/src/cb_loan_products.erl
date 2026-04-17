@@ -39,6 +39,7 @@
          get_product/1,
          list_products/0,
          update_product/2,
+         activate_product/1,
          deactivate_product/1
         ]).
 
@@ -131,6 +132,20 @@ update_product(ProductId, Updates) ->
     gen_server:call(?SERVER, {update_product, ProductId, Updates}).
 
 %%
+%% @doc Activates an inactive loan product.
+%%
+%% Marks the product as inactive, preventing new loan applications
+%% while preserving existing loans for reporting purposes.
+%%
+%% @param ProductId The unique product identifier
+%%
+%% @returns {ok, loan_product()} on success, {error, term()} on failure
+%%
+-spec activate_product(product_id()) -> {ok, loan_product()} | {error, term()}.
+activate_product(ProductId) ->
+    gen_server:call(?SERVER, {activate_product, ProductId}).
+
+%%
 %% @doc Deactivates a loan product.
 %%
 %% Marks the product as inactive, preventing new loan applications
@@ -173,6 +188,10 @@ handle_call({update_product, ProductId, Updates}, _From, State) ->
     Reply = do_update_product(ProductId, Updates),
     {reply, Reply, State};
 
+handle_call({activate_product, ProductId}, _From, State) ->
+    Reply = do_activate_product(ProductId),
+    {reply, Reply, State};
+
 handle_call({deactivate_product, ProductId}, _From, State) ->
     Reply = do_deactivate_product(ProductId),
     {reply, Reply, State};
@@ -196,8 +215,9 @@ do_create_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMont
     ValidCurrency = validate_currency(Currency),
     ValidInterestType = validate_interest_type(InterestType),
     ValidInterestRate = validate_interest_rate(InterestRate),
-    case {ValidCurrency, ValidInterestType, ValidInterestRate} of
-        {ok, ok, ok} ->
+    ValidRanges = validate_product_ranges(MinAmount, MaxAmount, MinTermMonths, MaxTermMonths),
+    case {ValidCurrency, ValidInterestType, ValidInterestRate, ValidRanges} of
+        {ok, ok, ok, ok} ->
             ProductId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
             Now = erlang:system_time(millisecond),
             Product = #loan_product{
@@ -220,12 +240,14 @@ do_create_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMont
                 {atomic, _} -> {ok, ProductId};
                 {aborted, Reason} -> {error, Reason}
             end;
-        {{error, _} = CurrencyError, _, _} ->
+        {{error, _} = CurrencyError, _, _, _} ->
             CurrencyError;
-        {ok, {error, _} = InterestTypeError, _} ->
+        {ok, {error, _} = InterestTypeError, _, _} ->
             InterestTypeError;
-        {ok, ok, {error, _} = InterestRateError} ->
-            InterestRateError
+        {ok, ok, {error, _} = InterestRateError, _} ->
+            InterestRateError;
+        {ok, ok, ok, {error, _} = RangeError} ->
+            RangeError
     end.
 
 do_get_product(ProductId) ->
@@ -242,12 +264,30 @@ do_list_products() ->
     end.
 
 do_update_product(ProductId, Updates) ->
+    case is_binary(ProductId) of
+        true ->
+            do_update_product_binary(ProductId, Updates);
+        false ->
+            {error, invalid_product_id}
+    end.
+
+do_update_product_binary(ProductId, Updates) ->
     Fun = fun() ->
         case mnesia:read({?TABLE, ProductId}) of
             [Product] ->
                 UpdatedProduct = apply_updates(Product, Updates),
-                mnesia:write(?TABLE, UpdatedProduct, write),
-                {ok, UpdatedProduct};
+                case validate_product_ranges(
+                    UpdatedProduct#loan_product.min_amount,
+                    UpdatedProduct#loan_product.max_amount,
+                    UpdatedProduct#loan_product.min_term_months,
+                    UpdatedProduct#loan_product.max_term_months
+                ) of
+                    ok ->
+                        mnesia:write(?TABLE, UpdatedProduct, write),
+                        {ok, UpdatedProduct};
+                    {error, _} = RangeError ->
+                        RangeError
+                end;
             [] ->
                 {error, not_found}
         end
@@ -257,8 +297,42 @@ do_update_product(ProductId, Updates) ->
         {aborted, Reason} -> {error, Reason}
     end.
 
-do_deactivate_product(ProductId) ->
-    do_update_product(ProductId, #{status => inactive}).
+do_activate_product(ProductId) when is_binary(ProductId) ->
+    do_set_product_status(ProductId, active);
+do_activate_product(_ProductId) ->
+    {error, invalid_product_id}.
+
+do_deactivate_product(ProductId) when is_binary(ProductId) ->
+    do_set_product_status(ProductId, inactive);
+do_deactivate_product(_ProductId) ->
+    {error, invalid_product_id}.
+
+do_set_product_status(ProductId, DesiredStatus) ->
+    Fun = fun() ->
+        case mnesia:read({?TABLE, ProductId}) of
+            [Product] ->
+                CurrentStatus = Product#loan_product.status,
+                case {CurrentStatus, DesiredStatus} of
+                    {active, active} ->
+                        {error, product_already_active};
+                    {inactive, inactive} ->
+                        {error, product_already_inactive};
+                    _ ->
+                        Updated = Product#loan_product{
+                            status = DesiredStatus,
+                            updated_at = erlang:system_time(millisecond)
+                        },
+                        mnesia:write(?TABLE, Updated, write),
+                        {ok, Updated}
+                end;
+            [] ->
+                {error, product_not_found}
+        end
+    end,
+    case mnesia:transaction(Fun) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
+    end.
 
 apply_updates(Product, Updates) ->
     Now = erlang:system_time(millisecond),
@@ -269,6 +343,8 @@ apply_updates(Product, Updates) ->
             currency -> Acc#loan_product{currency = V, updated_at = Now};
             min_amount -> Acc#loan_product{min_amount = V, updated_at = Now};
             max_amount -> Acc#loan_product{max_amount = V, updated_at = Now};
+            min_term_months -> Acc#loan_product{min_term_months = V, updated_at = Now};
+            max_term_months -> Acc#loan_product{max_term_months = V, updated_at = Now};
             interest_rate -> Acc#loan_product{interest_rate = V, updated_at = Now};
             interest_type -> Acc#loan_product{interest_type = V, updated_at = Now};
             status -> Acc#loan_product{status = V, updated_at = Now};
@@ -298,3 +374,18 @@ validate_interest_rate(InterestRate) when InterestRate > ?BPS_FACTOR ->
     {error, interest_rate_too_high};
 validate_interest_rate(_InterestRate) ->
     ok.
+
+validate_product_ranges(MinAmount, MaxAmount, MinTermMonths, MaxTermMonths)
+        when is_integer(MinAmount), is_integer(MaxAmount),
+             is_integer(MinTermMonths), is_integer(MaxTermMonths) ->
+    case {MinAmount > 0, MaxAmount >= MinAmount} of
+        {true, true} ->
+            case {MinTermMonths > 0, MaxTermMonths >= MinTermMonths} of
+                {true, true} -> ok;
+                _ -> {error, invalid_term_range}
+            end;
+        _ ->
+            {error, invalid_amount_range}
+    end;
+validate_product_ranges(_, _, _, _) ->
+    {error, invalid_parameters}.

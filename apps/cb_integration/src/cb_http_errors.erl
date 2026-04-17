@@ -131,6 +131,16 @@ to_response(product_already_active) ->
     {409, <<"product_already_active">>, <<"Product is already active">>};
 to_response(product_already_inactive) ->
     {409, <<"product_already_inactive">>, <<"Product is already inactive">>};
+to_response(product_inactive) ->
+    {409, <<"product_inactive">>, <<"Product is inactive">>};
+to_response(amount_out_of_product_range) ->
+    {422, <<"amount_out_of_product_range">>, <<"Amount is outside product limits">>};
+to_response(term_out_of_product_range) ->
+    {422, <<"term_out_of_product_range">>, <<"Term is outside product limits">>};
+to_response(invalid_amount_range) ->
+    {422, <<"invalid_amount_range">>, <<"Invalid amount range">>};
+to_response(invalid_term_range) ->
+    {422, <<"invalid_term_range">>, <<"Invalid term range">>};
 to_response(not_found) ->
     {404, <<"not_found">>, <<"Resource not found">>};
 to_response(accrual_not_found) ->

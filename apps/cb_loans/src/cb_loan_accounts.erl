@@ -441,7 +441,7 @@ do_calculate_overdue_amount(LoanId) ->
             Error
     end.
 
-validate_loan_creation(_ProductId, _PartyId, _AccountId, Amount, _Currency, TermMonths, InterestRate) ->
+validate_loan_creation(ProductId, _PartyId, _AccountId, Amount, Currency, TermMonths, InterestRate) ->
     case Amount of
         A when A =< 0 -> {error, invalid_amount};
         A when A > 9999999999999 -> {error, amount_overflow};
@@ -454,7 +454,43 @@ validate_loan_creation(_ProductId, _PartyId, _AccountId, Amount, _Currency, Term
                         R when not is_integer(R) -> {error, invalid_interest_rate};
                         R when R < 0 -> {error, invalid_interest_rate};
                         R when R > 10000 -> {error, interest_rate_too_high};
-                        _ -> ok
+                        _ -> validate_product_constraints(ProductId, Amount, Currency, TermMonths, InterestRate)
                     end
             end
     end.
+
+validate_product_constraints(ProductId, Amount, Currency, TermMonths, InterestRate) when is_binary(ProductId) ->
+    Fun = fun() -> mnesia:read(loan_products, ProductId) end,
+    case mnesia:transaction(Fun) of
+        {atomic, [Product]} ->
+            case Product#loan_product.status of
+                inactive ->
+                    {error, product_inactive};
+                active ->
+                    case Currency =:= Product#loan_product.currency of
+                        false ->
+                            {error, currency_mismatch};
+                        true ->
+                            case InterestRate =:= Product#loan_product.interest_rate of
+                                false ->
+                                    {error, invalid_interest_rate};
+                                true ->
+                                    case Amount >= Product#loan_product.min_amount andalso Amount =< Product#loan_product.max_amount of
+                                        false ->
+                                            {error, amount_out_of_product_range};
+                                        true ->
+                                            case TermMonths >= Product#loan_product.min_term_months andalso TermMonths =< Product#loan_product.max_term_months of
+                                                false -> {error, term_out_of_product_range};
+                                                true -> ok
+                                            end
+                                    end
+                            end
+                    end
+            end;
+        {atomic, []} ->
+            {error, product_not_found};
+        {aborted, _Reason} ->
+            {error, database_error}
+    end;
+validate_product_constraints(_ProductId, _Amount, _Currency, _TermMonths, _InterestRate) ->
+    {error, invalid_product_id}.

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"syscall/js"
 )
 
@@ -24,6 +25,36 @@ func resolveAPIBaseURL() string {
 	return fmt.Sprintf("%s//%s:8081/api/v1", protocol, hostname)
 }
 
+func alternateAPIBaseURL() string {
+	location := js.Global().Get("window").Get("location")
+	protocol := location.Get("protocol").String()
+	hostname := location.Get("hostname").String()
+	if protocol == "" {
+		protocol = "http:"
+	}
+	if hostname == "" {
+		hostname = "127.0.0.1"
+	}
+
+	if strings.Contains(apiBaseURL, ":8081/api/v1") {
+		return fmt.Sprintf("%s//%s:18081/api/v1", protocol, hostname)
+	}
+	if strings.Contains(apiBaseURL, ":18081/api/v1") {
+		return fmt.Sprintf("%s//%s:8081/api/v1", protocol, hostname)
+	}
+	return ""
+}
+
+func rewriteAPIBaseURL(url, fromBase, toBase string) string {
+	if fromBase == "" || toBase == "" {
+		return url
+	}
+	if strings.HasPrefix(url, fromBase) {
+		return toBase + strings.TrimPrefix(url, fromBase)
+	}
+	return url
+}
+
 // StatsResponse represents the dashboard stats response
 type StatsResponse struct {
 	TotalCustomers int   `json:"total_customers"`
@@ -35,6 +66,10 @@ type StatsResponse struct {
 
 // fetch makes an HTTP request using the browser's fetch API
 func fetch(method, url string, body interface{}) (js.Value, error) {
+	return fetchWithRetry(method, url, body, false)
+}
+
+func fetchWithRetry(method, url string, body interface{}, hasRetried bool) (js.Value, error) {
 	// Create request options
 	opts := js.Global().Get("Object").New()
 	opts.Set("method", method)
@@ -108,6 +143,18 @@ func fetch(method, url string, body interface{}) (js.Value, error) {
 	case result := <-resultCh:
 		return result, nil
 	case err := <-errCh:
+		if !hasRetried && strings.Contains(err.Error(), "fetch error:") {
+			altBase := alternateAPIBaseURL()
+			altURL := rewriteAPIBaseURL(url, apiBaseURL, altBase)
+			if altURL != url {
+				logMsg(WARN, "Primary API fetch failed, retrying alternate port", map[string]interface{}{
+					"url":         url,
+					"alternateUrl": altURL,
+				})
+				apiBaseURL = altBase
+				return fetchWithRetry(method, altURL, body, true)
+			}
+		}
 		return js.Value{}, err
 	}
 }

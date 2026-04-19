@@ -75,7 +75,8 @@
 %% @returns `ok' on success (always succeeds if Mnesia is running)
 -spec create_tables() -> ok.
 create_tables() ->
-    Tables = [party, account, transaction, ledger_entry, savings_product,
+    Tables = [party, account, transaction, ledger_entry, account_hold,
+              savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
               approval_decision, event_outbox, webhook_subscription,
@@ -161,6 +162,12 @@ table_spec(ledger_entry) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, ledger_entry)},
         {index, [txn_id, account_id]}
+    ];
+table_spec(account_hold) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, account_hold)},
+        {index, [account_id, status]}
     ];
 table_spec(savings_product) ->
     [

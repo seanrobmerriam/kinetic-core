@@ -204,3 +204,35 @@
     description :: binary(),
     posted_at   :: timestamp_ms()
 }).
+
+%% @doc Status of a funds hold on an account.
+%% - active: Hold is in effect; reduces available balance
+%% - released: Hold was manually released before expiry
+%% - expired: Hold passed its expiry time and is no longer active
+-type hold_status() :: active | released | expired.
+
+%% @doc Represents a temporary hold placed on account funds.
+%%
+%% A hold reserves a portion of an account's balance, reducing the available
+%% balance without reducing the ledger balance. Holds are used for pending
+%% authorizations, compliance holds, and other temporary restrictions.
+%%
+%% Fields:
+%% - hold_id: Unique UUID identifier for this hold
+%% - account_id: Account the hold is placed on
+%% - amount: Amount reserved in minor units (non-negative)
+%% - reason: Human-readable reason for the hold (e.g., "Pending authorization")
+%% - status: Current state of the hold (active | released | expired)
+%% - placed_at: Timestamp when the hold was created
+%% - released_at: Timestamp when the hold was released (if released or expired)
+%% - expires_at: Optional timestamp when the hold auto-expires
+-record(account_hold, {
+    hold_id     :: uuid(),
+    account_id  :: uuid(),
+    amount      :: amount(),
+    reason      :: binary(),
+    status      :: hold_status(),
+    placed_at   :: timestamp_ms(),
+    released_at :: timestamp_ms() | undefined,
+    expires_at  :: timestamp_ms() | undefined
+}).

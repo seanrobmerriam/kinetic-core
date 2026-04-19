@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"syscall/js"
 	"time"
@@ -853,6 +854,146 @@ func (a *App) renderAccountDetailView() js.Value {
 	}
 
 	container.Call("appendChild", txnSection)
+
+	// Holds Panel
+	holdsSection := doc.Call("createElement", "div")
+	holdsSection.Set("className", "detail-section")
+
+	holdsTitleRow := doc.Call("createElement", "div")
+	holdsTitleRow.Set("className", "card-header-row")
+	holdsTitle := doc.Call("createElement", "h3")
+	holdsTitle.Set("textContent", "Funds Holds")
+	holdsTitleRow.Call("appendChild", holdsTitle)
+
+	// Available balance indicator
+	availBadge := doc.Call("createElement", "span")
+	availBadge.Set("className", "stat-label")
+	holdsHeldAmt := int64(0)
+	for _, h := range a.Holds {
+		if h.Status == "active" {
+			holdsHeldAmt += h.Amount
+		}
+	}
+	availBal := account.Balance - holdsHeldAmt
+	availBadge.Set("textContent", "Available: "+FormatAmount(availBal, account.Currency))
+	holdsTitleRow.Call("appendChild", availBadge)
+	holdsSection.Call("appendChild", holdsTitleRow)
+
+	// Place hold form
+	holdForm := doc.Call("createElement", "div")
+	holdForm.Set("className", "form-card")
+	holdFormTitle := doc.Call("createElement", "h4")
+	holdFormTitle.Set("textContent", "Place New Hold")
+	holdForm.Call("appendChild", holdFormTitle)
+
+	holdFormGrid := doc.Call("createElement", "div")
+	holdFormGrid.Set("className", "form-grid")
+
+	holdAmountInput := doc.Call("createElement", "input")
+	holdAmountInput.Set("type", "number")
+	holdAmountInput.Set("id", "hold-amount-input")
+	holdAmountInput.Set("placeholder", "Amount (minor units)")
+	holdAmountInput.Set("className", "form-input")
+	holdFormGrid.Call("appendChild", holdAmountInput)
+
+	holdReasonInput := doc.Call("createElement", "input")
+	holdReasonInput.Set("type", "text")
+	holdReasonInput.Set("id", "hold-reason-input")
+	holdReasonInput.Set("placeholder", "Reason")
+	holdReasonInput.Set("className", "form-input")
+	holdFormGrid.Call("appendChild", holdReasonInput)
+
+	holdForm.Call("appendChild", holdFormGrid)
+
+	placeHoldBtn := doc.Call("createElement", "button")
+	placeHoldBtn.Set("className", "btn btn-warning")
+	placeHoldBtn.Set("textContent", "Place Hold")
+	accIDForHold := account.AccountID
+	placeHoldBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		amtStr := doc.Call("getElementById", "hold-amount-input").Get("value").String()
+		reason := doc.Call("getElementById", "hold-reason-input").Get("value").String()
+		if amtStr != "" && reason != "" {
+			amt := 0
+			fmt.Sscanf(amtStr, "%d", &amt)
+			a.PlaceAccountHold(js.Value{}, []js.Value{
+				js.ValueOf(accIDForHold),
+				js.ValueOf(amt),
+				js.ValueOf(reason),
+			})
+		}
+		return nil
+	}))
+	holdForm.Call("appendChild", placeHoldBtn)
+	holdsSection.Call("appendChild", holdForm)
+
+	// Existing holds table
+	if len(a.Holds) == 0 {
+		holdsEmpty := doc.Call("createElement", "div")
+		holdsEmpty.Set("className", "empty-state")
+		holdsEmpty.Set("textContent", "No holds on this account")
+		holdsSection.Call("appendChild", holdsEmpty)
+	} else {
+		holdsTable := doc.Call("createElement", "table")
+		holdsTable.Set("className", "data-table")
+
+		holdsThead := doc.Call("createElement", "thead")
+		holdsTheadRow := doc.Call("createElement", "tr")
+		for _, h := range []string{"Amount", "Reason", "Status", "Placed", "Actions"} {
+			th := doc.Call("createElement", "th")
+			th.Set("textContent", h)
+			holdsTheadRow.Call("appendChild", th)
+		}
+		holdsThead.Call("appendChild", holdsTheadRow)
+		holdsTable.Call("appendChild", holdsThead)
+
+		holdsTbody := doc.Call("createElement", "tbody")
+		for _, hold := range a.Holds {
+			holdRow := doc.Call("createElement", "tr")
+
+			amtCell := doc.Call("createElement", "td")
+			amtCell.Set("className", "cell-balance")
+			amtCell.Set("textContent", FormatAmount(hold.Amount, account.Currency))
+			holdRow.Call("appendChild", amtCell)
+
+			reasonCell := doc.Call("createElement", "td")
+			reasonCell.Set("textContent", hold.Reason)
+			holdRow.Call("appendChild", reasonCell)
+
+			statusCell := doc.Call("createElement", "td")
+			statusBadge := doc.Call("createElement", "span")
+			statusBadge.Set("className", "status-badge "+hold.Status)
+			statusBadge.Set("textContent", capitalize(hold.Status))
+			statusCell.Call("appendChild", statusBadge)
+			holdRow.Call("appendChild", statusCell)
+
+			placedCell := doc.Call("createElement", "td")
+			placedCell.Set("textContent", formatTimestamp(hold.PlacedAt))
+			holdRow.Call("appendChild", placedCell)
+
+			actCell := doc.Call("createElement", "td")
+			if hold.Status == "active" {
+				releaseBtn := doc.Call("createElement", "button")
+				releaseBtn.Set("className", "btn btn-sm btn-ghost")
+				releaseBtn.Set("textContent", "Release")
+				holdID := hold.HoldID
+				releaseBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+					a.ReleaseAccountHold(js.Value{}, []js.Value{
+						js.ValueOf(accIDForHold),
+						js.ValueOf(holdID),
+					})
+					return nil
+				}))
+				actCell.Call("appendChild", releaseBtn)
+			}
+			holdRow.Call("appendChild", actCell)
+
+			holdsTbody.Call("appendChild", holdRow)
+		}
+		holdsTable.Call("appendChild", holdsTbody)
+		holdsSection.Call("appendChild", holdsTable)
+	}
+
+	container.Call("appendChild", holdsSection)
 
 	return container
 }

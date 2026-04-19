@@ -46,6 +46,7 @@ type App struct {
 	LoanProducts    []LoanProduct
 	Loans           []Loan
 	LoanRepayments  []LoanRepayment
+	Holds           []AccountHold
 	SelectedParty   *Party
 	SelectedAccount *Account
 	SelectedLoan    *Loan
@@ -182,7 +183,20 @@ type BalanceResponse struct {
 	AccountID        string `json:"account_id"`
 	Currency         string `json:"currency"`
 	Balance          int64  `json:"balance"`
+	AvailableBalance int64  `json:"available_balance"`
 	BalanceFormatted string `json:"balance_formatted"`
+}
+
+// AccountHold represents a temporary funds hold on an account
+type AccountHold struct {
+	HoldID     string `json:"hold_id"`
+	AccountID  string `json:"account_id"`
+	Amount     int64  `json:"amount"`
+	Reason     string `json:"reason"`
+	Status     string `json:"status"`
+	PlacedAt   int64  `json:"placed_at"`
+	ReleasedAt int64  `json:"released_at"`
+	ExpiresAt  int64  `json:"expires_at"`
 }
 
 // NewApp creates a new App instance
@@ -197,6 +211,7 @@ func NewApp() *App {
 		LoanProducts:    []LoanProduct{},
 		Loans:           []Loan{},
 		LoanRepayments:  []LoanRepayment{},
+		Holds:           []AccountHold{},
 		RecentActivity:  []ActivityItem{},
 		Stats:           DashboardStats{},
 	}

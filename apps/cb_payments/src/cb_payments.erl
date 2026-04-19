@@ -162,8 +162,10 @@ do_transfer(IdempotencyKey, SourceId, DestId, Amount, Currency, Description) ->
                             [] ->
                                 {error, account_not_found};
                             [Dest] ->
-                                %% 3. Validate
-                                case validate_accounts_for_transfer(Source, Dest, Currency, Amount) of
+                                %% 3. Validate (use available balance for source funds check)
+                                AvailBal = available_balance_in_txn(SourceId, Source#account.balance),
+                                SourceWithAvail = Source#account{balance = AvailBal},
+                                case validate_accounts_for_transfer(SourceWithAvail, Dest, Currency, Amount) of
                                     ok ->
                                         %% 4. Update balances
                                         Now = erlang:system_time(millisecond),
@@ -456,7 +458,10 @@ withdraw(IdempotencyKey, SourceId, Amount, Currency, Description) ->
                             [] ->
                                 {error, account_not_found};
                             [Source] ->
-                                case validate_account_for_withdrawal(Source, Currency, Amount) of
+                                %% Use available balance (balance minus active holds) for funds check
+                                AvailBal = available_balance_in_txn(SourceId, Source#account.balance),
+                                SourceWithAvail = Source#account{balance = AvailBal},
+                                case validate_account_for_withdrawal(SourceWithAvail, Currency, Amount) of
                                     ok ->
                                         Now = erlang:system_time(millisecond),
                                         mnesia:write(Source#account{
@@ -818,6 +823,15 @@ validate_amount(Amount) when Amount > ?MAX_AMOUNT ->
     {error, amount_overflow};
 validate_amount(_Amount) ->
     ok.
+
+%% @private Compute available balance by subtracting active holds.
+%% Must be called from within a Mnesia transaction.
+-spec available_balance_in_txn(uuid(), amount()) -> amount().
+available_balance_in_txn(AccountId, Balance) ->
+    Holds = mnesia:index_read(account_hold, AccountId, account_id),
+    HoldTotal = lists:sum([H#account_hold.amount || H <- Holds,
+                           H#account_hold.status =:= active]),
+    Balance - HoldTotal.
 
 %%
 %% @doc Adjust an account balance

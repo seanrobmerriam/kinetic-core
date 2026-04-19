@@ -77,6 +77,17 @@ to_response(account_already_frozen) ->
     {409, <<"account_already_frozen">>, <<"Account is already frozen">>};
 to_response(account_not_frozen) ->
     {409, <<"account_not_frozen">>, <<"Account is not frozen">>};
+
+%% Hold errors
+to_response(hold_not_found) ->
+    {404, <<"hold_not_found">>, <<"Hold not found">>};
+to_response(hold_already_released) ->
+    {409, <<"hold_already_released">>, <<"Hold has already been released">>};
+to_response(hold_already_expired) ->
+    {409, <<"hold_already_expired">>, <<"Hold has already expired">>};
+to_response(insufficient_available_balance) ->
+    {402, <<"insufficient_available_balance">>, <<"Insufficient available balance (funds are on hold)">>};
+
 to_response(account_currency_immutable) ->
     {422, <<"account_currency_immutable">>, <<"Account currency cannot be changed">>};
 

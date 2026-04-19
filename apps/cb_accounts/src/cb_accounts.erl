@@ -429,16 +429,17 @@ close_account(AccountId) ->
 %% @returns {@type {ok, #{account_id => uuid(), currency => currency(), balance => amount(), balance_formatted => binary()}}}
 %%          on success, {@type {error, account_not_found}} if account doesn't exist
 %%
--spec get_balance(uuid()) -> {ok, #{account_id => uuid(), currency => currency(), balance => amount(), balance_formatted => binary()}} | {error, atom()}.
+-spec get_balance(uuid()) -> {ok, #{account_id => uuid(), currency => currency(), balance => amount(), available_balance => amount(), balance_formatted => binary()}} | {error, atom()}.
 get_balance(AccountId) ->
     F = fun() ->
         case mnesia:read(account, AccountId) of
             [Account] ->
                 Formatted = format_balance(Account#account.balance, Account#account.currency),
                 {ok, #{
-                    account_id => AccountId,
-                    currency => Account#account.currency,
-                    balance => Account#account.balance,
+                    account_id        => AccountId,
+                    currency          => Account#account.currency,
+                    balance           => Account#account.balance,
+                    available_balance => available_balance_for_account(AccountId, Account#account.balance),
                     balance_formatted => Formatted
                 }};
             [] ->
@@ -453,6 +454,14 @@ get_balance(AccountId) ->
 %% =============================================================================
 %% Internal Helper Functions
 %% =============================================================================
+
+%% @private Compute available balance accounting for active holds.
+%% Must be called from within a Mnesia transaction.
+-spec available_balance_for_account(uuid(), amount()) -> amount().
+available_balance_for_account(AccountId, Balance) ->
+    Holds = mnesia:index_read(account_hold, AccountId, account_id),
+    HoldTotal = lists:sum([H#account_hold.amount || H <- Holds, H#account_hold.status =:= active]),
+    Balance - HoldTotal.
 
 %% @private Formats a monetary balance for human display.
 %%

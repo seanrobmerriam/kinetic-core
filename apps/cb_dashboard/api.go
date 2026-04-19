@@ -387,6 +387,82 @@ func (a *App) CloseAccount(this js.Value, args []js.Value) interface{} {
 	return nil
 }
 
+// ListAccountHolds fetches all holds for an account
+func (a *App) ListAccountHolds(this js.Value, args []js.Value) interface{} {
+	if len(args) < 1 {
+		return nil
+	}
+
+	accountID := args[0].String()
+
+	go func() {
+		result, err := fetch("GET", apiBaseURL+"/accounts/"+accountID+"/holds", nil)
+		if err != nil {
+			a.Error = err.Error()
+		} else {
+			a.Error = ""
+			itemsJSON := js.Global().Get("JSON").Call("stringify", result.Get("items")).String()
+			json.Unmarshal([]byte(itemsJSON), &a.Holds)
+		}
+		a.Render()
+	}()
+
+	return nil
+}
+
+// PlaceAccountHold places a hold on an account
+func (a *App) PlaceAccountHold(this js.Value, args []js.Value) interface{} {
+	if len(args) < 3 {
+		return nil
+	}
+
+	accountID := args[0].String()
+	amount := args[1].Int()
+	reason := args[2].String()
+
+	body := map[string]interface{}{
+		"amount": amount,
+		"reason": reason,
+	}
+
+	go func() {
+		_, err := fetch("POST", apiBaseURL+"/accounts/"+accountID+"/holds", body)
+		if err != nil {
+			a.Error = err.Error()
+			a.Success = ""
+		} else {
+			a.Error = ""
+			a.ListAccountHolds(js.Value{}, []js.Value{js.ValueOf(accountID)})
+		}
+		a.Render()
+	}()
+
+	return nil
+}
+
+// ReleaseAccountHold releases a specific hold
+func (a *App) ReleaseAccountHold(this js.Value, args []js.Value) interface{} {
+	if len(args) < 2 {
+		return nil
+	}
+
+	accountID := args[0].String()
+	holdID := args[1].String()
+
+	go func() {
+		_, err := fetch("DELETE", apiBaseURL+"/accounts/"+accountID+"/holds/"+holdID, nil)
+		if err != nil {
+			a.Error = err.Error()
+		} else {
+			a.Error = ""
+			a.ListAccountHolds(js.Value{}, []js.Value{js.ValueOf(accountID)})
+		}
+		a.Render()
+	}()
+
+	return nil
+}
+
 // GetBalance fetches account balance
 func (a *App) GetBalance(this js.Value, args []js.Value) interface{} {
 	if len(args) < 1 {
@@ -830,6 +906,13 @@ func (a *App) GetAccountDetails(this js.Value, args []js.Value) interface{} {
 		if err == nil {
 			itemsJSON := js.Global().Get("JSON").Call("stringify", ledgerResult.Get("items")).String()
 			json.Unmarshal([]byte(itemsJSON), &a.LedgerEntries)
+		}
+
+		// Get holds
+		holdsResult, err := fetch("GET", apiBaseURL+"/accounts/"+accountID+"/holds", nil)
+		if err == nil && holdsResult.Get("items").Truthy() {
+			itemsJSON := js.Global().Get("JSON").Call("stringify", holdsResult.Get("items")).String()
+			json.Unmarshal([]byte(itemsJSON), &a.Holds)
 		}
 
 		a.Loading = false

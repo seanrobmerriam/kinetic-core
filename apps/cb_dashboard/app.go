@@ -8,6 +8,8 @@ import (
 
 var activeApp *App
 
+const themeStorageKey = "ironledger.theme"
+
 // DashboardStats represents summary statistics for the dashboard
 type DashboardStats struct {
 	TotalCustomers int   `json:"total_customers"`
@@ -56,6 +58,8 @@ type App struct {
 	Authenticated   bool
 	SessionID       string
 	CurrentUser     *AuthUser
+	DevToolsEnabled bool
+	MockImporting   bool
 
 	// Dashboard specific
 	Stats           DashboardStats
@@ -216,7 +220,53 @@ func NewApp() *App {
 		Stats:           DashboardStats{},
 	}
 	activeApp = app
+	app.applyThemePreference()
 	return app
+}
+
+func (a *App) applyThemePreference() {
+	doc := js.Global().Get("document")
+	docEl := doc.Get("documentElement")
+	storage := js.Global().Get("window").Get("localStorage")
+
+	if storage.IsUndefined() || storage.IsNull() {
+		docEl.Call("setAttribute", "data-theme", "light")
+		return
+	}
+
+	theme := storage.Call("getItem", themeStorageKey)
+	if theme.IsUndefined() || theme.IsNull() || theme.String() == "" {
+		docEl.Call("setAttribute", "data-theme", "light")
+		return
+	}
+
+	t := theme.String()
+	if t != "dark" {
+		t = "light"
+	}
+	docEl.Call("setAttribute", "data-theme", t)
+}
+
+func (a *App) isDarkTheme() bool {
+	doc := js.Global().Get("document")
+	docEl := doc.Get("documentElement")
+	return docEl.Call("getAttribute", "data-theme").String() == "dark"
+}
+
+func (a *App) toggleTheme() {
+	doc := js.Global().Get("document")
+	docEl := doc.Get("documentElement")
+	storage := js.Global().Get("window").Get("localStorage")
+
+	next := "dark"
+	if a.isDarkTheme() {
+		next = "light"
+	}
+	docEl.Call("setAttribute", "data-theme", next)
+
+	if !storage.IsUndefined() && !storage.IsNull() {
+		storage.Call("setItem", themeStorageKey, next)
+	}
 }
 
 // Navigate changes the current view
@@ -476,6 +526,43 @@ func (a *App) renderHeader() js.Value {
 		headerActions.Call("appendChild", userBadge)
 	}
 
+	if a.DevToolsEnabled {
+		mockBtn := doc.Call("createElement", "button")
+		mockBtn.Set("className", "header-btn")
+		mockBtn.Call("setAttribute", "title", "Import mock data")
+		mockBtn.Call("setAttribute", "data-testid", "mock-import-button")
+		iconName := "upload"
+		if a.MockImporting {
+			iconName = "hourglass_top"
+		}
+		mockBtn.Call("appendChild", createMaterialIcon(doc, iconName, "header-icon"))
+		if a.MockImporting {
+			mockBtn.Call("setAttribute", "disabled", "true")
+		}
+		mockBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			a.ImportMockData(js.Value{}, nil)
+			return nil
+		}))
+		headerActions.Call("appendChild", mockBtn)
+	}
+
+	// Theme toggle
+	themeBtn := doc.Call("createElement", "button")
+	themeBtn.Set("className", "header-btn")
+	themeBtn.Call("setAttribute", "title", "Toggle theme")
+	themeBtn.Call("setAttribute", "data-testid", "theme-toggle")
+	themeIconName := "dark_mode"
+	if a.isDarkTheme() {
+		themeIconName = "light_mode"
+	}
+	themeBtn.Call("appendChild", createMaterialIcon(doc, themeIconName, "header-icon"))
+	themeBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.toggleTheme()
+		a.Render()
+		return nil
+	}))
+	headerActions.Call("appendChild", themeBtn)
+
 	// Refresh button
 	refreshBtn := doc.Call("createElement", "button")
 	refreshBtn.Set("className", "header-btn")
@@ -517,10 +604,31 @@ func (a *App) renderLoginView() js.Value {
 	mainContent.Set("className", "main-content")
 
 	content := doc.Call("createElement", "div")
-	content.Set("className", "content-area")
+	content.Set("className", "content-area login-shell")
+
+	hero := doc.Call("createElement", "div")
+	hero.Set("className", "login-hero")
+
+	heroTitle := doc.Call("createElement", "h1")
+	heroTitle.Set("className", "login-hero-title")
+	heroTitle.Set("textContent", "IronLedger Dashboard")
+	hero.Call("appendChild", heroTitle)
+
+	heroSubtitle := doc.Call("createElement", "p")
+	heroSubtitle.Set("className", "login-hero-subtitle")
+	heroSubtitle.Set("textContent", "Modern core banking operations with real-time visibility and controls.")
+	hero.Call("appendChild", heroSubtitle)
+
+	heroMeta := doc.Call("createElement", "div")
+	heroMeta.Set("className", "login-hero-meta")
+	heroMeta.Set("textContent", "Secure operator access")
+	hero.Call("appendChild", heroMeta)
+
+	authWrap := doc.Call("createElement", "div")
+	authWrap.Set("className", "login-auth")
 
 	card := doc.Call("createElement", "div")
-	card.Set("className", "dashboard-card")
+	card.Set("className", "dashboard-card login-card")
 	card.Call("setAttribute", "data-testid", "login-form")
 
 	title := doc.Call("createElement", "h2")
@@ -549,12 +657,15 @@ func (a *App) renderLoginView() js.Value {
 	}
 
 	form := doc.Call("createElement", "form")
+	form.Set("className", "login-form")
 
 	emailLabel := doc.Call("createElement", "label")
+	emailLabel.Set("className", "form-label")
 	emailLabel.Set("textContent", "Email")
 	form.Call("appendChild", emailLabel)
 
 	emailInput := doc.Call("createElement", "input")
+	emailInput.Set("className", "form-input")
 	emailInput.Set("id", "login-email")
 	emailInput.Set("type", "email")
 	emailInput.Set("placeholder", "admin@example.com")
@@ -562,10 +673,12 @@ func (a *App) renderLoginView() js.Value {
 	form.Call("appendChild", emailInput)
 
 	passwordLabel := doc.Call("createElement", "label")
+	passwordLabel.Set("className", "form-label")
 	passwordLabel.Set("textContent", "Password")
 	form.Call("appendChild", passwordLabel)
 
 	passwordInput := doc.Call("createElement", "input")
+	passwordInput.Set("className", "form-input")
 	passwordInput.Set("id", "login-password")
 	passwordInput.Set("type", "password")
 	passwordInput.Set("required", true)
@@ -587,7 +700,9 @@ func (a *App) renderLoginView() js.Value {
 	}))
 
 	card.Call("appendChild", form)
-	content.Call("appendChild", card)
+	authWrap.Call("appendChild", card)
+	content.Call("appendChild", hero)
+	content.Call("appendChild", authWrap)
 	mainContent.Call("appendChild", content)
 	container.Call("appendChild", mainContent)
 
@@ -737,11 +852,14 @@ func (a *App) finishLogin(sessionID string, user AuthUser) {
 	a.Authenticated = true
 	a.SessionID = sessionID
 	a.CurrentUser = &user
+	a.DevToolsEnabled = false
+	a.MockImporting = false
 	a.CurrentView = "dashboard"
 	a.Error = ""
 	a.Success = ""
 	a.Loading = false
 	a.Render()
+	a.LoadDevToolsCapability()
 	a.FetchDashboardStats(js.Value{}, nil)
 }
 
@@ -751,6 +869,8 @@ func (a *App) handleUnauthorized(message string) {
 	a.Authenticated = false
 	a.SessionID = ""
 	a.CurrentUser = nil
+	a.DevToolsEnabled = false
+	a.MockImporting = false
 	a.Loading = false
 	a.Success = ""
 	a.Error = message

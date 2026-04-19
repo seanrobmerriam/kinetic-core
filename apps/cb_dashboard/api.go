@@ -64,6 +64,15 @@ type StatsResponse struct {
 	PendingTxns    int   `json:"pending_txns"`
 }
 
+type DevToolsCapabilityResponse struct {
+	Enabled bool `json:"enabled"`
+}
+
+type DevMockImportResponse struct {
+	Status  string         `json:"status"`
+	Summary map[string]int `json:"summary"`
+}
+
 // fetch makes an HTTP request using the browser's fetch API
 func fetch(method, url string, body interface{}) (js.Value, error) {
 	return fetchWithRetry(method, url, body, false)
@@ -148,7 +157,7 @@ func fetchWithRetry(method, url string, body interface{}, hasRetried bool) (js.V
 			altURL := rewriteAPIBaseURL(url, apiBaseURL, altBase)
 			if altURL != url {
 				logMsg(WARN, "Primary API fetch failed, retrying alternate port", map[string]interface{}{
-					"url":         url,
+					"url":          url,
 					"alternateUrl": altURL,
 				})
 				apiBaseURL = altBase
@@ -197,6 +206,76 @@ func clearSessionID() {
 
 func isLoginURL(url string) bool {
 	return url == apiBaseURL+"/auth/login"
+}
+
+// LoadDevToolsCapability checks whether dev-only dashboard actions should be shown.
+func (a *App) LoadDevToolsCapability() {
+	go func() {
+		result, err := fetch("GET", apiBaseURL+"/dev/mock-import", nil)
+		if err != nil {
+			a.DevToolsEnabled = false
+			a.Render()
+			return
+		}
+
+		jsonStr := js.Global().Get("JSON").Call("stringify", result).String()
+		var capability DevToolsCapabilityResponse
+		if err := json.Unmarshal([]byte(jsonStr), &capability); err != nil {
+			a.DevToolsEnabled = false
+			a.Render()
+			return
+		}
+
+		a.DevToolsEnabled = capability.Enabled
+		a.Render()
+	}()
+}
+
+// ImportMockData runs the backend dev mock-data import and refreshes loaded datasets.
+func (a *App) ImportMockData(this js.Value, args []js.Value) interface{} {
+	if a.MockImporting || !a.DevToolsEnabled {
+		return nil
+	}
+
+	a.MockImporting = true
+	a.Error = ""
+	a.Success = ""
+	a.Render()
+
+	go func() {
+		result, err := fetch("POST", apiBaseURL+"/dev/mock-import", map[string]interface{}{})
+		a.MockImporting = false
+		if err != nil {
+			a.Error = err.Error()
+			a.Success = ""
+			a.Render()
+			return
+		}
+
+		jsonStr := js.Global().Get("JSON").Call("stringify", result).String()
+		var resp DevMockImportResponse
+		if err := json.Unmarshal([]byte(jsonStr), &resp); err != nil {
+			a.Error = "Invalid import response"
+			a.Success = ""
+			a.Render()
+			return
+		}
+
+		createdTxns := resp.Summary["transactions_created"]
+		existingTxns := resp.Summary["transactions_existing"]
+		a.Error = ""
+		a.Success = fmt.Sprintf("Mock data imported (transactions created: %d, existing: %d)", createdTxns, existingTxns)
+		a.FetchDashboardStats(js.Value{}, nil)
+		a.ListParties(js.Value{}, nil)
+		a.ListAllAccounts(js.Value{}, nil)
+		a.ListAllTransactions(js.Value{}, nil)
+		a.ListSavingsProducts(js.Value{}, nil)
+		a.ListLoanProducts(js.Value{}, nil)
+		a.ListLoansForSelectedParty()
+		a.Render()
+	}()
+
+	return nil
 }
 
 // CreateParty creates a new party

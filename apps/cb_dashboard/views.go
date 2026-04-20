@@ -705,7 +705,7 @@ func (a *App) renderAccountDetailView() js.Value {
 	accountID.Set("textContent", "Account ID: "+account.AccountID)
 	headerCard.Call("appendChild", accountID)
 
-	headerCard.Call("appendChild", container)
+	container.Call("appendChild", headerCard)
 
 	// Stats row
 	statsRow := doc.Call("createElement", "div")

@@ -288,6 +288,11 @@ func (a *App) renderCustomersView() js.Value {
 	addBtn := doc.Call("createElement", "button")
 	addBtn.Set("className", "btn btn-primary")
 	addBtn.Set("textContent", "Add Customer")
+	addBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.ShowNewCustomerForm = !a.ShowNewCustomerForm
+		a.Render()
+		return nil
+	}))
 	toolbar.Call("appendChild", addBtn)
 
 	container.Call("appendChild", toolbar)
@@ -295,6 +300,9 @@ func (a *App) renderCustomersView() js.Value {
 	// Customer form (collapsible)
 	formCard := doc.Call("createElement", "div")
 	formCard.Set("className", "form-card")
+	if !a.ShowNewCustomerForm {
+		formCard.Get("style").Set("display", "none")
+	}
 
 	formTitle := doc.Call("createElement", "h3")
 	formTitle.Set("textContent", "New Customer")
@@ -329,12 +337,26 @@ func (a *App) renderCustomersView() js.Value {
 	saveBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		name := doc.Call("getElementById", "customer-name").Get("value").String()
 		email := doc.Call("getElementById", "customer-email").Get("value").String()
-		if name != "" && email != "" {
-			a.CreateParty(js.Value{}, []js.Value{js.ValueOf(name), js.ValueOf(email)})
+		if name == "" || email == "" {
+			a.Error = "Name and email are required"
+			a.Render()
+			return nil
 		}
+		a.ShowNewCustomerForm = false
+		a.CreateParty(js.Value{}, []js.Value{js.ValueOf(name), js.ValueOf(email)})
 		return nil
 	}))
 	formActions.Call("appendChild", saveBtn)
+
+	cancelBtn := doc.Call("createElement", "button")
+	cancelBtn.Set("className", "btn btn-ghost")
+	cancelBtn.Set("textContent", "Cancel")
+	cancelBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.ShowNewCustomerForm = false
+		a.Render()
+		return nil
+	}))
+	formActions.Call("appendChild", cancelBtn)
 
 	formCard.Call("appendChild", formActions)
 	container.Call("appendChild", formCard)

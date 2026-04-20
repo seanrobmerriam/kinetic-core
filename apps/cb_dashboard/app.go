@@ -62,11 +62,12 @@ type App struct {
 	MockImporting   bool
 
 	// Dashboard specific
-	Stats           DashboardStats
-	RecentActivity  []ActivityItem
-	SearchQuery     string
-	FilterAccountID string
-	FilterStatus    string
+	Stats              DashboardStats
+	RecentActivity     []ActivityItem
+	SearchQuery        string
+	FilterAccountID    string
+	FilterStatus       string
+	ShowNewCustomerForm bool
 }
 
 // Party represents a customer/party

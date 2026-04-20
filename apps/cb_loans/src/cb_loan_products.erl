@@ -50,6 +50,7 @@
 
 -include("loan.hrl").
 -include_lib("cb_ledger/include/cb_ledger.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -define(SERVER, ?MODULE).
 -define(TABLE, loan_products).
@@ -235,7 +236,10 @@ do_create_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMont
                 created_at = Now,
                 updated_at = Now
             },
-            Fun = fun() -> mnesia:write(?TABLE, Product, write) end,
+            Fun = fun() ->
+                mnesia:write(?TABLE, Product, write),
+                cb_events:write_outbox(<<"loan_product.created">>, #{product_id => ProductId})
+            end,
             case mnesia:transaction(Fun) of
                 {atomic, _} -> {ok, ProductId};
                 {aborted, Reason} -> {error, Reason}
@@ -323,6 +327,11 @@ do_set_product_status(ProductId, DesiredStatus) ->
                             updated_at = erlang:system_time(millisecond)
                         },
                         mnesia:write(?TABLE, Updated, write),
+                        EventType = case DesiredStatus of
+                            active   -> <<"loan_product.activated">>;
+                            inactive -> <<"loan_product.deactivated">>
+                        end,
+                        cb_events:write_outbox(EventType, #{product_id => ProductId}),
                         {ok, Updated}
                 end;
             [] ->

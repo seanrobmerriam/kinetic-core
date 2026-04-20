@@ -56,7 +56,7 @@ async function login(page) {
 }
 
 async function main() {
-  const dashboardURL = process.env.DASHBOARD_URL || "http://127.0.0.1:8080";
+  const dashboardURL = process.env.DASHBOARD_URL || "http://localhost:8080";
   const dashboardAPIURL = process.env.DASHBOARD_API_URL || "";
   const suffix = Date.now();
   const customerName = `E2E Customer ${suffix}`;
@@ -76,7 +76,7 @@ async function main() {
       const originalFetch = window.fetch.bind(window);
       window.fetch = (input, init) => {
         const url = typeof input === "string" ? input : input.url;
-        const rewritten = url.replace(/http:\/\/127\.0\.0\.1:8081\/api\/v1/, apiURL);
+        const rewritten = url.replace(/http:\/\/(127\.0\.0\.1|localhost):8081\/api\/v1/, apiURL);
         if (typeof input === "string") {
           return originalFetch(rewritten, init);
         }
@@ -90,8 +90,12 @@ async function main() {
       consoleErrors.push(msg.text());
     }
   });
+  page.on("console", (msg) => {
+    process.stdout.write(`[browser:${msg.type()}] ${msg.text()}\n`);
+  });
   page.on("pageerror", (err) => {
     pageErrors.push(err.message);
+    process.stderr.write(`[pageerror] ${err.message}\n`);
   });
 
   try {

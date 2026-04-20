@@ -257,7 +257,7 @@ builtin_jobs() ->
         },
         #job{
             name        = webhook_retry,
-            handler     = {cb_jobs, noop_job, []},
+            handler     = {cb_webhooks, retry_failed_deliveries, []},
             schedule    = undefined,
             timer_ref   = undefined,
             last_run_at = undefined,

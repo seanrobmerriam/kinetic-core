@@ -65,6 +65,7 @@
 -module(cb_payments).
 
 -include_lib("cb_ledger/include/cb_ledger.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -export([
     transfer/6,
@@ -219,6 +220,15 @@ do_transfer(IdempotencyKey, SourceId, DestId, Amount, Currency, Description) ->
                                             posted_at = Now
                                         }),
 
+                                        cb_events:write_outbox(<<"transaction.posted">>, #{
+                                            txn_id            => TxnId,
+                                            txn_type          => transfer,
+                                            amount            => Amount,
+                                            currency          => Currency,
+                                            source_account_id => SourceId,
+                                            dest_account_id   => DestId
+                                        }),
+
                                         {ok, Txn};
                                     Error ->
                                         Error
@@ -365,6 +375,14 @@ deposit(IdempotencyKey, DestId, Amount, Currency, Description) ->
                                             posted_at = Now
                                         }),
 
+                                        cb_events:write_outbox(<<"transaction.posted">>, #{
+                                            txn_id          => TxnId,
+                                            txn_type        => deposit,
+                                            amount          => Amount,
+                                            currency        => Currency,
+                                            dest_account_id => DestId
+                                        }),
+
                                         {ok, Txn};
                                     Error ->
                                         Error
@@ -495,6 +513,14 @@ withdraw(IdempotencyKey, SourceId, Amount, Currency, Description) ->
                                             currency = Currency,
                                             description = Description,
                                             posted_at = Now
+                                        }),
+
+                                        cb_events:write_outbox(<<"transaction.posted">>, #{
+                                            txn_id            => TxnId,
+                                            txn_type          => withdrawal,
+                                            amount            => Amount,
+                                            currency          => Currency,
+                                            source_account_id => SourceId
                                         }),
 
                                         {ok, Txn};
@@ -782,6 +808,13 @@ reverse_transaction(TxnId) ->
                                 })
                         end,
 
+                        cb_events:write_outbox(<<"transaction.reversed">>, #{
+                            reversal_txn_id  => ReversalId,
+                            original_txn_id  => TxnId,
+                            amount           => Txn#transaction.amount,
+                            currency         => Txn#transaction.currency
+                        }),
+
                         {ok, ReversalTxn};
                     failed ->
                         {error, transaction_not_posted};
@@ -924,6 +957,14 @@ adjust_balance(IdempotencyKey, AccountId, Amount, Currency, Description) ->
                                     currency = Currency,
                                     description = Description,
                                     posted_at = Now
+                                }),
+
+                                cb_events:write_outbox(<<"transaction.posted">>, #{
+                                    txn_id          => TxnId,
+                                    txn_type        => adjustment,
+                                    amount          => erlang:abs(Amount),
+                                    currency        => Currency,
+                                    dest_account_id => AccountId
                                 }),
 
                                 {ok, Txn};

@@ -129,6 +129,15 @@ dispatch() ->
             {<<"/api/v1/loans/:loan_id/disburse">>, cb_loans_handler, []},
             {<<"/api/v1/loans/:loan_id/repayments">>, cb_loan_repayments_handler, []},
 
+            %% Domain events
+            {<<"/api/v1/events">>, cb_events_handler, []},
+            {<<"/api/v1/events/:event_id">>, cb_events_handler, []},
+            {<<"/api/v1/events/:event_id/replay">>, cb_events_handler, []},
+
+            %% Webhook subscriptions
+            {<<"/api/v1/webhooks">>, cb_webhooks_handler, []},
+            {<<"/api/v1/webhooks/:subscription_id">>, cb_webhooks_handler, []},
+
             %% Development tools
             {<<"/api/v1/dev/mock-import">>, cb_dev_mock_import_handler, []},
 

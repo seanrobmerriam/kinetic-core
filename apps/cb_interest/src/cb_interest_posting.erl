@@ -37,6 +37,7 @@
 -export([
     post_accrued_interest/2,
     process_daily_accruals/0,
+    run_job/0,
     get_interest_expense_account_id/0,
     get_interest_income_account_id/0
 ]).
@@ -124,6 +125,19 @@ post_accrued_interest(AccountId, Amount) when is_binary(AccountId), is_integer(A
 process_daily_accruals() ->
     Accruals = cb_interest_accrual:get_active_accruals(),
     process_accruals(Accruals, 0).
+
+%%%
+%%% @doc Job runner entry point for daily interest processing.
+%%%
+%%% This is the MFA target registered in `cb_jobs` for the `daily_interest` job.
+%%% It delegates directly to `process_daily_accruals/0` and exists as a named
+%%% entry point so job registration is self-documenting.
+%%%
+%%% @returns `{ok, Count}` — the number of accruals that were processed.
+%%%
+-spec run_job() -> {ok, non_neg_integer()}.
+run_job() ->
+    process_daily_accruals().
 
 %%%
 %%% @doc Get the account ID for interest expense ledger entries.

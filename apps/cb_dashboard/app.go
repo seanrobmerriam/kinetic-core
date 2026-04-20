@@ -385,14 +385,24 @@ func (a *App) renderSidebar() js.Value {
 	// Logo/Brand
 	brand := doc.Call("createElement", "div")
 	brand.Set("className", "sidebar-brand")
+	brandLogo := doc.Call("createElement", "div")
+	brandLogo.Set("className", "brand-logo")
+	brandMark := doc.Call("createElement", "div")
+	brandMark.Set("className", "brand-mark")
+	brandMark.Set("textContent", "Fe")
+	brandLogo.Call("appendChild", brandMark)
+	brandTextWrap := doc.Call("createElement", "div")
+	brandTextWrap.Set("className", "brand-text")
 	brandText := doc.Call("createElement", "h1")
 	brandText.Set("textContent", "IronLedger")
 	brandText.Set("className", "brand-title")
-	brand.Call("appendChild", brandText)
+	brandTextWrap.Call("appendChild", brandText)
 	brandSubtitle := doc.Call("createElement", "span")
 	brandSubtitle.Set("textContent", "Core Banking")
 	brandSubtitle.Set("className", "brand-subtitle")
-	brand.Call("appendChild", brandSubtitle)
+	brandTextWrap.Call("appendChild", brandSubtitle)
+	brandLogo.Call("appendChild", brandTextWrap)
+	brand.Call("appendChild", brandLogo)
 	sidebar.Call("appendChild", brand)
 
 	// Navigation items
@@ -408,7 +418,6 @@ func (a *App) renderSidebar() js.Value {
 		{"ledger", "Ledger", "book"},
 		{"products", "Products", "inventory_2"},
 		{"loans", "Loans", "request_quote"},
-		{"settings", "Settings", "settings"},
 	}
 
 	nav := doc.Call("createElement", "nav")
@@ -463,28 +472,43 @@ func (a *App) renderSidebar() js.Value {
 
 	sidebar.Call("appendChild", nav)
 
-	// Quick Actions section
-	actionsTitle := doc.Call("createElement", "div")
-	actionsTitle.Set("className", "sidebar-section-title")
-	actionsTitle.Set("textContent", "Quick Actions")
-	sidebar.Call("appendChild", actionsTitle)
+	// Divider + Operations section
+	divider := doc.Call("createElement", "div")
+	divider.Set("className", "nav-divider")
+	sidebar.Call("appendChild", divider)
 
-	quickActions := []struct {
+	opsLabel := doc.Call("createElement", "div")
+	opsLabel.Set("className", "sidebar-section-label")
+	opsLabel.Set("textContent", "Operations")
+	sidebar.Call("appendChild", opsLabel)
+
+	opsNav := doc.Call("createElement", "nav")
+	opsNav.Set("className", "sidebar-nav")
+	opsNav.Set("style", "flex: 0; padding-top: 0;")
+
+	opsItems := []struct {
 		id    string
 		label string
-		color string
+		icon  string
 	}{
-		{"transfer", "Transfer Funds", "primary"},
-		{"deposit", "Deposit / Withdraw", "success"},
+		{"transfer", "Transfer Funds", "swap_horiz"},
+		{"deposit", "Deposit / Withdraw", "payments"},
+		{"settings", "Settings", "settings"},
 	}
-
-	for _, action := range quickActions {
+	for _, item := range opsItems {
 		btn := doc.Call("createElement", "button")
-		btn.Set("className", "quick-action-btn btn btn-"+action.color)
-		btn.Set("textContent", action.label)
-		btn.Call("setAttribute", "data-testid", "quick-"+action.id)
-
-		viewName := action.id
+		btn.Set("className", "nav-item")
+		btn.Call("setAttribute", "data-testid", "nav-"+item.id)
+		if a.CurrentView == item.id {
+			btn.Get("classList").Call("add", "active")
+		}
+		icon := createMaterialIcon(doc, item.icon, "nav-icon")
+		label := doc.Call("createElement", "span")
+		label.Set("textContent", item.label)
+		label.Set("className", "nav-label")
+		btn.Call("appendChild", icon)
+		btn.Call("appendChild", label)
+		viewName := item.id
 		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			a.CurrentView = viewName
 			a.Error = ""
@@ -492,9 +516,18 @@ func (a *App) renderSidebar() js.Value {
 			a.Render()
 			return nil
 		}))
-
-		sidebar.Call("appendChild", btn)
+		opsNav.Call("appendChild", btn)
 	}
+	sidebar.Call("appendChild", opsNav)
+
+	// Sidebar footer
+	footer := doc.Call("createElement", "div")
+	footer.Set("className", "sidebar-footer")
+	footerText := doc.Call("createElement", "div")
+	footerText.Set("style", "font-size: 0.72rem; color: var(--color-text-muted);")
+	footerText.Set("textContent", "IronLedger v0.1")
+	footer.Call("appendChild", footerText)
+	sidebar.Call("appendChild", footer)
 
 	return sidebar
 }
@@ -520,11 +553,32 @@ func (a *App) renderHeader() js.Value {
 	headerActions.Set("className", "header-actions")
 
 	if a.CurrentUser != nil {
-		userBadge := doc.Call("createElement", "div")
-		userBadge.Set("className", "header-btn")
-		userBadge.Call("setAttribute", "data-testid", "current-user")
-		userBadge.Set("textContent", a.CurrentUser.Email+" ("+capitalize(a.CurrentUser.Role)+")")
-		headerActions.Call("appendChild", userBadge)
+		// User avatar pill
+		userPill := doc.Call("createElement", "div")
+		userPill.Set("className", "user-pill")
+		userPill.Call("setAttribute", "data-testid", "current-user")
+
+		avatar := doc.Call("createElement", "div")
+		avatar.Set("className", "user-avatar")
+		// Get initials from email
+		initials := "U"
+		if len(a.CurrentUser.Email) > 0 {
+			initials = string([]rune(a.CurrentUser.Email)[0:1])
+		}
+		avatar.Set("textContent", initials)
+		userPill.Call("appendChild", avatar)
+
+		nameEl := doc.Call("createElement", "span")
+		nameEl.Set("textContent", a.CurrentUser.Email)
+		nameEl.Set("style", "max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")
+		userPill.Call("appendChild", nameEl)
+
+		roleEl := doc.Call("createElement", "span")
+		roleEl.Set("style", "color: var(--color-text-muted); font-size: 0.75rem;")
+		roleEl.Set("textContent", capitalize(a.CurrentUser.Role))
+		userPill.Call("appendChild", roleEl)
+
+		headerActions.Call("appendChild", userPill)
 	}
 
 	if a.DevToolsEnabled {

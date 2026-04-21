@@ -3,7 +3,7 @@
 <img width="1376" height="525" alt="image" src="https://github.com/user-attachments/assets/d53bb17f-88e0-4004-b625-ead3ef8d3d2e" />
 
 
-A core banking application built with Erlang/OTP 25.3, featuring double-entry bookkeeping, REST API, and a WebAssembly dashboard.
+A core banking application built with Erlang/OTP 25.3, featuring double-entry bookkeeping, REST API, and a Next.js dashboard.
 
 ## Overview
 
@@ -14,7 +14,7 @@ IronLedger is a Dockerized core banking system that provides:
 - **Double-Entry Ledger**: Immutable financial transaction recording
 - **Payment Processing**: Transfers, deposits, and withdrawals with idempotency
 - **REST API**: Cowboy-based HTTP interface
-- **WebAssembly Dashboard**: Go-compiled browser UI with locally packaged fonts and icons
+- **Next.js Dashboard**: React/TypeScript browser UI with locally packaged fonts and icons
 
 
 ## Architecture
@@ -45,7 +45,7 @@ IronLedger is a Dockerized core banking system that provides:
 │                          │                                  │
 │  ┌───────────────────────┴───────────────────────┐         │
 │  │              cb_dashboard                     │         │
-│  │         (Go → WebAssembly UI)                 │         │
+│  │           (Next.js + React UI)                │         │
 │  └───────────────────────────────────────────────┘         │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -62,7 +62,7 @@ IronLedger is a Dockerized core banking system that provides:
 ironledger/
 ├── apps/
 │   ├── cb_accounts/        # Account lifecycle management (OTP active app)
-│   ├── cb_dashboard/       # Go/Wasm browser dashboard
+│   ├── cb_dashboard/       # Next.js browser dashboard
 │   ├── cb_integration/     # HTTP API (Cowboy, routing, handlers) - OTP active app
 │   ├── cb_ledger/          # Double-entry ledger engine (OTP library app)
 │   ├── cb_party/           # Party (customer) management (OTP library app)
@@ -129,8 +129,7 @@ All active applications implement the `application` behaviour with:
 
 - Erlang/OTP 25.3 or later
 - rebar3 (Erlang build tool)
-- Go 1.25.7+ (for dashboard compilation)
-- Node.js + npm (only for local browser E2E validation)
+- Node.js 20+ and npm (for the dashboard build and local browser E2E validation)
 - Docker and Docker Compose (for packaged local deployment)
 
 ### Build
@@ -139,9 +138,10 @@ All active applications implement the `application` behaviour with:
 # Compile all Erlang applications
 rebar3 compile
 
-# Build the WebAssembly dashboard
+# Build the Next.js dashboard
 cd apps/cb_dashboard
-GOARCH=wasm GOOS=js go build -o dist/ironledger.wasm .
+npm install
+npm run build
 ```
 
 ### Run with Docker Compose
@@ -159,8 +159,6 @@ The compose setup starts:
 - a named Docker volume for Mnesia data at `/tmp/ironledger_mnesia`
 
 The dashboard image serves all required static assets locally, including:
-- `ironledger.wasm`
-- `wasm_exec.js`
 - `Google Sans Flex`
 - `Material Symbols Outlined`
 
@@ -233,9 +231,9 @@ Key configuration values:
 
 ```bash
 cd apps/cb_dashboard
-go run serve.go
+npm run dev
 
-# Dashboard available at http://localhost:8080
+# Dashboard available at http://localhost:3000 (proxies API at NEXT_PUBLIC_API_BASE)
 ```
 
 ## API Endpoints

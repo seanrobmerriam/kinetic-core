@@ -21,6 +21,12 @@ init([]) ->
           restart => permanent,
           shutdown => 5000,
           type => worker,
-          modules => [cb_reporting]}
+          modules => [cb_reporting]},
+        #{id => cb_jobs,
+          start => {cb_jobs, start_link, []},
+          restart => permanent,
+          shutdown => 5000,
+          type => worker,
+          modules => [cb_jobs]}
     ],
     {ok, {SupFlags, Children}}.

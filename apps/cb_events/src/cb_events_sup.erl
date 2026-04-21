@@ -21,6 +21,12 @@ init([]) ->
           restart => permanent,
           shutdown => 5000,
           type => worker,
-          modules => [cb_events]}
+          modules => [cb_events]},
+        #{id => cb_webhooks,
+          start => {cb_webhooks, start_link, []},
+          restart => permanent,
+          shutdown => 5000,
+          type => worker,
+          modules => [cb_webhooks]}
     ],
     {ok, {SupFlags, Children}}.

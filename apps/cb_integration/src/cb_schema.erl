@@ -143,7 +143,7 @@ table_spec(party) ->
     [
         {ram_copies, [node()]},
         {attributes, record_info(fields, party)},
-        {index, [email, status]}
+        {index, [email, status, kyc_status]}
     ];
 table_spec(account) ->
     [

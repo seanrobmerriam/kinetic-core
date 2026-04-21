@@ -7,207 +7,241 @@ import (
 	"time"
 )
 
-// renderDashboardHome renders the dashboard home view with summary cards
+// renderDashboardHome renders the dashboard home view (Baseella-inspired layout)
 func (a *App) renderDashboardHome() js.Value {
 	doc := js.Global().Get("document")
 	container := doc.Call("createElement", "div")
 	container.Set("className", "dashboard-view")
 
-	// Summary cards row
-	cardsRow := doc.Call("createElement", "div")
-	cardsRow.Set("className", "summary-cards")
+	// ── Stat strip: 4 slim metric cards ──────────────────────────────
+	strip := doc.Call("createElement", "div")
+	strip.Set("className", "stat-strip")
 
-	cards := []struct {
-		title      string
-		value      string
-		icon       string
-		colorClass string
-		stat       int
-	}{
-		{"Total Customers", "", "group", "blue", a.Stats.TotalCustomers},
-		{"Total Accounts", "", "account_balance", "green", a.Stats.TotalAccounts},
-		{"Total Balance", FormatAmount(a.Stats.TotalBalance, "USD"), "payments", "purple", 0},
-		{"Today's Transactions", "", "receipt_long", "orange", a.Stats.TodayTxns},
+	type statCard struct {
+		label string
+		value string
+		icon  string
+		color string
+	}
+	statsData := []statCard{
+		{"Total Customers", formatNumber(a.Stats.TotalCustomers), "group", "blue"},
+		{"Total Accounts", formatNumber(a.Stats.TotalAccounts), "account_balance", "green"},
+		{"Portfolio Balance", FormatAmount(a.Stats.TotalBalance, "USD"), "payments", "orange"},
+		{"Today's Transactions", formatNumber(a.Stats.TodayTxns), "receipt_long", "amber"},
 	}
 
-	for _, card := range cards {
-		cardEl := doc.Call("createElement", "div")
-		cardEl.Set("className", "summary-card")
+	for _, s := range statsData {
+		card := doc.Call("createElement", "div")
+		card.Set("className", "stat-strip-card")
 
-		cardHeader := doc.Call("createElement", "div")
-		cardHeader.Set("className", "card-header")
+		iconWrap := doc.Call("createElement", "div")
+		iconWrap.Set("className", "stat-strip-icon "+s.color)
+		iconWrap.Call("appendChild", createMaterialIcon(doc, s.icon, "icon"))
+		card.Call("appendChild", iconWrap)
 
-		iconWrapper := doc.Call("createElement", "div")
-		iconWrapper.Set("className", "card-icon "+card.colorClass)
+		body := doc.Call("createElement", "div")
+		body.Set("className", "stat-strip-body")
 
-		icon := createMaterialIcon(doc, card.icon, "icon")
-		iconWrapper.Call("appendChild", icon)
+		valEl := doc.Call("createElement", "div")
+		valEl.Set("className", "stat-strip-value")
+		valEl.Set("textContent", s.value)
+		body.Call("appendChild", valEl)
 
-		cardHeader.Call("appendChild", iconWrapper)
-		cardEl.Call("appendChild", cardHeader)
+		lblEl := doc.Call("createElement", "div")
+		lblEl.Set("className", "stat-strip-label")
+		lblEl.Set("textContent", s.label)
+		body.Call("appendChild", lblEl)
 
-		cardContent := doc.Call("createElement", "div")
-		cardContent.Set("className", "card-content")
-
-		valueEl := doc.Call("createElement", "div")
-		valueEl.Set("className", "card-value")
-		if card.stat > 0 && card.value == "" {
-			valueEl.Set("textContent", formatNumber(card.stat))
-		} else {
-			valueEl.Set("textContent", card.value)
-		}
-		cardContent.Call("appendChild", valueEl)
-
-		titleEl := doc.Call("createElement", "div")
-		titleEl.Set("className", "card-title")
-		titleEl.Set("textContent", card.title)
-		cardContent.Call("appendChild", titleEl)
-
-		cardEl.Call("appendChild", cardContent)
-		cardsRow.Call("appendChild", cardEl)
+		card.Call("appendChild", body)
+		strip.Call("appendChild", card)
 	}
+	container.Call("appendChild", strip)
 
-	container.Call("appendChild", cardsRow)
+	// ── Two-column section grid ───────────────────────────────────────
+	grid := doc.Call("createElement", "div")
+	grid.Set("className", "dashboard-section-grid")
 
-	// Two column layout for activity and quick actions
-	twoCol := doc.Call("createElement", "div")
-	twoCol.Set("className", "dashboard-two-col")
+	// ── Left: Recent Activity ─────────────────────────────────────────
+	activitySection := doc.Call("createElement", "div")
+	activitySection.Set("className", "metric-section")
 
-	// Recent Activity
-	activityCol := doc.Call("createElement", "div")
-	activityCol.Set("className", "dashboard-card")
+	actHdr := doc.Call("createElement", "div")
+	actHdr.Set("className", "section-header")
 
-	activityHeader := doc.Call("createElement", "div")
-	activityHeader.Set("className", "card-header-row")
-
-	activityTitle := doc.Call("createElement", "h3")
-	activityTitle.Set("textContent", "Recent Activity")
-	activityHeader.Call("appendChild", activityTitle)
+	actHdrLeft := doc.Call("createElement", "div")
+	actHdrLeft.Set("className", "section-header-left")
+	actIcon := doc.Call("createElement", "div")
+	actIcon.Set("className", "section-icon")
+	actIcon.Call("appendChild", createMaterialIcon(doc, "receipt_long", ""))
+	actIcon.Get("firstChild").Set("style", "font-size:14px; line-height:30px;")
+	actHdrLeft.Call("appendChild", actIcon)
+	actTitle := doc.Call("createElement", "h3")
+	actTitle.Set("className", "section-title")
+	actTitle.Set("textContent", "Recent Activity")
+	actHdrLeft.Call("appendChild", actTitle)
+	actHdr.Call("appendChild", actHdrLeft)
 
 	viewAllBtn := doc.Call("createElement", "button")
-	viewAllBtn.Set("className", "btn btn-link")
-	viewAllBtn.Set("textContent", "View All")
+	viewAllBtn.Set("className", "section-link")
+	viewAllBtn.Set("textContent", "View all ↗")
 	viewAllBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		a.CurrentView = "transactions"
 		a.ListAllTransactions(js.Value{}, nil)
 		a.Render()
 		return nil
 	}))
-	activityHeader.Call("appendChild", viewAllBtn)
+	actHdr.Call("appendChild", viewAllBtn)
+	activitySection.Call("appendChild", actHdr)
 
-	activityCol.Call("appendChild", activityHeader)
-
-	activityList := doc.Call("createElement", "div")
-	activityList.Set("className", "activity-list")
-
+	actList := doc.Call("createElement", "div")
 	if len(a.RecentActivity) == 0 {
-		emptyState := doc.Call("createElement", "div")
-		emptyState.Set("className", "empty-state")
-		emptyState.Set("textContent", "No recent activity")
-		activityList.Call("appendChild", emptyState)
+		empty := doc.Call("createElement", "div")
+		empty.Set("className", "empty-state")
+		empty.Set("textContent", "No recent activity")
+		actList.Call("appendChild", empty)
 	} else {
 		for _, item := range a.RecentActivity {
-			activityItem := doc.Call("createElement", "div")
-			activityItem.Set("className", "activity-item")
+			row := doc.Call("createElement", "div")
+			row.Set("className", "activity-row")
 
-			iconWrap := doc.Call("createElement", "div")
-			iconWrap.Set("className", "activity-icon")
-			if item.Type == "deposit" || item.Type == "credit" {
-				iconWrap.Get("classList").Call("add", "success")
+			isCredit := item.Type == "deposit" || item.Type == "credit"
+			dotClass := "neutral"
+			amtClass := ""
+			if isCredit {
+				dotClass = "credit"
+				amtClass = "credit"
 			} else if item.Type == "withdrawal" || item.Type == "debit" {
-				iconWrap.Get("classList").Call("add", "warning")
+				dotClass = "debit"
+				amtClass = "debit"
 			}
 
-			icon := doc.Call("createElement", "svg")
-			icon.Set("className", "icon-sm")
-			icon.Call("setAttribute", "fill", "none")
-			icon.Call("setAttribute", "viewBox", "0 0 24 24")
-			icon.Call("setAttribute", "stroke", "currentColor")
-			icon.Call("setAttribute", "stroke-width", "2")
-
-			path := doc.Call("createElement", "path")
-			path.Call("setAttribute", "stroke-linecap", "round")
-			path.Call("setAttribute", "stroke-linejoin", "round")
-			if item.Type == "deposit" || item.Type == "credit" {
-				path.Set("d", "M7 11l5-5m0 0l5 5m-5-5v12")
-			} else {
-				path.Set("d", "M17 13l-5 5m0 0l-5-5m5 5V6")
-			}
-			icon.Call("appendChild", path)
-			iconWrap.Call("appendChild", icon)
-
-			activityItem.Call("appendChild", iconWrap)
-
-			content := doc.Call("createElement", "div")
-			content.Set("className", "activity-content")
+			dot := doc.Call("createElement", "div")
+			dot.Set("className", "activity-dot "+dotClass)
+			row.Call("appendChild", dot)
 
 			desc := doc.Call("createElement", "div")
-			desc.Set("className", "activity-desc")
+			desc.Set("className", "activity-row-desc")
 			desc.Set("textContent", item.Description)
-			content.Call("appendChild", desc)
+			row.Call("appendChild", desc)
 
 			meta := doc.Call("createElement", "div")
-			meta.Set("className", "activity-meta")
-			meta.Set("textContent", formatTimestamp(item.Timestamp)+" • "+FormatAmount(item.Amount, item.Currency))
-			content.Call("appendChild", meta)
+			meta.Set("className", "activity-row-meta")
+			meta.Set("textContent", formatTimestamp(item.Timestamp))
+			row.Call("appendChild", meta)
 
-			activityItem.Call("appendChild", content)
-			activityList.Call("appendChild", activityItem)
+			amt := doc.Call("createElement", "div")
+			amt.Set("className", "activity-row-amount "+amtClass)
+			prefix := ""
+			if isCredit {
+				prefix = "+"
+			}
+			amt.Set("textContent", prefix+FormatAmount(item.Amount, item.Currency))
+			row.Call("appendChild", amt)
+
+			actList.Call("appendChild", row)
 		}
 	}
+	activitySection.Call("appendChild", actList)
+	grid.Call("appendChild", activitySection)
 
-	activityCol.Call("appendChild", activityList)
-	twoCol.Call("appendChild", activityCol)
+	// ── Right: Overview metrics + quick-navigate ──────────────────────
+	overviewSection := doc.Call("createElement", "div")
+	overviewSection.Set("className", "metric-section")
 
-	// Quick Actions Card
-	quickCol := doc.Call("createElement", "div")
-	quickCol.Set("className", "dashboard-card")
+	ovHdr := doc.Call("createElement", "div")
+	ovHdr.Set("className", "section-header")
+	ovHdrLeft := doc.Call("createElement", "div")
+	ovHdrLeft.Set("className", "section-header-left")
+	ovIcon := doc.Call("createElement", "div")
+	ovIcon.Set("className", "section-icon")
+	ovIcon.Call("appendChild", createMaterialIcon(doc, "bar_chart", ""))
+	ovIcon.Get("firstChild").Set("style", "font-size:14px; line-height:30px;")
+	ovHdrLeft.Call("appendChild", ovIcon)
+	ovTitle := doc.Call("createElement", "h3")
+	ovTitle.Set("className", "section-title")
+	ovTitle.Set("textContent", "Overview")
+	ovHdrLeft.Call("appendChild", ovTitle)
+	ovHdr.Call("appendChild", ovHdrLeft)
+	overviewSection.Call("appendChild", ovHdr)
 
-	quickTitle := doc.Call("createElement", "h3")
-	quickTitle.Set("textContent", "Quick Actions")
-	quickCol.Call("appendChild", quickTitle)
-
-	quickActions := []struct {
+	// Metric rows
+	type metricRow struct {
 		label string
-		desc  string
-		icon  string
-		view  string
-		color string
-	}{
-		{"New Customer", "Add a new customer to the system", "person_add", "customers", "primary"},
-		{"New Account", "Open a new account for a customer", "add_card", "accounts", "success"},
-		{"New Product", "Create savings and loan products", "inventory_2", "products", "info"},
-		{"Manage Loans", "Create, approve, disburse and repay loans", "request_quote", "loans", "warning"},
-		{"Transfer", "Transfer funds between accounts", "swap_horiz", "transfer", "info"},
-		{"View Transactions", "Browse all transactions", "receipt_long", "transactions", "warning"},
+		value string
+		delta string
+	}
+	metrics := []metricRow{
+		{"Customers", formatNumber(a.Stats.TotalCustomers), ""},
+		{"Active Accounts", formatNumber(a.Stats.TotalAccounts), ""},
+		{"Portfolio Balance", FormatAmount(a.Stats.TotalBalance, "USD"), ""},
+		{"Transactions Today", formatNumber(a.Stats.TodayTxns), ""},
 	}
 
-	quickGrid := doc.Call("createElement", "div")
-	quickGrid.Set("className", "quick-actions-grid")
+	for _, m := range metrics {
+		row := doc.Call("createElement", "div")
+		row.Set("className", "metric-row")
 
-	for _, action := range quickActions {
-		actionBtn := doc.Call("createElement", "button")
-		actionBtn.Set("className", "quick-action-card")
+		lbl := doc.Call("createElement", "div")
+		lbl.Set("className", "metric-label")
+		lbl.Set("textContent", m.label)
+		row.Call("appendChild", lbl)
 
-		actionIcon := doc.Call("createElement", "div")
-		actionIcon.Set("className", "action-icon "+action.color)
+		valGroup := doc.Call("createElement", "div")
+		valGroup.Set("className", "metric-value-group")
 
-		actionIcon.Call("appendChild", createMaterialIcon(doc, action.icon, "icon"))
+		val := doc.Call("createElement", "div")
+		val.Set("className", "metric-value")
+		val.Set("textContent", m.value)
+		valGroup.Call("appendChild", val)
 
-		actionLabel := doc.Call("createElement", "div")
-		actionLabel.Set("className", "action-label")
-		actionLabel.Set("textContent", action.label)
+		if m.delta != "" {
+			delta := doc.Call("createElement", "div")
+			delta.Set("className", "metric-delta positive")
+			delta.Set("textContent", m.delta)
+			valGroup.Call("appendChild", delta)
+		}
 
-		actionDesc := doc.Call("createElement", "div")
-		actionDesc.Set("className", "action-desc")
-		actionDesc.Set("textContent", action.desc)
+		row.Call("appendChild", valGroup)
+		overviewSection.Call("appendChild", row)
+	}
 
-		actionBtn.Call("appendChild", actionIcon)
-		actionBtn.Call("appendChild", actionLabel)
-		actionBtn.Call("appendChild", actionDesc)
+	// Navigate shortcuts
+	navHdr := doc.Call("createElement", "div")
+	navHdr.Set("style", "margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border-light);")
+	navLabel := doc.Call("createElement", "div")
+	navLabel.Set("style", "font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 10px;")
+	navLabel.Set("textContent", "Quick Navigate")
+	navHdr.Call("appendChild", navLabel)
 
-		viewName := action.view
-		actionBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	shortcuts := []struct {
+		label string
+		view  string
+		icon  string
+	}{
+		{"Customers", "customers", "group"},
+		{"Accounts", "accounts", "account_balance"},
+		{"Products", "products", "inventory_2"},
+		{"Loans", "loans", "request_quote"},
+	}
+
+	shortcutGrid := doc.Call("createElement", "div")
+	shortcutGrid.Set("style", "display: grid; grid-template-columns: 1fr 1fr; gap: 6px;")
+
+	for _, sc := range shortcuts {
+		scBtn := doc.Call("createElement", "button")
+		scBtn.Set("style", "display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--color-border-light); border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.82rem; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; transition: all 120ms;")
+		scBtn.Set("onmouseover", "this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)';")
+		scBtn.Set("onmouseout", "this.style.borderColor='var(--color-border)'; this.style.color='var(--color-text-secondary)';")
+
+		scBtn.Call("appendChild", createMaterialIcon(doc, sc.icon, ""))
+		scBtn.Get("firstChild").Set("style", "font-size: 15px;")
+
+		scLabel := doc.Call("createElement", "span")
+		scLabel.Set("textContent", sc.label)
+		scBtn.Call("appendChild", scLabel)
+
+		viewName := sc.view
+		scBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			a.CurrentView = viewName
 			a.Error = ""
 			a.Success = ""
@@ -216,8 +250,6 @@ func (a *App) renderDashboardHome() js.Value {
 			} else if viewName == "accounts" {
 				a.ListParties(js.Value{}, nil)
 				a.ListAllAccounts(js.Value{}, nil)
-			} else if viewName == "transactions" {
-				a.ListAllTransactions(js.Value{}, nil)
 			} else if viewName == "products" {
 				a.ListSavingsProducts(js.Value{}, nil)
 				a.ListLoanProducts(js.Value{}, nil)
@@ -230,14 +262,14 @@ func (a *App) renderDashboardHome() js.Value {
 			a.Render()
 			return nil
 		}))
-
-		quickGrid.Call("appendChild", actionBtn)
+		shortcutGrid.Call("appendChild", scBtn)
 	}
 
-	quickCol.Call("appendChild", quickGrid)
-	twoCol.Call("appendChild", quickCol)
+	navHdr.Call("appendChild", shortcutGrid)
+	overviewSection.Call("appendChild", navHdr)
 
-	container.Call("appendChild", twoCol)
+	grid.Call("appendChild", overviewSection)
+	container.Call("appendChild", grid)
 
 	return container
 }
@@ -248,32 +280,51 @@ func (a *App) renderCustomersView() js.Value {
 	container := doc.Call("createElement", "div")
 	container.Set("className", "customers-view")
 
-	// Toolbar
-	toolbar := doc.Call("createElement", "div")
-	toolbar.Set("className", "view-toolbar")
+	// ── Search & Filter Panel ─────────────────────────────────────────
+	filterPanel := doc.Call("createElement", "div")
+	filterPanel.Set("className", "customers-filter-panel")
 
-	// Search
+	filterPanelHeader := doc.Call("createElement", "div")
+	filterPanelHeader.Set("className", "customers-filter-header")
+
+	filterTitle := doc.Call("createElement", "div")
+	filterTitle.Set("className", "customers-filter-title")
+	filterTitle.Call("appendChild", createMaterialIcon(doc, "search", ""))
+	filterTitle.Get("lastChild").Set("style", "font-size: 16px; color: var(--color-text-muted);")
+	filterTitleText := doc.Call("createElement", "span")
+	filterTitleText.Set("textContent", "Search & Filter")
+	filterTitle.Call("appendChild", filterTitleText)
+	filterPanelHeader.Call("appendChild", filterTitle)
+
+	addBtn := doc.Call("createElement", "button")
+	addBtn.Set("className", "btn btn-primary")
+	addBtnIcon := createMaterialIcon(doc, "person_add", "")
+	addBtnIcon.Set("style", "font-size: 16px; margin-right: 6px;")
+	addBtn.Call("appendChild", addBtnIcon)
+	addBtnLabel := doc.Call("createElement", "span")
+	addBtnLabel.Set("textContent", "New Customer")
+	addBtn.Call("appendChild", addBtnLabel)
+	addBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.ShowNewCustomerForm = !a.ShowNewCustomerForm
+		a.Render()
+		return nil
+	}))
+	filterPanelHeader.Call("appendChild", addBtn)
+	filterPanel.Call("appendChild", filterPanelHeader)
+
+	// Search row
+	filterRow := doc.Call("createElement", "div")
+	filterRow.Set("className", "customers-filter-row")
+
+	// Search input
 	searchWrapper := doc.Call("createElement", "div")
-	searchWrapper.Set("className", "search-wrapper")
-
-	searchIcon := doc.Call("createElement", "svg")
-	searchIcon.Set("className", "search-icon")
-	searchIcon.Call("setAttribute", "fill", "none")
-	searchIcon.Call("setAttribute", "viewBox", "0 0 24 24")
-	searchIcon.Call("setAttribute", "stroke", "currentColor")
-	searchIcon.Call("setAttribute", "stroke-width", "2")
-
-	searchPath := doc.Call("createElement", "path")
-	searchPath.Call("setAttribute", "stroke-linecap", "round")
-	searchPath.Call("setAttribute", "stroke-linejoin", "round")
-	searchPath.Set("d", "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z")
-	searchIcon.Call("appendChild", searchPath)
+	searchWrapper.Set("className", "search-wrapper customers-search")
+	searchIcon := createMaterialIcon(doc, "search", "search-icon")
 	searchWrapper.Call("appendChild", searchIcon)
-
 	searchInput := doc.Call("createElement", "input")
 	searchInput.Set("type", "text")
 	searchInput.Set("className", "search-input")
-	searchInput.Set("placeholder", "Search customers...")
+	searchInput.Set("placeholder", "Search by name or email…")
 	searchInput.Set("value", a.SearchQuery)
 	searchInput.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		a.SearchQuery = this.Get("value").String()
@@ -281,145 +332,242 @@ func (a *App) renderCustomersView() js.Value {
 		return nil
 	}))
 	searchWrapper.Call("appendChild", searchInput)
+	filterRow.Call("appendChild", searchWrapper)
 
-	toolbar.Call("appendChild", searchWrapper)
+	// Status filter chips
+	chipGroup := doc.Call("createElement", "div")
+	chipGroup.Set("className", "filter-chip-group")
 
-	// Add customer button
-	addBtn := doc.Call("createElement", "button")
-	addBtn.Set("className", "btn btn-primary")
-	addBtn.Set("textContent", "Add Customer")
-	toolbar.Call("appendChild", addBtn)
-
-	container.Call("appendChild", toolbar)
-
-	// Customer form (collapsible)
-	formCard := doc.Call("createElement", "div")
-	formCard.Set("className", "form-card")
-
-	formTitle := doc.Call("createElement", "h3")
-	formTitle.Set("textContent", "New Customer")
-	formCard.Call("appendChild", formTitle)
-
-	formGrid := doc.Call("createElement", "div")
-	formGrid.Set("className", "form-grid")
-
-	nameInput := doc.Call("createElement", "input")
-	nameInput.Set("type", "text")
-	nameInput.Set("id", "customer-name")
-	nameInput.Set("placeholder", "Full Name")
-	nameInput.Set("className", "form-input")
-	formGrid.Call("appendChild", nameInput)
-
-	emailInput := doc.Call("createElement", "input")
-	emailInput.Set("type", "email")
-	emailInput.Set("id", "customer-email")
-	emailInput.Set("placeholder", "Email Address")
-	emailInput.Set("className", "form-input")
-	formGrid.Call("appendChild", emailInput)
-
-	formCard.Call("appendChild", formGrid)
-
-	formActions := doc.Call("createElement", "div")
-	formActions.Set("className", "form-actions")
-
-	saveBtn := doc.Call("createElement", "button")
-	saveBtn.Set("id", "create-customer-button")
-	saveBtn.Set("className", "btn btn-primary")
-	saveBtn.Set("textContent", "Create Customer")
-	saveBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		name := doc.Call("getElementById", "customer-name").Get("value").String()
-		email := doc.Call("getElementById", "customer-email").Get("value").String()
-		if name != "" && email != "" {
-			a.CreateParty(js.Value{}, []js.Value{js.ValueOf(name), js.ValueOf(email)})
-		}
-		return nil
-	}))
-	formActions.Call("appendChild", saveBtn)
-
-	formCard.Call("appendChild", formActions)
-	container.Call("appendChild", formCard)
-
-	// Filtered parties
-	filteredParties := a.filterParties(a.SearchQuery)
-
-	// Customers table
-	table := doc.Call("createElement", "table")
-	table.Set("className", "data-table")
-
-	thead := doc.Call("createElement", "thead")
-	theadRow := doc.Call("createElement", "tr")
-	headers := []string{"Name", "Email", "Status", "Created", "Actions"}
-	for _, h := range headers {
-		th := doc.Call("createElement", "th")
-		th.Set("textContent", h)
-		theadRow.Call("appendChild", th)
+	statuses := []struct{ label, value string }{
+		{"All", ""},
+		{"Active", "active"},
+		{"Suspended", "suspended"},
+		{"Closed", "closed"},
 	}
-	thead.Call("appendChild", theadRow)
-	table.Call("appendChild", thead)
-
-	tbody := doc.Call("createElement", "tbody")
-
-	for _, party := range filteredParties {
-		row := doc.Call("createElement", "tr")
-
-		nameCell := doc.Call("createElement", "td")
-		nameCell.Set("className", "cell-primary")
-		nameCell.Set("textContent", party.FullName)
-		row.Call("appendChild", nameCell)
-
-		emailCell := doc.Call("createElement", "td")
-		emailCell.Set("textContent", party.Email)
-		row.Call("appendChild", emailCell)
-
-		statusCell := doc.Call("createElement", "td")
-		statusBadge := doc.Call("createElement", "span")
-		statusBadge.Set("className", "status-badge "+party.Status)
-		statusBadge.Set("textContent", capitalize(party.Status))
-		statusCell.Call("appendChild", statusBadge)
-		row.Call("appendChild", statusCell)
-
-		dateCell := doc.Call("createElement", "td")
-		dateCell.Set("textContent", formatDate(party.CreatedAt))
-		row.Call("appendChild", dateCell)
-
-		actionsCell := doc.Call("createElement", "td")
-
-		viewBtn := doc.Call("createElement", "button")
-		viewBtn.Set("className", "btn btn-sm btn-ghost")
-		viewBtn.Set("textContent", "View")
-		p := party
-		viewBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.SelectedParty = &p
-			a.CurrentView = "accounts"
-			a.ListAccounts(js.Value{}, []js.Value{js.ValueOf(p.PartyID)})
+	for _, s := range statuses {
+		chip := doc.Call("createElement", "button")
+		cls := "filter-chip"
+		if a.FilterStatus == s.value {
+			cls += " active"
+		}
+		chip.Set("className", cls)
+		chip.Set("textContent", s.label)
+		val := s.value
+		chip.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			a.FilterStatus = val
 			a.Render()
 			return nil
 		}))
-		actionsCell.Call("appendChild", viewBtn)
+		chipGroup.Call("appendChild", chip)
+	}
+	filterRow.Call("appendChild", chipGroup)
+	filterPanel.Call("appendChild", filterRow)
 
-		if party.Status == "active" {
-			actionsCell.Call("appendChild", a.createActionButton("Suspend", "warning", func() {
-				a.SuspendParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
-			}))
-		}
+	// Inline new customer form (shown when toggled)
+	if a.ShowNewCustomerForm {
+		formRow := doc.Call("createElement", "div")
+		formRow.Set("className", "customers-inline-form")
 
-		actionsCell.Call("appendChild", a.createActionButton("Close", "danger", func() {
-			a.CloseParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
+		formLabel := doc.Call("createElement", "div")
+		formLabel.Set("className", "customers-inline-form-label")
+		formLabel.Set("textContent", "New Customer")
+		formRow.Call("appendChild", formLabel)
+
+		formFields := doc.Call("createElement", "div")
+		formFields.Set("className", "customers-inline-form-fields")
+
+		nameInput := doc.Call("createElement", "input")
+		nameInput.Set("type", "text")
+		nameInput.Set("id", "customer-name")
+		nameInput.Set("placeholder", "Full Name")
+		nameInput.Set("className", "form-input")
+		formFields.Call("appendChild", nameInput)
+
+		emailInput := doc.Call("createElement", "input")
+		emailInput.Set("type", "email")
+		emailInput.Set("id", "customer-email")
+		emailInput.Set("placeholder", "Email Address")
+		emailInput.Set("className", "form-input")
+		formFields.Call("appendChild", emailInput)
+
+		saveBtn := doc.Call("createElement", "button")
+		saveBtn.Set("id", "create-customer-button")
+		saveBtn.Set("className", "btn btn-primary")
+		saveBtn.Set("textContent", "Create")
+		saveBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			name := doc.Call("getElementById", "customer-name").Get("value").String()
+			email := doc.Call("getElementById", "customer-email").Get("value").String()
+			if name == "" || email == "" {
+				a.Error = "Name and email are required"
+				a.Render()
+				return nil
+			}
+			a.ShowNewCustomerForm = false
+			a.CreateParty(js.Value{}, []js.Value{js.ValueOf(name), js.ValueOf(email)})
+			return nil
 		}))
+		formFields.Call("appendChild", saveBtn)
 
-		row.Call("appendChild", actionsCell)
-		tbody.Call("appendChild", row)
+		cancelBtn := doc.Call("createElement", "button")
+		cancelBtn.Set("className", "btn btn-ghost")
+		cancelBtn.Set("textContent", "Cancel")
+		cancelBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			a.ShowNewCustomerForm = false
+			a.Render()
+			return nil
+		}))
+		formFields.Call("appendChild", cancelBtn)
+
+		formRow.Call("appendChild", formFields)
+		filterPanel.Call("appendChild", formRow)
 	}
 
-	table.Call("appendChild", tbody)
-	container.Call("appendChild", table)
+	container.Call("appendChild", filterPanel)
 
-	// Empty state
+	// ── Results Panel ─────────────────────────────────────────────────
+	resultsPanel := doc.Call("createElement", "div")
+	resultsPanel.Set("className", "customers-results-panel")
+
+	// Apply both search and status filter
+	filteredParties := a.filterPartiesWithStatus(a.SearchQuery, a.FilterStatus)
+
+	// Results header
+	resultsHeader := doc.Call("createElement", "div")
+	resultsHeader.Set("className", "customers-results-header")
+
+	countLabel := doc.Call("createElement", "div")
+	countLabel.Set("className", "customers-results-count")
+	countText := "All customers"
+	if a.SearchQuery != "" || a.FilterStatus != "" {
+		countText = formatNumber(len(filteredParties)) + " result"
+		if len(filteredParties) != 1 {
+			countText += "s"
+		}
+	} else {
+		countText = formatNumber(len(filteredParties)) + " customer"
+		if len(filteredParties) != 1 {
+			countText += "s"
+		}
+	}
+	countLabel.Set("textContent", countText)
+	resultsHeader.Call("appendChild", countLabel)
+	resultsPanel.Call("appendChild", resultsHeader)
+
 	if len(filteredParties) == 0 {
 		empty := doc.Call("createElement", "div")
 		empty.Set("className", "empty-state-large")
-		empty.Set("textContent", "No customers found")
-		container.Call("appendChild", empty)
+		emptyIcon := createMaterialIcon(doc, "person_search", "")
+		emptyIcon.Set("style", "font-size: 36px; color: var(--color-text-muted); display: block; margin-bottom: 8px;")
+		empty.Call("appendChild", emptyIcon)
+		emptyMsg := doc.Call("createElement", "div")
+		if a.SearchQuery != "" || a.FilterStatus != "" {
+			emptyMsg.Set("textContent", "No customers match your search")
+		} else {
+			emptyMsg.Set("textContent", "No customers yet — add your first customer above")
+		}
+		empty.Call("appendChild", emptyMsg)
+		resultsPanel.Call("appendChild", empty)
+	} else {
+		table := doc.Call("createElement", "table")
+		table.Set("className", "data-table")
+
+		thead := doc.Call("createElement", "thead")
+		theadRow := doc.Call("createElement", "tr")
+		headers := []string{"Name", "Email", "Status", "KYC", "Created", "Actions"}
+		for _, h := range headers {
+			th := doc.Call("createElement", "th")
+			th.Set("textContent", h)
+			theadRow.Call("appendChild", th)
+		}
+		thead.Call("appendChild", theadRow)
+		table.Call("appendChild", thead)
+
+		tbody := doc.Call("createElement", "tbody")
+
+		for _, party := range filteredParties {
+			row := doc.Call("createElement", "tr")
+
+			nameCell := doc.Call("createElement", "td")
+			nameCell.Set("className", "cell-primary")
+			nameCell.Set("textContent", party.FullName)
+			row.Call("appendChild", nameCell)
+
+			emailCell := doc.Call("createElement", "td")
+			emailCell.Set("textContent", party.Email)
+			row.Call("appendChild", emailCell)
+
+			statusCell := doc.Call("createElement", "td")
+			statusBadge := doc.Call("createElement", "span")
+			statusBadge.Set("className", "status-badge "+party.Status)
+			statusBadge.Set("textContent", capitalize(party.Status))
+			statusCell.Call("appendChild", statusBadge)
+			row.Call("appendChild", statusCell)
+
+			kycCell := doc.Call("createElement", "td")
+			kycBadge := doc.Call("createElement", "span")
+			kycStatus := party.KycStatus
+			if kycStatus == "" {
+				kycStatus = "not_started"
+			}
+			kycBadge.Set("className", "status-badge kyc-"+kycStatus)
+			kycBadge.Set("textContent", kycStatusLabel(kycStatus))
+			kycCell.Call("appendChild", kycBadge)
+			row.Call("appendChild", kycCell)
+
+			dateCell := doc.Call("createElement", "td")
+			dateCell.Set("textContent", formatDate(party.CreatedAt))
+			row.Call("appendChild", dateCell)
+
+			actionsCell := doc.Call("createElement", "td")
+
+			viewBtn := doc.Call("createElement", "button")
+			viewBtn.Set("className", "btn btn-sm btn-ghost")
+			viewBtn.Set("textContent", "View")
+			p := party
+			viewBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.SelectedParty = &p
+				a.CurrentView = "accounts"
+				a.ListAccounts(js.Value{}, []js.Value{js.ValueOf(p.PartyID)})
+				a.Render()
+				return nil
+			}))
+			actionsCell.Call("appendChild", viewBtn)
+
+			kycBtn := doc.Call("createElement", "button")
+			kycBtn.Set("className", "btn btn-sm btn-outline")
+			kycBtn.Set("textContent", "KYC")
+			pk := party
+			kycBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.SelectedKycParty = &pk
+				a.ShowKycPanel = true
+				a.Render()
+				return nil
+			}))
+			actionsCell.Call("appendChild", kycBtn)
+
+			if party.Status == "active" {
+				actionsCell.Call("appendChild", a.createActionButton("Suspend", "warning", func() {
+					a.SuspendParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
+				}))
+			}
+
+			actionsCell.Call("appendChild", a.createActionButton("Close", "danger", func() {
+				a.CloseParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
+			}))
+
+			row.Call("appendChild", actionsCell)
+			tbody.Call("appendChild", row)
+		}
+
+		table.Call("appendChild", tbody)
+		resultsPanel.Call("appendChild", table)
+	}
+
+	container.Call("appendChild", resultsPanel)
+
+	// KYC Management Panel (shown when a party is selected for KYC)
+	if a.ShowKycPanel && a.SelectedKycParty != nil {
+		container.Call("appendChild", a.renderKycPanel(doc))
 	}
 
 	return container
@@ -705,7 +853,7 @@ func (a *App) renderAccountDetailView() js.Value {
 	accountID.Set("textContent", "Account ID: "+account.AccountID)
 	headerCard.Call("appendChild", accountID)
 
-	headerCard.Call("appendChild", container)
+	container.Call("appendChild", headerCard)
 
 	// Stats row
 	statsRow := doc.Call("createElement", "div")
@@ -995,10 +1143,198 @@ func (a *App) renderAccountDetailView() js.Value {
 
 	container.Call("appendChild", holdsSection)
 
+	// Statement Section
+	stmtSection := doc.Call("createElement", "div")
+	stmtSection.Set("className", "detail-section statement-section")
+
+	stmtTitleRow := doc.Call("createElement", "div")
+	stmtTitleRow.Set("className", "card-header-row")
+	stmtTitle := doc.Call("createElement", "h3")
+	stmtTitle.Set("textContent", "Account Statement")
+	stmtTitleRow.Call("appendChild", stmtTitle)
+
+	exportBtn := doc.Call("createElement", "button")
+	exportBtn.Set("className", "btn btn-ghost btn-sm")
+	exportBtn.Set("textContent", "⬇ Export CSV")
+	exportBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.DownloadCSVExport(js.Value{}, []js.Value{
+			js.ValueOf("transactions"),
+			js.ValueOf(account.AccountID),
+		})
+		return nil
+	}))
+	stmtTitleRow.Call("appendChild", exportBtn)
+	stmtSection.Call("appendChild", stmtTitleRow)
+
+	// Date range filter row
+	filterRow := doc.Call("createElement", "div")
+	filterRow.Set("className", "stmt-filter-row")
+
+	fromLabel := doc.Call("createElement", "label")
+	fromLabel.Set("textContent", "From")
+	fromLabel.Set("className", "stmt-date-label")
+	filterRow.Call("appendChild", fromLabel)
+	fromInput := doc.Call("createElement", "input")
+	fromInput.Set("type", "date")
+	fromInput.Set("className", "input-field stmt-date-input")
+	fromInput.Set("value", a.StatementFromDate)
+	fromInput.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.StatementFromDate = fromInput.Get("value").String()
+		return nil
+	}))
+	filterRow.Call("appendChild", fromInput)
+
+	toLabel := doc.Call("createElement", "label")
+	toLabel.Set("textContent", "To")
+	toLabel.Set("className", "stmt-date-label")
+	filterRow.Call("appendChild", toLabel)
+	toInput := doc.Call("createElement", "input")
+	toInput.Set("type", "date")
+	toInput.Set("className", "input-field stmt-date-input")
+	toInput.Set("value", a.StatementToDate)
+	toInput.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.StatementToDate = toInput.Get("value").String()
+		return nil
+	}))
+	filterRow.Call("appendChild", toInput)
+
+	genBtn := doc.Call("createElement", "button")
+	genBtn.Set("className", "btn btn-primary btn-sm")
+	genBtn.Set("textContent", "Generate")
+	genBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		fromMs := int64(0)
+		toMs := int64(0)
+		if a.StatementFromDate != "" {
+			fromMs = dateStringToMs(a.StatementFromDate)
+		}
+		if a.StatementToDate != "" {
+			toMs = dateStringToEndOfDayMs(a.StatementToDate)
+		}
+		a.FetchStatement(js.Value{}, []js.Value{
+			js.ValueOf(account.AccountID),
+			js.ValueOf(int(fromMs)),
+			js.ValueOf(int(toMs)),
+		})
+		return nil
+	}))
+	filterRow.Call("appendChild", genBtn)
+	stmtSection.Call("appendChild", filterRow)
+
+	// Statement results
+	if a.AccountStatement != nil && a.AccountStatement.AccountID == account.AccountID {
+		stmt := a.AccountStatement
+
+		// Summary row
+		summaryRow := doc.Call("createElement", "div")
+		summaryRow.Set("className", "stmt-summary-row")
+
+		openCard := doc.Call("createElement", "div")
+		openCard.Set("className", "stmt-summary-card")
+		openLbl := doc.Call("createElement", "div")
+		openLbl.Set("className", "stat-label")
+		openLbl.Set("textContent", "Opening Balance")
+		openVal := doc.Call("createElement", "div")
+		openVal.Set("className", "stat-value")
+		openVal.Set("textContent", FormatAmount(stmt.OpeningBalance, stmt.Currency))
+		openCard.Call("appendChild", openLbl)
+		openCard.Call("appendChild", openVal)
+		summaryRow.Call("appendChild", openCard)
+
+		closeCard := doc.Call("createElement", "div")
+		closeCard.Set("className", "stmt-summary-card")
+		closeLbl := doc.Call("createElement", "div")
+		closeLbl.Set("className", "stat-label")
+		closeLbl.Set("textContent", "Closing Balance")
+		closeVal := doc.Call("createElement", "div")
+		closeVal.Set("className", "stat-value")
+		closeVal.Set("textContent", FormatAmount(stmt.ClosingBalance, stmt.Currency))
+		closeCard.Call("appendChild", closeLbl)
+		closeCard.Call("appendChild", closeVal)
+		summaryRow.Call("appendChild", closeCard)
+
+		totalCard := doc.Call("createElement", "div")
+		totalCard.Set("className", "stmt-summary-card")
+		totalLbl := doc.Call("createElement", "div")
+		totalLbl.Set("className", "stat-label")
+		totalLbl.Set("textContent", "Total Entries")
+		totalVal := doc.Call("createElement", "div")
+		totalVal.Set("className", "stat-value")
+		totalVal.Set("textContent", fmt.Sprintf("%d", stmt.Total))
+		totalCard.Call("appendChild", totalLbl)
+		totalCard.Call("appendChild", totalVal)
+		summaryRow.Call("appendChild", totalCard)
+
+		stmtSection.Call("appendChild", summaryRow)
+
+		if len(stmt.Entries) == 0 {
+			emptyStmt := doc.Call("createElement", "div")
+			emptyStmt.Set("className", "empty-state")
+			emptyStmt.Set("textContent", "No entries for the selected period")
+			stmtSection.Call("appendChild", emptyStmt)
+		} else {
+			stmtTable := doc.Call("createElement", "table")
+			stmtTable.Set("className", "data-table stmt-table")
+
+			stmtThead := doc.Call("createElement", "thead")
+			stmtTr := doc.Call("createElement", "tr")
+			for _, h := range []string{"Date", "Description", "Type", "Amount", "Running Balance"} {
+				th := doc.Call("createElement", "th")
+				th.Set("textContent", h)
+				stmtTr.Call("appendChild", th)
+			}
+			stmtThead.Call("appendChild", stmtTr)
+			stmtTable.Call("appendChild", stmtThead)
+
+			stmtTbody := doc.Call("createElement", "tbody")
+			for _, entry := range stmt.Entries {
+				row := doc.Call("createElement", "tr")
+
+				dateCell := doc.Call("createElement", "td")
+				dateCell.Set("textContent", formatTimestamp(entry.PostedAt))
+				row.Call("appendChild", dateCell)
+
+				descCell := doc.Call("createElement", "td")
+				descCell.Set("textContent", entry.Description)
+				row.Call("appendChild", descCell)
+
+				typeCell := doc.Call("createElement", "td")
+				typeBadge := doc.Call("createElement", "span")
+				typeBadge.Set("className", "type-badge "+entry.EntryType)
+				typeBadge.Set("textContent", capitalize(entry.EntryType))
+				typeCell.Call("appendChild", typeBadge)
+				row.Call("appendChild", typeCell)
+
+				amtCls := "cell-balance debit"
+				if entry.EntryType == "credit" {
+					amtCls = "cell-balance credit"
+				}
+				amtCell := doc.Call("createElement", "td")
+				amtCell.Set("className", amtCls)
+				prefix := "-"
+				if entry.EntryType == "credit" {
+					prefix = "+"
+				}
+				amtCell.Set("textContent", prefix+FormatAmount(entry.Amount, stmt.Currency))
+				row.Call("appendChild", amtCell)
+
+				balCell := doc.Call("createElement", "td")
+				balCell.Set("className", "cell-balance")
+				balCell.Set("textContent", FormatAmount(entry.RunningBalance, stmt.Currency))
+				row.Call("appendChild", balCell)
+
+				stmtTbody.Call("appendChild", row)
+			}
+			stmtTable.Call("appendChild", stmtTbody)
+			stmtSection.Call("appendChild", stmtTable)
+		}
+	}
+
+	container.Call("appendChild", stmtSection)
+
 	return container
 }
 
-// renderTransactionsListView renders the transactions list view
+
 func (a *App) renderTransactionsListView() js.Value {
 	doc := js.Global().Get("document")
 	container := doc.Call("createElement", "div")
@@ -2273,6 +2609,20 @@ func (a *App) filterParties(query string) []Party {
 	return filtered
 }
 
+func (a *App) filterPartiesWithStatus(query string, status string) []Party {
+	var filtered []Party
+	lowerQuery := toLower(query)
+	for _, p := range a.Parties {
+		if status != "" && p.Status != status {
+			continue
+		}
+		if query == "" || contains(toLower(p.FullName), lowerQuery) || contains(toLower(p.Email), lowerQuery) {
+			filtered = append(filtered, p)
+		}
+	}
+	return filtered
+}
+
 func (a *App) filterAccounts(query string, status string) []Account {
 	var filtered []Account
 	for _, acc := range a.Accounts {
@@ -2421,4 +2771,195 @@ func formatDate(ts int64) string {
 	}
 	t := time.Unix(ts/1000, 0)
 	return t.Format("2006-01-02")
+}
+
+// dateStringToMs converts "2006-01-02" to Unix milliseconds at start of day (UTC).
+func dateStringToMs(dateStr string) int64 {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return 0
+	}
+	return t.UnixMilli()
+}
+
+// dateStringToEndOfDayMs converts "2006-01-02" to Unix milliseconds at 23:59:59 UTC.
+func dateStringToEndOfDayMs(dateStr string) int64 {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return 0
+	}
+	return t.Add(24*time.Hour - time.Millisecond).UnixMilli()
+}
+
+// kycStatusLabel returns a human-readable label for a KYC status string
+func kycStatusLabel(status string) string {
+switch status {
+case "not_started":
+return "Not Started"
+case "pending":
+return "Pending Review"
+case "approved":
+return "Approved"
+case "rejected":
+return "Rejected"
+default:
+return capitalize(status)
+}
+}
+
+// renderKycPanel renders the KYC management overlay panel for a selected party
+func (a *App) renderKycPanel(doc js.Value) js.Value {
+party := a.SelectedKycParty
+overlay := doc.Call("createElement", "div")
+overlay.Set("className", "kyc-panel-overlay")
+
+panel := doc.Call("createElement", "div")
+panel.Set("className", "kyc-panel")
+
+// Header
+header := doc.Call("createElement", "div")
+header.Set("className", "kyc-panel-header")
+
+title := doc.Call("createElement", "h3")
+title.Set("textContent", "KYC Management — "+party.FullName)
+header.Call("appendChild", title)
+
+closeBtn := doc.Call("createElement", "button")
+closeBtn.Set("className", "btn btn-ghost kyc-close-btn")
+closeBtn.Set("textContent", "✕")
+closeBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+a.ShowKycPanel = false
+a.SelectedKycParty = nil
+a.Render()
+return nil
+}))
+header.Call("appendChild", closeBtn)
+panel.Call("appendChild", header)
+
+// Current status row
+statusRow := doc.Call("createElement", "div")
+statusRow.Set("className", "kyc-status-row")
+
+kycLabel := doc.Call("createElement", "span")
+kycLabel.Set("className", "kyc-field-label")
+kycLabel.Set("textContent", "KYC Status:")
+statusRow.Call("appendChild", kycLabel)
+
+kycBadge := doc.Call("createElement", "span")
+ks := party.KycStatus
+if ks == "" {
+ks = "not_started"
+}
+kycBadge.Set("className", "status-badge kyc-"+ks)
+kycBadge.Set("textContent", kycStatusLabel(ks))
+statusRow.Call("appendChild", kycBadge)
+
+onbLabel := doc.Call("createElement", "span")
+onbLabel.Set("className", "kyc-field-label")
+onbLabel.Set("style", "margin-left: 16px;")
+onbLabel.Set("textContent", "Onboarding:")
+statusRow.Call("appendChild", onbLabel)
+
+onbBadge := doc.Call("createElement", "span")
+obs := party.OnboardingStatus
+if obs == "" {
+obs = "incomplete"
+}
+onbBadge.Set("className", "status-badge onb-"+obs)
+onbBadge.Set("textContent", capitalize(obs))
+statusRow.Call("appendChild", onbBadge)
+panel.Call("appendChild", statusRow)
+
+// Review notes display
+if party.ReviewNotes != "" {
+notesDisplay := doc.Call("createElement", "div")
+notesDisplay.Set("className", "kyc-notes-display")
+notesLbl := doc.Call("createElement", "span")
+notesLbl.Set("className", "kyc-field-label")
+notesLbl.Set("textContent", "Last Review Notes: ")
+notesDisplay.Call("appendChild", notesLbl)
+notesText := doc.Call("createElement", "span")
+notesText.Set("textContent", party.ReviewNotes)
+notesDisplay.Call("appendChild", notesText)
+panel.Call("appendChild", notesDisplay)
+}
+
+// Doc refs
+if len(party.DocRefs) > 0 {
+docsDiv := doc.Call("createElement", "div")
+docsDiv.Set("className", "kyc-docs-list")
+docsLbl := doc.Call("createElement", "div")
+docsLbl.Set("className", "kyc-field-label")
+docsLbl.Set("textContent", "Document References:")
+docsDiv.Call("appendChild", docsLbl)
+for _, ref := range party.DocRefs {
+refItem := doc.Call("createElement", "div")
+refItem.Set("className", "kyc-doc-ref")
+refItem.Set("textContent", ref)
+docsDiv.Call("appendChild", refItem)
+}
+panel.Call("appendChild", docsDiv)
+}
+
+// Divider
+divider := doc.Call("createElement", "hr")
+divider.Set("className", "kyc-divider")
+panel.Call("appendChild", divider)
+
+// Update KYC status form
+formTitle := doc.Call("createElement", "div")
+formTitle.Set("className", "kyc-form-title")
+formTitle.Set("textContent", "Update KYC Status")
+panel.Call("appendChild", formTitle)
+
+formRow := doc.Call("createElement", "div")
+formRow.Set("className", "kyc-form-row")
+
+kycSelect := doc.Call("createElement", "select")
+kycSelect.Set("id", "kyc-status-select")
+kycSelect.Set("className", "form-select kyc-select")
+statuses := []struct{ val, label string }{
+{"not_started", "Not Started"},
+{"pending", "Pending Review"},
+{"approved", "Approved"},
+{"rejected", "Rejected"},
+}
+for _, s := range statuses {
+opt := doc.Call("createElement", "option")
+opt.Set("value", s.val)
+opt.Set("textContent", s.label)
+if s.val == ks {
+opt.Set("selected", true)
+}
+kycSelect.Call("appendChild", opt)
+}
+formRow.Call("appendChild", kycSelect)
+panel.Call("appendChild", formRow)
+
+notesInput := doc.Call("createElement", "textarea")
+notesInput.Set("id", "kyc-notes-input")
+notesInput.Set("className", "form-textarea kyc-notes-input")
+notesInput.Set("placeholder", "Review notes (optional for approved; required for rejected)")
+notesInput.Set("rows", 3)
+notesInput.Set("value", party.ReviewNotes)
+panel.Call("appendChild", notesInput)
+
+updateBtn := doc.Call("createElement", "button")
+	updateBtn.Set("className", "btn btn-primary kyc-update-btn")
+	updateBtn.Set("textContent", "Update KYC Status")
+	updateBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		selectedStatus := doc.Call("getElementById", "kyc-status-select").Get("value").String()
+		notes := doc.Call("getElementById", "kyc-notes-input").Get("value").String()
+		pid := party.PartyID
+		go func() {
+			a.UpdateKycStatus(pid, selectedStatus, notes)
+			a.FetchParty(pid)
+			a.Render()
+		}()
+		return nil
+	}))
+	panel.Call("appendChild", updateBtn)
+
+overlay.Call("appendChild", panel)
+return overlay
 }

@@ -68,6 +68,10 @@ party_to_json(Party) ->
         full_name => Party#party.full_name,
         email => Party#party.email,
         status => Party#party.status,
+        kyc_status => Party#party.kyc_status,
+        onboarding_status => Party#party.onboarding_status,
+        review_notes => Party#party.review_notes,
+        doc_refs => Party#party.doc_refs,
         created_at => Party#party.created_at,
         updated_at => Party#party.updated_at
     }.

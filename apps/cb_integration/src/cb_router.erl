@@ -84,6 +84,7 @@ dispatch() ->
             {<<"/api/v1/parties/:party_id/suspend">>, cb_party_suspend_handler, []},
             {<<"/api/v1/parties/:party_id/reactivate">>, cb_party_reactivate_handler, []},
             {<<"/api/v1/parties/:party_id/close">>, cb_party_close_handler, []},
+            {<<"/api/v1/parties/:party_id/kyc">>, cb_party_kyc_handler, []},
 
             %% Accounts
             {<<"/api/v1/accounts">>, cb_accounts_list_handler, []},
@@ -128,6 +129,19 @@ dispatch() ->
             {<<"/api/v1/loans/:loan_id/approve">>, cb_loans_handler, []},
             {<<"/api/v1/loans/:loan_id/disburse">>, cb_loans_handler, []},
             {<<"/api/v1/loans/:loan_id/repayments">>, cb_loan_repayments_handler, []},
+
+            %% Domain events
+            {<<"/api/v1/events">>, cb_events_handler, []},
+            {<<"/api/v1/events/:event_id">>, cb_events_handler, []},
+            {<<"/api/v1/events/:event_id/replay">>, cb_events_handler, []},
+
+            %% Webhook subscriptions
+            {<<"/api/v1/webhooks">>, cb_webhooks_handler, []},
+            {<<"/api/v1/webhooks/:subscription_id">>, cb_webhooks_handler, []},
+
+            %% Statements and CSV exports
+            {<<"/api/v1/accounts/:account_id/statement">>, cb_statements_handler, []},
+            {<<"/api/v1/export/:resource">>, cb_exports_handler, []},
 
             %% Development tools
             {<<"/api/v1/dev/mock-import">>, cb_dev_mock_import_handler, []},

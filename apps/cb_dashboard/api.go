@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"syscall/js"
 )
@@ -1339,4 +1342,131 @@ func (a *App) RecordLoanRepayment(this js.Value, args []js.Value) interface{} {
 	}()
 
 	return nil
+}
+
+// FetchStatement fetches an account statement from the server.
+// fromMs and toMs are Unix timestamps in milliseconds (0 = not set).
+func (a *App) FetchStatement(this js.Value, args []js.Value) interface{} {
+if len(args) < 1 {
+return nil
+}
+accountID := args[0].String()
+fromMs := int64(0)
+toMs := int64(0)
+if len(args) >= 2 {
+fromMs = int64(args[1].Int())
+}
+if len(args) >= 3 {
+toMs = int64(args[2].Int())
+}
+
+go func() {
+url := apiBaseURL + "/accounts/" + accountID + "/statement"
+sep := "?"
+if fromMs > 0 {
+url += sep + fmt.Sprintf("from=%d", fromMs)
+sep = "&"
+}
+if toMs > 0 {
+url += sep + fmt.Sprintf("to=%d", toMs)
+}
+result, err := fetch("GET", url, nil)
+if err != nil {
+a.Error = err.Error()
+} else {
+a.Error = ""
+resultJSON := js.Global().Get("JSON").Call("stringify", result).String()
+var stmt AccountStatement
+json.Unmarshal([]byte(resultJSON), &stmt)
+a.AccountStatement = &stmt
+}
+a.Render()
+}()
+return nil
+}
+
+// DownloadCSVExport triggers a CSV export download via a temporary <a> element.
+// resource is one of: accounts, transactions, events
+func (a *App) DownloadCSVExport(this js.Value, args []js.Value) interface{} {
+if len(args) < 1 {
+return nil
+}
+resource := args[0].String()
+accountID := ""
+if len(args) >= 2 {
+accountID = args[1].String()
+}
+
+go func() {
+url := apiBaseURL + "/export/" + resource
+if accountID != "" {
+url += "?account_id=" + accountID
+}
+// Build a full URL using window.location for cross-origin safety
+doc := js.Global().Get("document")
+a := doc.Call("createElement", "a")
+a.Set("href", url)
+a.Set("download", resource+".csv")
+doc.Get("body").Call("appendChild", a)
+a.Call("click")
+doc.Get("body").Call("removeChild", a)
+}()
+return nil
+}
+
+// UpdateKycStatus sends a PATCH to /api/v1/parties/:id/kyc
+func (a *App) UpdateKycStatus(partyID, kycStatus, reviewNotes string) {
+	type kycPayload struct {
+		KycStatus   string `json:"kyc_status"`
+		ReviewNotes string `json:"review_notes,omitempty"`
+	}
+	payload, _ := json.Marshal(kycPayload{KycStatus: kycStatus, ReviewNotes: reviewNotes})
+
+	url := apiBaseURL + "/parties/" + partyID + "/kyc"
+	req, err := http.NewRequest("PATCH", url, bytes.NewReader(payload))
+	if err != nil {
+		a.Error = "Failed to build request: " + err.Error()
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		a.Error = "Request failed: " + err.Error()
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		a.Error = "KYC update failed: " + string(body)
+		return
+	}
+
+	a.Success = "KYC status updated"
+	a.Error = ""
+}
+
+// FetchParty refreshes the SelectedKycParty data from the API
+func (a *App) FetchParty(partyID string) {
+	url := apiBaseURL + "/parties/" + partyID
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	var party Party
+	if err := json.Unmarshal(body, &party); err != nil {
+		return
+	}
+	a.SelectedKycParty = &party
+	// Also update the party in the list
+	for i, p := range a.Parties {
+		if p.PartyID == partyID {
+			a.Parties[i] = party
+			break
+		}
+	}
 }

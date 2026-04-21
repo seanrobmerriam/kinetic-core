@@ -61,22 +61,37 @@ type App struct {
 	DevToolsEnabled bool
 	MockImporting   bool
 
+	// Statement view state
+	AccountStatement    *AccountStatement
+	StatementFromDate   string
+	StatementToDate     string
+	StatementAccountID  string
+
+	// KYC panel state
+	SelectedKycParty   *Party
+	ShowKycPanel       bool
+
 	// Dashboard specific
-	Stats           DashboardStats
-	RecentActivity  []ActivityItem
-	SearchQuery     string
-	FilterAccountID string
-	FilterStatus    string
+	Stats               DashboardStats
+	RecentActivity     []ActivityItem
+	SearchQuery        string
+	FilterAccountID    string
+	FilterStatus       string
+	ShowNewCustomerForm bool
 }
 
 // Party represents a customer/party
 type Party struct {
-	PartyID   string `json:"party_id"`
-	FullName  string `json:"full_name"`
-	Email     string `json:"email"`
-	Status    string `json:"status"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	PartyID           string   `json:"party_id"`
+	FullName          string   `json:"full_name"`
+	Email             string   `json:"email"`
+	Status            string   `json:"status"`
+	KycStatus         string   `json:"kyc_status"`
+	OnboardingStatus  string   `json:"onboarding_status"`
+	ReviewNotes       string   `json:"review_notes"`
+	DocRefs           []string `json:"doc_refs"`
+	CreatedAt         int64    `json:"created_at"`
+	UpdatedAt         int64    `json:"updated_at"`
 }
 
 // Account represents a bank account
@@ -108,14 +123,32 @@ type Transaction struct {
 
 // LedgerEntry represents a ledger entry
 type LedgerEntry struct {
-	EntryID     string `json:"entry_id"`
-	TxnID       string `json:"txn_id"`
-	AccountID   string `json:"account_id"`
-	EntryType   string `json:"entry_type"`
-	Amount      int64  `json:"amount"`
-	Currency    string `json:"currency"`
-	Description string `json:"description"`
-	PostedAt    int64  `json:"posted_at"`
+	EntryID        string `json:"entry_id"`
+	TxnID          string `json:"txn_id"`
+	AccountID      string `json:"account_id"`
+	EntryType      string `json:"entry_type"`
+	Amount         int64  `json:"amount"`
+	Currency       string `json:"currency"`
+	Description    string `json:"description"`
+	PostedAt       int64  `json:"posted_at"`
+	RunningBalance int64  `json:"running_balance"`
+}
+
+// AccountStatement represents a generated account statement
+type AccountStatement struct {
+	AccountID      string         `json:"account_id"`
+	PartyID        string         `json:"party_id"`
+	Name           string         `json:"name"`
+	Currency       string         `json:"currency"`
+	CurrentBalance int64          `json:"current_balance"`
+	OpeningBalance int64          `json:"opening_balance"`
+	ClosingBalance int64          `json:"closing_balance"`
+	Entries        []LedgerEntry  `json:"entries"`
+	Total          int            `json:"total"`
+	Page           int            `json:"page"`
+	PageSize       int            `json:"page_size"`
+	From           *int64         `json:"from"`
+	To             *int64         `json:"to"`
 }
 
 // SavingsProduct represents a savings product definition
@@ -384,116 +417,155 @@ func (a *App) renderSidebar() js.Value {
 	// Logo/Brand
 	brand := doc.Call("createElement", "div")
 	brand.Set("className", "sidebar-brand")
+	brandLogo := doc.Call("createElement", "div")
+	brandLogo.Set("className", "brand-logo")
+	brandMark := doc.Call("createElement", "div")
+	brandMark.Set("className", "brand-mark")
+	brandMark.Set("textContent", "IL")
+	brandLogo.Call("appendChild", brandMark)
+	brandTextWrap := doc.Call("createElement", "div")
+	brandTextWrap.Set("className", "brand-text")
 	brandText := doc.Call("createElement", "h1")
 	brandText.Set("textContent", "IronLedger")
 	brandText.Set("className", "brand-title")
-	brand.Call("appendChild", brandText)
+	brandTextWrap.Call("appendChild", brandText)
 	brandSubtitle := doc.Call("createElement", "span")
-	brandSubtitle.Set("textContent", "Core Banking")
+	brandSubtitle.Set("textContent", "CORE BANKING")
 	brandSubtitle.Set("className", "brand-subtitle")
-	brand.Call("appendChild", brandSubtitle)
+	brandTextWrap.Call("appendChild", brandSubtitle)
+	brandLogo.Call("appendChild", brandTextWrap)
+	brand.Call("appendChild", brandLogo)
 	sidebar.Call("appendChild", brand)
 
-	// Navigation items
-	navItems := []struct {
+	type navItem struct {
 		id    string
 		label string
 		icon  string
-	}{
-		{"dashboard", "Dashboard", "dashboard"},
-		{"customers", "Customers", "group"},
-		{"accounts", "Accounts", "account_balance"},
-		{"transactions", "Transactions", "swap_horiz"},
-		{"ledger", "Ledger", "book"},
-		{"products", "Products", "inventory_2"},
-		{"loans", "Loans", "request_quote"},
-		{"settings", "Settings", "settings"},
+	}
+	type navGroup struct {
+		label string
+		items []navItem
 	}
 
-	nav := doc.Call("createElement", "nav")
-	nav.Set("className", "sidebar-nav")
+	groups := []navGroup{
+		{"Overview", []navItem{
+			{"dashboard", "Dashboard", "dashboard"},
+		}},
+		{"Banking", []navItem{
+			{"customers", "Customers", "group"},
+			{"accounts", "Accounts", "account_balance"},
+			{"transactions", "Transactions", "swap_horiz"},
+			{"ledger", "Ledger", "book"},
+			{"loans", "Loans", "request_quote"},
+		}},
+		{"Operations", []navItem{
+			{"transfer", "Transfer Funds", "swap_horiz"},
+			{"deposit", "Deposit / Withdraw", "payments"},
+			{"products", "Products", "inventory_2"},
+		}},
+		{"Workspace", []navItem{
+			{"settings", "Settings", "settings"},
+		}},
+	}
 
-	for _, item := range navItems {
-		btn := doc.Call("createElement", "button")
-		btn.Set("className", "nav-item")
-		btn.Call("setAttribute", "data-testid", "nav-"+item.id)
-		if a.CurrentView == item.id {
-			btn.Get("classList").Call("add", "active")
+	for gi, g := range groups {
+		label := doc.Call("createElement", "div")
+		label.Set("className", "sidebar-section-label")
+		label.Set("textContent", g.label)
+		sidebar.Call("appendChild", label)
+
+		nav := doc.Call("createElement", "nav")
+		if gi == 0 {
+			nav.Set("className", "sidebar-nav primary")
+		} else {
+			nav.Set("className", "sidebar-nav")
 		}
 
-		icon := createMaterialIcon(doc, item.icon, "nav-icon")
-
-		label := doc.Call("createElement", "span")
-		label.Set("textContent", item.label)
-		label.Set("className", "nav-label")
-
-		btn.Call("appendChild", icon)
-		btn.Call("appendChild", label)
-
-		viewName := item.id
-		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.CurrentView = viewName
-			a.Error = ""
-			a.Success = ""
-			if viewName == "dashboard" {
-				a.FetchDashboardStats(js.Value{}, nil)
-			} else if viewName == "customers" {
-				a.ListParties(js.Value{}, nil)
-			} else if viewName == "accounts" {
-				a.ListParties(js.Value{}, nil)
-				a.ListAllAccounts(js.Value{}, nil)
-			} else if viewName == "transactions" {
-				a.ListAllTransactions(js.Value{}, nil)
-			} else if viewName == "products" {
-				a.ListSavingsProducts(js.Value{}, nil)
-				a.ListLoanProducts(js.Value{}, nil)
-			} else if viewName == "loans" {
-				a.ListParties(js.Value{}, nil)
-				a.ListAllAccounts(js.Value{}, nil)
-				a.ListLoanProducts(js.Value{}, nil)
-				a.ListLoansForSelectedParty()
+		for _, item := range g.items {
+			btn := doc.Call("createElement", "button")
+			btn.Set("className", "nav-item")
+			btn.Call("setAttribute", "data-testid", "nav-"+item.id)
+			if a.CurrentView == item.id {
+				btn.Get("classList").Call("add", "active")
 			}
-			a.Render()
-			return nil
-		}))
 
-		nav.Call("appendChild", btn)
+			icon := createMaterialIcon(doc, item.icon, "nav-icon")
+			lbl := doc.Call("createElement", "span")
+			lbl.Set("textContent", item.label)
+			lbl.Set("className", "nav-label")
+			btn.Call("appendChild", icon)
+			btn.Call("appendChild", lbl)
+
+			viewName := item.id
+			btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.CurrentView = viewName
+				a.Error = ""
+				a.Success = ""
+				switch viewName {
+				case "dashboard":
+					a.FetchDashboardStats(js.Value{}, nil)
+					a.ListParties(js.Value{}, nil)
+				case "customers":
+					a.ListParties(js.Value{}, nil)
+				case "accounts":
+					a.ListParties(js.Value{}, nil)
+					a.ListAllAccounts(js.Value{}, nil)
+				case "transactions":
+					a.ListAllTransactions(js.Value{}, nil)
+				case "products":
+					a.ListSavingsProducts(js.Value{}, nil)
+					a.ListLoanProducts(js.Value{}, nil)
+				case "loans":
+					a.ListParties(js.Value{}, nil)
+					a.ListAllAccounts(js.Value{}, nil)
+					a.ListLoanProducts(js.Value{}, nil)
+					a.ListLoansForSelectedParty()
+				}
+				a.Render()
+				return nil
+			}))
+
+			nav.Call("appendChild", btn)
+		}
+		sidebar.Call("appendChild", nav)
 	}
 
-	sidebar.Call("appendChild", nav)
+	// Sidebar footer with user pill
+	footer := doc.Call("createElement", "div")
+	footer.Set("className", "sidebar-footer")
+	if a.CurrentUser != nil {
+		pill := doc.Call("createElement", "div")
+		pill.Set("className", "sidebar-user-pill")
 
-	// Quick Actions section
-	actionsTitle := doc.Call("createElement", "div")
-	actionsTitle.Set("className", "sidebar-section-title")
-	actionsTitle.Set("textContent", "Quick Actions")
-	sidebar.Call("appendChild", actionsTitle)
+		av := doc.Call("createElement", "div")
+		av.Set("className", "avatar")
+		initials := "U"
+		if len(a.CurrentUser.Email) > 0 {
+			initials = string([]rune(a.CurrentUser.Email)[0:1])
+		}
+		av.Set("textContent", initials)
+		pill.Call("appendChild", av)
 
-	quickActions := []struct {
-		id    string
-		label string
-		color string
-	}{
-		{"transfer", "Transfer Funds", "primary"},
-		{"deposit", "Deposit / Withdraw", "success"},
+		info := doc.Call("createElement", "div")
+		info.Set("className", "user-info")
+		nm := doc.Call("createElement", "span")
+		nm.Set("className", "user-name")
+		nm.Set("textContent", a.CurrentUser.Email)
+		info.Call("appendChild", nm)
+		rl := doc.Call("createElement", "span")
+		rl.Set("className", "user-role")
+		rl.Set("textContent", capitalize(a.CurrentUser.Role))
+		info.Call("appendChild", rl)
+		pill.Call("appendChild", info)
+
+		footer.Call("appendChild", pill)
+	} else {
+		footerText := doc.Call("createElement", "div")
+		footerText.Set("style", "font-size: 0.72rem;")
+		footerText.Set("textContent", "IronLedger v0.1")
+		footer.Call("appendChild", footerText)
 	}
-
-	for _, action := range quickActions {
-		btn := doc.Call("createElement", "button")
-		btn.Set("className", "quick-action-btn btn btn-"+action.color)
-		btn.Set("textContent", action.label)
-		btn.Call("setAttribute", "data-testid", "quick-"+action.id)
-
-		viewName := action.id
-		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.CurrentView = viewName
-			a.Error = ""
-			a.Success = ""
-			a.Render()
-			return nil
-		}))
-
-		sidebar.Call("appendChild", btn)
-	}
+	sidebar.Call("appendChild", footer)
 
 	return sidebar
 }
@@ -514,17 +586,33 @@ func (a *App) renderHeader() js.Value {
 
 	header.Call("appendChild", title)
 
+	// Global search
+	search := doc.Call("createElement", "div")
+	search.Set("className", "header-search")
+	search.Call("appendChild", createMaterialIcon(doc, "search", ""))
+	searchInput := doc.Call("createElement", "input")
+	searchInput.Set("type", "search")
+	searchInput.Set("placeholder", "Search customers, accounts, transactions…")
+	searchInput.Call("setAttribute", "data-testid", "global-search")
+	if a.SearchQuery != "" {
+		searchInput.Set("value", a.SearchQuery)
+	}
+	searchInput.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 && args[0].Get("key").String() == "Enter" {
+			q := this.Get("value").String()
+			a.SearchQuery = q
+			a.CurrentView = "customers"
+			a.ListParties(js.Value{}, nil)
+			a.Render()
+		}
+		return nil
+	}))
+	search.Call("appendChild", searchInput)
+	header.Call("appendChild", search)
+
 	// Header actions
 	headerActions := doc.Call("createElement", "div")
 	headerActions.Set("className", "header-actions")
-
-	if a.CurrentUser != nil {
-		userBadge := doc.Call("createElement", "div")
-		userBadge.Set("className", "header-btn")
-		userBadge.Call("setAttribute", "data-testid", "current-user")
-		userBadge.Set("textContent", a.CurrentUser.Email+" ("+capitalize(a.CurrentUser.Role)+")")
-		headerActions.Call("appendChild", userBadge)
-	}
 
 	if a.DevToolsEnabled {
 		mockBtn := doc.Call("createElement", "button")
@@ -545,6 +633,19 @@ func (a *App) renderHeader() js.Value {
 		}))
 		headerActions.Call("appendChild", mockBtn)
 	}
+
+	// Notifications (badge dot if there are pending tasks)
+	notifBtn := doc.Call("createElement", "button")
+	notifBtn.Set("className", "header-btn")
+	notifBtn.Call("setAttribute", "title", "Notifications")
+	notifBtn.Call("setAttribute", "data-testid", "notifications-button")
+	notifBtn.Call("appendChild", createMaterialIcon(doc, "notifications", "header-icon"))
+	if a.pendingTaskCount() > 0 {
+		dot := doc.Call("createElement", "span")
+		dot.Set("className", "badge-dot")
+		notifBtn.Call("appendChild", dot)
+	}
+	headerActions.Call("appendChild", notifBtn)
 
 	// Theme toggle
 	themeBtn := doc.Call("createElement", "button")
@@ -567,16 +668,35 @@ func (a *App) renderHeader() js.Value {
 	refreshBtn := doc.Call("createElement", "button")
 	refreshBtn.Set("className", "header-btn")
 	refreshBtn.Call("setAttribute", "title", "Refresh")
-
-	refreshIcon := createMaterialIcon(doc, "autorenew", "header-icon")
-	refreshBtn.Call("appendChild", refreshIcon)
-
+	refreshBtn.Call("appendChild", createMaterialIcon(doc, "autorenew", "header-icon"))
 	refreshBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		a.RefreshCurrentView()
 		return nil
 	}))
-
 	headerActions.Call("appendChild", refreshBtn)
+
+	// User pill
+	if a.CurrentUser != nil {
+		userPill := doc.Call("createElement", "div")
+		userPill.Set("className", "user-pill")
+		userPill.Call("setAttribute", "data-testid", "current-user")
+
+		avatar := doc.Call("createElement", "div")
+		avatar.Set("className", "user-avatar")
+		initials := "U"
+		if len(a.CurrentUser.Email) > 0 {
+			initials = string([]rune(a.CurrentUser.Email)[0:1])
+		}
+		avatar.Set("textContent", initials)
+		userPill.Call("appendChild", avatar)
+
+		nameEl := doc.Call("createElement", "span")
+		nameEl.Set("textContent", a.CurrentUser.Email)
+		nameEl.Set("style", "max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; font-weight: 600;")
+		userPill.Call("appendChild", nameEl)
+
+		headerActions.Call("appendChild", userPill)
+	}
 
 	logoutBtn := doc.Call("createElement", "button")
 	logoutBtn.Set("className", "header-btn")
@@ -592,6 +712,24 @@ func (a *App) renderHeader() js.Value {
 	header.Call("appendChild", headerActions)
 
 	return header
+}
+
+// pendingTaskCount returns the number of items in the operations queue
+// (KYC reviews, pending transactions, frozen accounts, etc.)
+func (a *App) pendingTaskCount() int {
+	n := 0
+	for _, p := range a.Parties {
+		if p.KycStatus != "" && p.KycStatus != "approved" && p.KycStatus != "verified" {
+			n++
+		}
+	}
+	n += a.Stats.PendingTxns
+	for _, ac := range a.Accounts {
+		if ac.Status == "frozen" || ac.Status == "suspended" {
+			n++
+		}
+	}
+	return n
 }
 
 func (a *App) renderLoginView() js.Value {

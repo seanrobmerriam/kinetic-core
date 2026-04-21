@@ -49,6 +49,7 @@
 
 -include("loan.hrl").
 -include_lib("cb_ledger/include/cb_ledger.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -define(SERVER, ?MODULE).
 -define(TABLE, loan_accounts).
@@ -286,7 +287,15 @@ do_create_loan(ProductId, PartyId, AccountId, Amount, Currency, TermMonths, Inte
                         created_at = Now,
                         updated_at = Now
                     },
-                    Fun = fun() -> mnesia:write(?TABLE, Loan, write) end,
+                    Fun = fun() ->
+                    mnesia:write(?TABLE, Loan, write),
+                    cb_events:write_outbox(<<"loan.created">>, #{
+                        loan_id   => LoanId,
+                        party_id  => PartyId,
+                        principal => Amount,
+                        currency  => Currency
+                    })
+                end,
                     case mnesia:transaction(Fun) of
                         {atomic, _} -> {ok, LoanId};
                         {aborted, Reason} -> {error, Reason}
@@ -309,6 +318,7 @@ do_approve_loan(LoanId) ->
                             updated_at = erlang:system_time(millisecond)
                         },
                         mnesia:write(?TABLE, UpdatedLoan, write),
+                        cb_events:write_outbox(<<"loan.approved">>, #{loan_id => LoanId}),
                         {ok, UpdatedLoan};
                     _Status ->
                         {error, invalid_status}
@@ -333,6 +343,7 @@ do_reject_loan(LoanId) ->
                             updated_at = erlang:system_time(millisecond)
                         },
                         mnesia:write(?TABLE, UpdatedLoan, write),
+                        cb_events:write_outbox(<<"loan.rejected">>, #{loan_id => LoanId}),
                         {ok, UpdatedLoan};
                     _Status ->
                         {error, invalid_status}
@@ -359,6 +370,7 @@ do_disburse_loan(LoanId) ->
                             updated_at = Now
                         },
                         mnesia:write(?TABLE, UpdatedLoan, write),
+                        cb_events:write_outbox(<<"loan.disbursed">>, #{loan_id => LoanId}),
                         {ok, UpdatedLoan};
                     _Status ->
                         {error, invalid_status}

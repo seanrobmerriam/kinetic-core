@@ -2,9 +2,15 @@ _build
 .git
 .gitignore
 node_modules
+**/node_modules
+**/.next
+**/.turbo
 apps/cb_dashboard/_build
-apps/cb_dashboard/dist/ironledger.wasm
-apps/cb_dashboard/dist/wasm_exec.js
+apps/cb_dashboard/dist
 apps/cb_dashboard/rebar.lock
 *.beam
 erl_crash.dump
+test-results
+playwright-report
+.DS_Store
+*.log

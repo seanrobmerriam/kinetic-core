@@ -109,7 +109,116 @@ do_import(Summary0) ->
         Summary14
     ),
 
-    {ok, Summary15}.
+    %% Bulk demo dataset: ensures the dashboard has a meaningful volume of
+    %% records to exercise pagination, search, and reporting flows. All
+    %% generators are deterministic and idempotent so re-running the importer
+    %% does not produce duplicates.
+    BulkPartyCount = 200,
+    BulkLoanCount = 299,
+    case bulk_ensure_parties(BulkPartyCount, Summary15) of
+        {ok, BulkParties, Summary16} ->
+            case bulk_ensure_deposits(BulkParties, Summary16) of
+                {ok, Summary17} ->
+                    case bulk_ensure_loans(LoanProductId, BulkParties, BulkLoanCount, Summary17) of
+                        {ok, Summary18} ->
+                            {ok, Summary18};
+                        {error, _} = Err -> Err
+                    end;
+                {error, _} = Err -> Err
+            end;
+        {error, _} = Err -> Err
+    end.
+
+%% --- Bulk demo dataset helpers -------------------------------------------
+
+bulk_ensure_parties(Count, Summary0) ->
+    bulk_ensure_parties(1, Count, [], Summary0).
+
+bulk_ensure_parties(N, Count, Acc, Summary) when N > Count ->
+    {ok, lists:reverse(Acc), Summary};
+bulk_ensure_parties(N, Count, Acc, Summary0) ->
+    Idx = pad3(N),
+    FullName = <<"Mock Customer ", Idx/binary>>,
+    Email = <<"mock-customer-", Idx/binary, "@ironledger.dev">>,
+    AccountName = <<"Main Checking">>,
+    case ensure_party_account(FullName, Email, AccountName, 'USD', Summary0) of
+        {ok, AccountId, Summary1} ->
+            case find_party_id_by_email(Email) of
+                {ok, PartyId} ->
+                    bulk_ensure_parties(N + 1, Count, [{PartyId, AccountId} | Acc], Summary1);
+                {error, _} = Err ->
+                    Err
+            end;
+        {error, _} = Err ->
+            Err
+    end.
+
+bulk_ensure_deposits(Parties, Summary0) ->
+    bulk_ensure_deposits(Parties, 1, Summary0).
+
+bulk_ensure_deposits([], _N, Summary) ->
+    {ok, Summary};
+bulk_ensure_deposits([{_PartyId, AccountId} | Rest], N, Summary0) ->
+    Idx = pad3(N),
+    Key = <<"mock-bulk-deposit-", Idx/binary>>,
+    Amount = 100000 + (N * 1000),
+    Description = <<"Bulk demo deposit ", Idx/binary>>,
+    case ensure_payment_txn(
+        Key,
+        fun() -> cb_payments:deposit(Key, AccountId, Amount, 'USD', Description) end,
+        Summary0
+    ) of
+        {ok, Summary1} ->
+            bulk_ensure_deposits(Rest, N + 1, Summary1);
+        {error, _} = Err ->
+            Err
+    end.
+
+bulk_ensure_loans(_ProductId, _Parties, 0, Summary) ->
+    {ok, Summary};
+bulk_ensure_loans(_ProductId, [], _Remaining, Summary) ->
+    {ok, Summary};
+bulk_ensure_loans(ProductId, Parties, Remaining, Summary0) ->
+    bulk_ensure_loans_loop(ProductId, Parties, Parties, 1, Remaining, Summary0).
+
+bulk_ensure_loans_loop(_ProductId, _AllParties, _Cursor, _N, 0, Summary) ->
+    {ok, Summary};
+bulk_ensure_loans_loop(ProductId, AllParties, [], N, Remaining, Summary) ->
+    bulk_ensure_loans_loop(ProductId, AllParties, AllParties, N, Remaining, Summary);
+bulk_ensure_loans_loop(ProductId, AllParties, [{PartyId, AccountId} | Rest], N, Remaining, Summary0) ->
+    %% Vary the principal per loan so that each {product, party, account,
+    %% principal, currency, term} tuple is unique and the find_loan
+    %% idempotency guard correctly distinguishes seeded loans on re-runs.
+    Principal = 100000 + (N * 1000),
+    TermMonths = 12,
+    InterestRate = 850,
+    case ensure_loan_pending(ProductId, PartyId, AccountId, Principal, 'USD', TermMonths, InterestRate, Summary0) of
+        {ok, Summary1} ->
+            bulk_ensure_loans_loop(ProductId, AllParties, Rest, N + 1, Remaining - 1, Summary1);
+        {error, _} = Err ->
+            Err
+    end.
+
+ensure_loan_pending(ProductId, PartyId, AccountId, Principal, Currency, TermMonths, InterestRate, Summary0) ->
+    case find_loan(ProductId, PartyId, AccountId, Principal, Currency, TermMonths) of
+        {ok, _Loan} ->
+            {ok, inc(loans_existing, Summary0)};
+        not_found ->
+            case cb_loan_accounts:create_loan(ProductId, PartyId, AccountId, Principal, Currency, TermMonths, InterestRate) of
+                {ok, _LoanId} ->
+                    {ok, inc(loans_created, Summary0)};
+                {error, Reason} ->
+                    {error, Reason}
+            end
+    end.
+
+pad3(N) when is_integer(N), N >= 0 ->
+    Bin = integer_to_binary(N),
+    case byte_size(Bin) of
+        1 -> <<"00", Bin/binary>>;
+        2 -> <<"0", Bin/binary>>;
+        _ -> Bin
+    end.
 
 with_import_lock(Fun) ->
     LockKey = {cb_mock_data_importer, import},

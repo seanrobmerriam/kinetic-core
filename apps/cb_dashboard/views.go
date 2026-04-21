@@ -1114,10 +1114,198 @@ func (a *App) renderAccountDetailView() js.Value {
 
 	container.Call("appendChild", holdsSection)
 
+	// Statement Section
+	stmtSection := doc.Call("createElement", "div")
+	stmtSection.Set("className", "detail-section statement-section")
+
+	stmtTitleRow := doc.Call("createElement", "div")
+	stmtTitleRow.Set("className", "card-header-row")
+	stmtTitle := doc.Call("createElement", "h3")
+	stmtTitle.Set("textContent", "Account Statement")
+	stmtTitleRow.Call("appendChild", stmtTitle)
+
+	exportBtn := doc.Call("createElement", "button")
+	exportBtn.Set("className", "btn btn-ghost btn-sm")
+	exportBtn.Set("textContent", "⬇ Export CSV")
+	exportBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.DownloadCSVExport(js.Value{}, []js.Value{
+			js.ValueOf("transactions"),
+			js.ValueOf(account.AccountID),
+		})
+		return nil
+	}))
+	stmtTitleRow.Call("appendChild", exportBtn)
+	stmtSection.Call("appendChild", stmtTitleRow)
+
+	// Date range filter row
+	filterRow := doc.Call("createElement", "div")
+	filterRow.Set("className", "stmt-filter-row")
+
+	fromLabel := doc.Call("createElement", "label")
+	fromLabel.Set("textContent", "From")
+	fromLabel.Set("className", "stmt-date-label")
+	filterRow.Call("appendChild", fromLabel)
+	fromInput := doc.Call("createElement", "input")
+	fromInput.Set("type", "date")
+	fromInput.Set("className", "input-field stmt-date-input")
+	fromInput.Set("value", a.StatementFromDate)
+	fromInput.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.StatementFromDate = fromInput.Get("value").String()
+		return nil
+	}))
+	filterRow.Call("appendChild", fromInput)
+
+	toLabel := doc.Call("createElement", "label")
+	toLabel.Set("textContent", "To")
+	toLabel.Set("className", "stmt-date-label")
+	filterRow.Call("appendChild", toLabel)
+	toInput := doc.Call("createElement", "input")
+	toInput.Set("type", "date")
+	toInput.Set("className", "input-field stmt-date-input")
+	toInput.Set("value", a.StatementToDate)
+	toInput.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.StatementToDate = toInput.Get("value").String()
+		return nil
+	}))
+	filterRow.Call("appendChild", toInput)
+
+	genBtn := doc.Call("createElement", "button")
+	genBtn.Set("className", "btn btn-primary btn-sm")
+	genBtn.Set("textContent", "Generate")
+	genBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		fromMs := int64(0)
+		toMs := int64(0)
+		if a.StatementFromDate != "" {
+			fromMs = dateStringToMs(a.StatementFromDate)
+		}
+		if a.StatementToDate != "" {
+			toMs = dateStringToEndOfDayMs(a.StatementToDate)
+		}
+		a.FetchStatement(js.Value{}, []js.Value{
+			js.ValueOf(account.AccountID),
+			js.ValueOf(int(fromMs)),
+			js.ValueOf(int(toMs)),
+		})
+		return nil
+	}))
+	filterRow.Call("appendChild", genBtn)
+	stmtSection.Call("appendChild", filterRow)
+
+	// Statement results
+	if a.AccountStatement != nil && a.AccountStatement.AccountID == account.AccountID {
+		stmt := a.AccountStatement
+
+		// Summary row
+		summaryRow := doc.Call("createElement", "div")
+		summaryRow.Set("className", "stmt-summary-row")
+
+		openCard := doc.Call("createElement", "div")
+		openCard.Set("className", "stmt-summary-card")
+		openLbl := doc.Call("createElement", "div")
+		openLbl.Set("className", "stat-label")
+		openLbl.Set("textContent", "Opening Balance")
+		openVal := doc.Call("createElement", "div")
+		openVal.Set("className", "stat-value")
+		openVal.Set("textContent", FormatAmount(stmt.OpeningBalance, stmt.Currency))
+		openCard.Call("appendChild", openLbl)
+		openCard.Call("appendChild", openVal)
+		summaryRow.Call("appendChild", openCard)
+
+		closeCard := doc.Call("createElement", "div")
+		closeCard.Set("className", "stmt-summary-card")
+		closeLbl := doc.Call("createElement", "div")
+		closeLbl.Set("className", "stat-label")
+		closeLbl.Set("textContent", "Closing Balance")
+		closeVal := doc.Call("createElement", "div")
+		closeVal.Set("className", "stat-value")
+		closeVal.Set("textContent", FormatAmount(stmt.ClosingBalance, stmt.Currency))
+		closeCard.Call("appendChild", closeLbl)
+		closeCard.Call("appendChild", closeVal)
+		summaryRow.Call("appendChild", closeCard)
+
+		totalCard := doc.Call("createElement", "div")
+		totalCard.Set("className", "stmt-summary-card")
+		totalLbl := doc.Call("createElement", "div")
+		totalLbl.Set("className", "stat-label")
+		totalLbl.Set("textContent", "Total Entries")
+		totalVal := doc.Call("createElement", "div")
+		totalVal.Set("className", "stat-value")
+		totalVal.Set("textContent", fmt.Sprintf("%d", stmt.Total))
+		totalCard.Call("appendChild", totalLbl)
+		totalCard.Call("appendChild", totalVal)
+		summaryRow.Call("appendChild", totalCard)
+
+		stmtSection.Call("appendChild", summaryRow)
+
+		if len(stmt.Entries) == 0 {
+			emptyStmt := doc.Call("createElement", "div")
+			emptyStmt.Set("className", "empty-state")
+			emptyStmt.Set("textContent", "No entries for the selected period")
+			stmtSection.Call("appendChild", emptyStmt)
+		} else {
+			stmtTable := doc.Call("createElement", "table")
+			stmtTable.Set("className", "data-table stmt-table")
+
+			stmtThead := doc.Call("createElement", "thead")
+			stmtTr := doc.Call("createElement", "tr")
+			for _, h := range []string{"Date", "Description", "Type", "Amount", "Running Balance"} {
+				th := doc.Call("createElement", "th")
+				th.Set("textContent", h)
+				stmtTr.Call("appendChild", th)
+			}
+			stmtThead.Call("appendChild", stmtTr)
+			stmtTable.Call("appendChild", stmtThead)
+
+			stmtTbody := doc.Call("createElement", "tbody")
+			for _, entry := range stmt.Entries {
+				row := doc.Call("createElement", "tr")
+
+				dateCell := doc.Call("createElement", "td")
+				dateCell.Set("textContent", formatTimestamp(entry.PostedAt))
+				row.Call("appendChild", dateCell)
+
+				descCell := doc.Call("createElement", "td")
+				descCell.Set("textContent", entry.Description)
+				row.Call("appendChild", descCell)
+
+				typeCell := doc.Call("createElement", "td")
+				typeBadge := doc.Call("createElement", "span")
+				typeBadge.Set("className", "type-badge "+entry.EntryType)
+				typeBadge.Set("textContent", capitalize(entry.EntryType))
+				typeCell.Call("appendChild", typeBadge)
+				row.Call("appendChild", typeCell)
+
+				amtCls := "cell-balance debit"
+				if entry.EntryType == "credit" {
+					amtCls = "cell-balance credit"
+				}
+				amtCell := doc.Call("createElement", "td")
+				amtCell.Set("className", amtCls)
+				prefix := "-"
+				if entry.EntryType == "credit" {
+					prefix = "+"
+				}
+				amtCell.Set("textContent", prefix+FormatAmount(entry.Amount, stmt.Currency))
+				row.Call("appendChild", amtCell)
+
+				balCell := doc.Call("createElement", "td")
+				balCell.Set("className", "cell-balance")
+				balCell.Set("textContent", FormatAmount(entry.RunningBalance, stmt.Currency))
+				row.Call("appendChild", balCell)
+
+				stmtTbody.Call("appendChild", row)
+			}
+			stmtTable.Call("appendChild", stmtTbody)
+			stmtSection.Call("appendChild", stmtTable)
+		}
+	}
+
+	container.Call("appendChild", stmtSection)
+
 	return container
 }
 
-// renderTransactionsListView renders the transactions list view
+
 func (a *App) renderTransactionsListView() js.Value {
 	doc := js.Global().Get("document")
 	container := doc.Call("createElement", "div")
@@ -2554,4 +2742,22 @@ func formatDate(ts int64) string {
 	}
 	t := time.Unix(ts/1000, 0)
 	return t.Format("2006-01-02")
+}
+
+// dateStringToMs converts "2006-01-02" to Unix milliseconds at start of day (UTC).
+func dateStringToMs(dateStr string) int64 {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return 0
+	}
+	return t.UnixMilli()
+}
+
+// dateStringToEndOfDayMs converts "2006-01-02" to Unix milliseconds at 23:59:59 UTC.
+func dateStringToEndOfDayMs(dateStr string) int64 {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return 0
+	}
+	return t.Add(24*time.Hour - time.Millisecond).UnixMilli()
 }

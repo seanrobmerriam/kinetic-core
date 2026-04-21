@@ -61,8 +61,14 @@ type App struct {
 	DevToolsEnabled bool
 	MockImporting   bool
 
+	// Statement view state
+	AccountStatement    *AccountStatement
+	StatementFromDate   string
+	StatementToDate     string
+	StatementAccountID  string
+
 	// Dashboard specific
-	Stats              DashboardStats
+	Stats               DashboardStats
 	RecentActivity     []ActivityItem
 	SearchQuery        string
 	FilterAccountID    string
@@ -109,14 +115,32 @@ type Transaction struct {
 
 // LedgerEntry represents a ledger entry
 type LedgerEntry struct {
-	EntryID     string `json:"entry_id"`
-	TxnID       string `json:"txn_id"`
-	AccountID   string `json:"account_id"`
-	EntryType   string `json:"entry_type"`
-	Amount      int64  `json:"amount"`
-	Currency    string `json:"currency"`
-	Description string `json:"description"`
-	PostedAt    int64  `json:"posted_at"`
+	EntryID        string `json:"entry_id"`
+	TxnID          string `json:"txn_id"`
+	AccountID      string `json:"account_id"`
+	EntryType      string `json:"entry_type"`
+	Amount         int64  `json:"amount"`
+	Currency       string `json:"currency"`
+	Description    string `json:"description"`
+	PostedAt       int64  `json:"posted_at"`
+	RunningBalance int64  `json:"running_balance"`
+}
+
+// AccountStatement represents a generated account statement
+type AccountStatement struct {
+	AccountID      string         `json:"account_id"`
+	PartyID        string         `json:"party_id"`
+	Name           string         `json:"name"`
+	Currency       string         `json:"currency"`
+	CurrentBalance int64          `json:"current_balance"`
+	OpeningBalance int64          `json:"opening_balance"`
+	ClosingBalance int64          `json:"closing_balance"`
+	Entries        []LedgerEntry  `json:"entries"`
+	Total          int            `json:"total"`
+	Page           int            `json:"page"`
+	PageSize       int            `json:"page_size"`
+	From           *int64         `json:"from"`
+	To             *int64         `json:"to"`
 }
 
 // SavingsProduct represents a savings product definition

@@ -138,6 +138,10 @@ dispatch() ->
             {<<"/api/v1/webhooks">>, cb_webhooks_handler, []},
             {<<"/api/v1/webhooks/:subscription_id">>, cb_webhooks_handler, []},
 
+            %% Statements and CSV exports
+            {<<"/api/v1/accounts/:account_id/statement">>, cb_statements_handler, []},
+            {<<"/api/v1/export/:resource">>, cb_exports_handler, []},
+
             %% Development tools
             {<<"/api/v1/dev/mock-import">>, cb_dev_mock_import_handler, []},
 

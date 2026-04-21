@@ -1023,6 +1023,56 @@
                 border-bottom: 1px solid var(--color-border);
             }
 
+            /* Statement Section */
+            .statement-section {
+                border-top: 3px solid var(--color-primary);
+            }
+
+            .stmt-filter-row {
+                display: flex;
+                align-items: center;
+                gap: var(--space-md);
+                flex-wrap: wrap;
+                margin-bottom: var(--space-lg);
+            }
+
+            .stmt-date-label {
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+                color: var(--color-text-secondary);
+                white-space: nowrap;
+            }
+
+            .stmt-date-input {
+                width: 160px;
+                padding: 6px 10px;
+                font-size: var(--font-size-sm);
+            }
+
+            .stmt-summary-row {
+                display: flex;
+                gap: var(--space-md);
+                margin-bottom: var(--space-lg);
+            }
+
+            .stmt-summary-card {
+                flex: 1;
+                background: var(--color-hover);
+                border-radius: var(--radius-md);
+                padding: var(--space-md) var(--space-lg);
+                border-left: 3px solid var(--color-primary);
+            }
+
+            .stmt-table tbody tr:hover {
+                background: var(--color-hover);
+            }
+
+            .cell-balance.credit { color: #16a34a; font-weight: 600; }
+            .cell-balance.debit  { color: #dc2626; font-weight: 600; }
+
+            .type-badge.credit { background: #dcfce7; color: #15803d; }
+            .type-badge.debit  { background: #fee2e2; color: #b91c1c; }
+
             /* Settings View */
             .settings-view {
                 max-width: 800px;
@@ -2013,7 +2063,7 @@
         <script>
             const go = new Go();
             WebAssembly.instantiateStreaming(
-                fetch("ironledger.wasm?v=10"),
+                fetch("ironledger.wasm?v=11"),
                 go.importObject,
             )
                 .then((result) => {

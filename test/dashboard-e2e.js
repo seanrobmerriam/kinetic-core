@@ -37,11 +37,15 @@ async function waitForSuccess(page, text, timeout = 15000) {
     timeout
   });
   await page.waitForLoadState("networkidle");
+  // Drain WASM goroutine continuations scheduled via setTimeout(0) after network idle
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
 }
 
 async function clickNav(page, view) {
   await page.locator(`[data-testid="nav-${view}"]`).click();
   await page.waitForLoadState("networkidle");
+  // Drain WASM goroutine continuations scheduled via setTimeout(0) after network idle
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
 }
 
 async function login(page) {
@@ -103,6 +107,8 @@ async function main() {
     await login(page);
 
     await clickNav(page, "customers");
+    await page.locator('button:has-text("Add Customer")').click();
+    await waitForVisible(page, "#customer-name");
     await page.fill("#customer-name", customerName);
     await page.fill("#customer-email", customerEmail);
     await page.click("#create-customer-button");
@@ -146,6 +152,9 @@ async function main() {
     await clickNav(page, "loans");
     await waitForOption(page, "#loan-party-select", `${customerName} (${customerEmail})`);
     await page.selectOption("#loan-party-select", { label: `${customerName} (${customerEmail})` });
+    // Selecting a party triggers ListLoansForSelectedParty goroutine + a.Render(); drain before filling
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
     await waitForOption(page, "#loan-create-product", `${loanProductName} (USD)`);
     await waitForOption(page, "#loan-create-account", `${accountName} (USD)`);
     await page.selectOption("#loan-create-product", { label: `${loanProductName} (USD)` });

@@ -1,11 +1,37 @@
-<!doctype html>
-<html lang="en" data-theme="light">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>IronLedger Dashboard</title>
-        <link rel="stylesheet" href="fonts.css" />
-        <style>
+@import "tailwindcss";
+
+@font-face {
+    font-family: 'Google Sans Flex';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('/fonts/google-sans-flex.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/material-symbols-outlined.ttf') format('truetype');
+}
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: 400;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    user-select: none;
+}
+
             /* ============================================================
                IronLedger Dashboard — TailAdmin-Style CSS
                ============================================================ */
@@ -1302,29 +1328,3 @@
 
                 .quick-actions-grid { grid-template-columns: 1fr; }
             }
-        </style>
-    </head>
-    <body>
-        <div id="root">
-            <div id="loading">Loading IronLedger Dashboard...</div>
-        </div>
-
-        <script src="wasm_exec.js"></script>
-        <script>
-            const go = new Go();
-            WebAssembly.instantiateStreaming(
-                fetch("ironledger.wasm?v=10"),
-                go.importObject,
-            )
-                .then((result) => {
-                    go.run(result.instance);
-                })
-                .catch((err) => {
-                    document.getElementById("root").innerHTML =
-                        '<div class="alert alert-error">Error loading WebAssembly: ' +
-                        err.message +
-                        "</div>";
-                });
-        </script>
-    </body>
-</html>

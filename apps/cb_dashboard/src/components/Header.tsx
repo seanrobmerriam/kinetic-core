@@ -2,12 +2,28 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  ActionIcon,
+  AppShell,
+  Avatar,
+  Badge,
+  Group,
+  Text,
+  Title,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconLogout,
+  IconMoon,
+  IconRefresh,
+  IconSun,
+  IconUpload,
+} from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
 import { useNotify } from "@/lib/notify";
 import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { capitalize } from "@/lib/format";
-import { MaterialIcon } from "./MaterialIcon";
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
@@ -42,30 +58,6 @@ function pageKey(pathname: string): string {
     return "account-detail";
   }
   return pathname.split("/")[1] || "dashboard";
-}
-
-interface IconButtonProps {
-  icon: string;
-  title: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  testId?: string;
-}
-
-function IconButton({ icon, title, onClick, disabled, testId }: IconButtonProps) {
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onClick={onClick}
-      disabled={disabled}
-      data-testid={testId}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <MaterialIcon name={icon} className="text-[20px]" />
-    </button>
-  );
 }
 
 export function Header({ onRefresh }: { onRefresh?: () => void }) {
@@ -115,67 +107,104 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
   };
 
   const refresh = () => {
-    if (onRefresh) {
-      onRefresh();
-    } else {
-      router.refresh();
-    }
+    if (onRefresh) onRefresh();
+    else router.refresh();
   };
 
   const key = pageKey(pathname);
   const title = PAGE_TITLES[key] ?? "Dashboard";
   const subtitle = PAGE_SUBTITLES[key] ?? "";
-  const userInitial = state.status === "authenticated" && state.user
-    ? state.user.email.charAt(0).toUpperCase()
-    : "?";
+  const userInitial =
+    state.status === "authenticated" && state.user
+      ? state.user.email.charAt(0).toUpperCase()
+      : "?";
 
   return (
-    <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/80 px-8 backdrop-blur">
-      <div className="flex flex-col">
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2>
-        {subtitle ? <p className="text-sm text-slate-500">{subtitle}</p> : null}
-      </div>
+    <AppShell.Header>
+      <Group h="100%" px="lg" justify="space-between" wrap="nowrap">
+        <div>
+          <Title order={3} fw={600}>
+            {title}
+          </Title>
+          {subtitle && (
+            <Text size="sm" c="dimmed">
+              {subtitle}
+            </Text>
+          )}
+        </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        {state.status === "authenticated" && state.user && (
-          <div
-            data-testid="current-user"
-            className="hidden items-center gap-3 rounded-full border border-slate-200 bg-white px-2 py-1.5 pr-4 sm:flex"
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-xs font-semibold text-white">
-              {userInitial}
-            </div>
-            <div className="leading-tight">
-              <div className="text-xs font-semibold text-slate-800">{state.user.email}</div>
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">
-                {capitalize(state.user.role)}
+        <Group gap="xs" wrap="nowrap">
+          {state.status === "authenticated" && state.user && (
+            <Group
+              gap="xs"
+              data-testid="current-user"
+              wrap="nowrap"
+              visibleFrom="sm"
+            >
+              <Avatar
+                color="indigo"
+                radius="xl"
+                size="sm"
+                variant="gradient"
+                gradient={{ from: "indigo", to: "violet" }}
+              >
+                {userInitial}
+              </Avatar>
+              <div>
+                <Text size="xs" fw={600} lh={1.1}>
+                  {state.user.email}
+                </Text>
+                <Badge size="xs" variant="light" color="gray">
+                  {capitalize(state.user.role)}
+                </Badge>
               </div>
-            </div>
-          </div>
-        )}
-        {devToolsEnabled && (
-          <IconButton
-            icon={mockImporting ? "hourglass_top" : "upload"}
-            title="Import mock data"
-            testId="mock-import-button"
-            onClick={importMock}
-            disabled={mockImporting}
-          />
-        )}
-        <IconButton
-          icon={theme === "dark" ? "light_mode" : "dark_mode"}
-          title="Toggle theme"
-          testId="theme-toggle"
-          onClick={toggle}
-        />
-        <IconButton icon="autorenew" title="Refresh" onClick={refresh} />
-        <IconButton
-          icon="logout"
-          title="Sign out"
-          testId="logout-button"
-          onClick={() => void logout()}
-        />
-      </div>
-    </header>
+            </Group>
+          )}
+
+          {devToolsEnabled && (
+            <Tooltip label="Import mock data">
+              <ActionIcon
+                variant="default"
+                size="lg"
+                data-testid="mock-import-button"
+                onClick={importMock}
+                disabled={mockImporting}
+                loading={mockImporting}
+              >
+                <IconUpload size={18} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+
+          <Tooltip label="Toggle theme">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              data-testid="theme-toggle"
+              onClick={toggle}
+            >
+              {theme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label="Refresh">
+            <ActionIcon variant="default" size="lg" onClick={refresh}>
+              <IconRefresh size={18} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label="Sign out">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              data-testid="logout-button"
+              onClick={() => void logout()}
+            >
+              <IconLogout size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Group>
+    </AppShell.Header>
   );
 }

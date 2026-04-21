@@ -2,14 +2,43 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
+import {
+  Anchor,
+  Badge,
+  Button,
+  Card,
+  Group,
+  NumberInput,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
-import { capitalize, formatAmount, formatDate, formatTimestamp } from "@/lib/format";
+import {
+  capitalize,
+  formatAmount,
+  formatDate,
+  formatTimestamp,
+} from "@/lib/format";
 import type { Account, AccountHold, Transaction } from "@/lib/types";
 
 interface ListResponse<T> {
   items: T[];
+}
+
+function statusColor(s: string) {
+  if (s === "active" || s === "posted") return "teal";
+  if (s === "frozen" || s === "pending") return "yellow";
+  if (s === "closed" || s === "released" || s === "reversed") return "gray";
+  if (s === "failed") return "red";
+  return "gray";
 }
 
 export default function AccountDetailPage({
@@ -23,21 +52,28 @@ export default function AccountDetailPage({
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [holds, setHolds] = useState<AccountHold[]>([]);
-  const [holdAmount, setHoldAmount] = useState("");
+  const [holdAmount, setHoldAmount] = useState<string | number>("");
   const [holdReason, setHoldReason] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        // Fetch account via parties → accounts (no GET /accounts/:id endpoint).
-        const partyResp = await api<ListResponse<{ party_id: string }>>("GET", "/parties");
+        const partyResp = await api<ListResponse<{ party_id: string }>>(
+          "GET",
+          "/parties",
+        );
         const parties = partyResp.items ?? [];
         let found: Account | null = null;
         for (const p of parties) {
           try {
-            const accResp = await api<ListResponse<Account>>("GET", `/parties/${p.party_id}/accounts`);
-            const match = (accResp.items ?? []).find((a) => a.account_id === accountId);
+            const accResp = await api<ListResponse<Account>>(
+              "GET",
+              `/parties/${p.party_id}/accounts`,
+            );
+            const match = (accResp.items ?? []).find(
+              (a) => a.account_id === accountId,
+            );
             if (match) {
               found = match;
               break;
@@ -48,13 +84,19 @@ export default function AccountDetailPage({
         }
         if (!cancelled) setAccount(found);
         try {
-          const txResp = await api<ListResponse<Transaction>>("GET", `/accounts/${accountId}/transactions`);
+          const txResp = await api<ListResponse<Transaction>>(
+            "GET",
+            `/accounts/${accountId}/transactions`,
+          );
           if (!cancelled) setTransactions(txResp.items ?? []);
         } catch {
           /* ignore */
         }
         try {
-          const holdResp = await api<ListResponse<AccountHold>>("GET", `/accounts/${accountId}/holds`);
+          const holdResp = await api<ListResponse<AccountHold>>(
+            "GET",
+            `/accounts/${accountId}/holds`,
+          );
           if (!cancelled) setHolds(holdResp.items ?? []);
         } catch {
           /* ignore */
@@ -69,7 +111,9 @@ export default function AccountDetailPage({
   }, [accountId, tick, setError]);
 
   const availableBalance = useMemo(() => {
-    const held = holds.filter((h) => h.status === "active").reduce((s, h) => s + h.amount, 0);
+    const held = holds
+      .filter((h) => h.status === "active")
+      .reduce((s, h) => s + h.amount, 0);
     return (account?.balance ?? 0) - held;
   }, [account, holds]);
 
@@ -84,10 +128,14 @@ export default function AccountDetailPage({
   };
 
   const placeHold = async () => {
-    const amt = parseInt(holdAmount, 10);
+    const amt =
+      typeof holdAmount === "number" ? holdAmount : parseInt(holdAmount, 10);
     if (!Number.isFinite(amt) || !holdReason) return;
     try {
-      await api("POST", `/accounts/${accountId}/holds`, { amount: amt, reason: holdReason });
+      await api("POST", `/accounts/${accountId}/holds`, {
+        amount: amt,
+        reason: holdReason,
+      });
       setSuccess("Hold placed");
       setHoldAmount("");
       setHoldReason("");
@@ -109,180 +157,248 @@ export default function AccountDetailPage({
 
   if (!account) {
     return (
-      <div className="account-detail-view">
-        <Link className="btn btn-ghost back-btn" href="/accounts">
-          ← Back to Accounts
-        </Link>
-        <div className="empty-state-large">Loading account…</div>
-      </div>
+      <Stack gap="lg">
+        <Anchor component={Link} href="/accounts" size="sm">
+          <Group gap={4}>
+            <IconArrowLeft size={14} />
+            Back to Accounts
+          </Group>
+        </Anchor>
+        <Text c="dimmed">Loading account…</Text>
+      </Stack>
     );
   }
 
   return (
-    <div className="account-detail-view">
-      <Link className="btn btn-ghost back-btn" href="/accounts">
-        ← Back to Accounts
-      </Link>
+    <Stack gap="lg">
+      <Anchor component={Link} href="/accounts" size="sm">
+        <Group gap={4}>
+          <IconArrowLeft size={14} />
+          Back to Accounts
+        </Group>
+      </Anchor>
 
-      <div className="account-header-card">
-        <div className="account-header-top">
-          <h2 className="account-name">{account.name}</h2>
-          <span className={`status-badge-lg ${account.status}`}>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Group justify="space-between" align="flex-start">
+          <div>
+            <Title order={3}>{account.name}</Title>
+            <Text size="xs" c="dimmed" ff="monospace" mt={4}>
+              Account ID: {account.account_id}
+            </Text>
+          </div>
+          <Badge size="lg" variant="light" color={statusColor(account.status)}>
             {capitalize(account.status)}
-          </span>
-        </div>
-        <div className="account-id">Account ID: {account.account_id}</div>
-      </div>
+          </Badge>
+        </Group>
+      </Card>
 
-      <div className="detail-stats">
-        <div className="detail-stat">
-          <div className="stat-label">Current Balance</div>
-          <div className="stat-value-lg">{formatAmount(account.balance, account.currency)}</div>
-        </div>
-        <div className="detail-stat">
-          <div className="stat-label">Currency</div>
-          <div className="stat-value">{account.currency}</div>
-        </div>
-        <div className="detail-stat">
-          <div className="stat-label">Created</div>
-          <div className="stat-value">{formatDate(account.created_at)}</div>
-        </div>
-      </div>
+      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Current Balance
+          </Text>
+          <Title order={3} mt={4}>
+            {formatAmount(account.balance, account.currency)}
+          </Title>
+        </Card>
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Currency
+          </Text>
+          <Title order={4} mt={4}>
+            {account.currency}
+          </Title>
+        </Card>
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Created
+          </Text>
+          <Title order={4} mt={4}>
+            {formatDate(account.created_at)}
+          </Title>
+        </Card>
+      </SimpleGrid>
 
-      <div className="account-actions">
+      <Group>
         {account.status === "active" && (
-          <button
-            type="button"
-            className="btn btn-warning"
-            onClick={() => action(`/accounts/${accountId}/freeze`, "Account frozen")}
+          <Button
+            color="yellow"
+            variant="light"
+            onClick={() =>
+              action(`/accounts/${accountId}/freeze`, "Account frozen")
+            }
           >
             Freeze Account
-          </button>
+          </Button>
         )}
         {account.status === "frozen" && (
-          <button
-            type="button"
-            className="btn btn-success"
-            onClick={() => action(`/accounts/${accountId}/unfreeze`, "Account unfrozen")}
+          <Button
+            color="teal"
+            variant="light"
+            onClick={() =>
+              action(`/accounts/${accountId}/unfreeze`, "Account unfrozen")
+            }
           >
             Unfreeze Account
-          </button>
+          </Button>
         )}
-        <button
-          type="button"
-          className="btn btn-danger"
-          onClick={() => action(`/accounts/${accountId}/close`, "Account closed")}
+        <Button
+          color="red"
+          variant="light"
+          onClick={() =>
+            action(`/accounts/${accountId}/close`, "Account closed")
+          }
         >
           Close Account
-        </button>
+        </Button>
+      </Group>
+
+      <div>
+        <Title order={4} mb="sm">
+          Recent Transactions
+        </Title>
+        <Paper withBorder radius="md" shadow="sm">
+          <Table.ScrollContainer minWidth={700}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th ta="right">Amount</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {transactions.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
+                      No transactions yet
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  transactions.map((t) => (
+                    <Table.Tr key={t.txn_id}>
+                      <Table.Td>{formatTimestamp(t.created_at)}</Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color="gray" radius="sm">
+                          {capitalize(t.txn_type)}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>{t.description}</Table.Td>
+                      <Table.Td ta="right" ff="monospace" fw={500}>
+                        {formatAmount(t.amount, t.currency)}
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          variant="light"
+                          color={statusColor(t.status)}
+                          radius="sm"
+                        >
+                          {capitalize(t.status)}
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </Paper>
       </div>
 
-      <div className="detail-section">
-        <h3>Recent Transactions</h3>
-        {transactions.length === 0 ? (
-          <div className="empty-state">No transactions yet</div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((t) => (
-                <tr key={t.txn_id}>
-                  <td>{formatTimestamp(t.created_at)}</td>
-                  <td>
-                    <span className={`type-badge ${t.txn_type}`}>{capitalize(t.txn_type)}</span>
-                  </td>
-                  <td>{t.description}</td>
-                  <td className="cell-balance">{formatAmount(t.amount, t.currency)}</td>
-                  <td>
-                    <span className={`status-badge ${t.status}`}>{capitalize(t.status)}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div className="detail-section">
-        <div className="card-header-row">
-          <h3>Funds Holds</h3>
-          <span className="stat-label">
+      <div>
+        <Group justify="space-between" mb="sm">
+          <Title order={4}>Funds Holds</Title>
+          <Text size="sm" c="dimmed">
             Available: {formatAmount(availableBalance, account.currency)}
-          </span>
-        </div>
+          </Text>
+        </Group>
 
-        <div className="form-card">
-          <h4>Place New Hold</h4>
-          <div className="form-grid">
-            <input
-              type="number"
-              id="hold-amount-input"
-              className="form-input"
-              placeholder="Amount (minor units)"
-              value={holdAmount}
-              onChange={(e) => setHoldAmount(e.target.value)}
-            />
-            <input
-              type="text"
-              id="hold-reason-input"
-              className="form-input"
-              placeholder="Reason"
-              value={holdReason}
-              onChange={(e) => setHoldReason(e.target.value)}
-            />
-          </div>
-          <button type="button" className="btn btn-warning" onClick={placeHold}>
-            Place Hold
-          </button>
-        </div>
+        <Card withBorder shadow="sm" radius="md" padding="lg" mb="md">
+          <Title order={5} mb="md">
+            Place New Hold
+          </Title>
+          <Stack>
+            <Group grow>
+              <NumberInput
+                id="hold-amount-input"
+                label="Amount (minor units)"
+                placeholder="100"
+                value={holdAmount}
+                onChange={setHoldAmount}
+              />
+              <TextInput
+                id="hold-reason-input"
+                label="Reason"
+                placeholder="Reason"
+                value={holdReason}
+                onChange={(e) => setHoldReason(e.currentTarget.value)}
+              />
+            </Group>
+            <Group>
+              <Button color="yellow" onClick={placeHold}>
+                Place Hold
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
 
-        {holds.length === 0 ? (
-          <div className="empty-state">No holds on this account</div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Amount</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>Placed</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {holds.map((h) => (
-                <tr key={h.hold_id}>
-                  <td className="cell-balance">{formatAmount(h.amount, account.currency)}</td>
-                  <td>{h.reason}</td>
-                  <td>
-                    <span className={`status-badge ${h.status}`}>{capitalize(h.status)}</span>
-                  </td>
-                  <td>{formatTimestamp(h.placed_at)}</td>
-                  <td>
-                    {h.status === "active" && (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => releaseHold(h.hold_id)}
-                      >
-                        Release
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <Paper withBorder radius="md" shadow="sm">
+          <Table.ScrollContainer minWidth={700}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th ta="right">Amount</Table.Th>
+                  <Table.Th>Reason</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Placed</Table.Th>
+                  <Table.Th>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {holds.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
+                      No holds on this account
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  holds.map((h) => (
+                    <Table.Tr key={h.hold_id}>
+                      <Table.Td ta="right" ff="monospace" fw={500}>
+                        {formatAmount(h.amount, account.currency)}
+                      </Table.Td>
+                      <Table.Td>{h.reason}</Table.Td>
+                      <Table.Td>
+                        <Badge
+                          variant="light"
+                          color={statusColor(h.status)}
+                          radius="sm"
+                        >
+                          {capitalize(h.status)}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>{formatTimestamp(h.placed_at)}</Table.Td>
+                      <Table.Td>
+                        {h.status === "active" && (
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            onClick={() => releaseHold(h.hold_id)}
+                          >
+                            Release
+                          </Button>
+                        )}
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </Paper>
       </div>
-    </div>
+    </Stack>
   );
 }

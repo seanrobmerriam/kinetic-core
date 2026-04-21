@@ -3,6 +3,20 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  Paper,
+  SegmentedControl,
+  Select,
+  Stack,
+  Table,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { IconSearch } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -13,7 +27,19 @@ interface ListResponse<T> {
   items: T[];
 }
 
-const STATUSES = ["all", "active", "frozen", "closed"] as const;
+const STATUSES = [
+  { label: "All", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Frozen", value: "frozen" },
+  { label: "Closed", value: "closed" },
+];
+
+function statusColor(s: string) {
+  if (s === "active") return "teal";
+  if (s === "frozen") return "yellow";
+  if (s === "closed") return "gray";
+  return "gray";
+}
 
 export default function AccountsPage() {
   const searchParams = useSearchParams();
@@ -22,10 +48,12 @@ export default function AccountsPage() {
   const [parties, setParties] = useState<Party[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [partyId, setPartyId] = useState<string>(searchParams?.get("party") ?? "");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [partyId, setPartyId] = useState<string>(
+    searchParams?.get("party") ?? "",
+  );
   const [name, setName] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState<string | null>("USD");
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +65,10 @@ export default function AccountsPage() {
         let all: Account[] = [];
         for (const p of ps) {
           try {
-            const accResp = await api<ListResponse<Account>>("GET", `/parties/${p.party_id}/accounts`);
+            const accResp = await api<ListResponse<Account>>(
+              "GET",
+              `/parties/${p.party_id}/accounts`,
+            );
             if (accResp.items) all = all.concat(accResp.items);
           } catch {
             /* skip */
@@ -55,7 +86,8 @@ export default function AccountsPage() {
 
   const filtered = useMemo(() => {
     let list = accounts;
-    if (filterStatus) list = list.filter((a) => a.status === filterStatus);
+    if (filterStatus && filterStatus !== "all")
+      list = list.filter((a) => a.status === filterStatus);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -91,130 +123,120 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="accounts-view">
-      <div className="view-toolbar">
-        <div className="search-wrapper">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search accounts..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+    <Stack gap="lg">
+      <TextInput
+        leftSection={<IconSearch size={16} />}
+        placeholder="Search accounts..."
+        value={search}
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        maw={400}
+      />
+
+      <Card
+        withBorder
+        shadow="sm"
+        radius="md"
+        padding="lg"
+        data-testid="create-account-form"
+      >
+        <Title order={4} mb="md">
+          Open New Account
+        </Title>
+        <Stack>
+          <Select
+            id="account-party-select"
+            label="Customer"
+            placeholder="Select customer"
+            data={parties.map((p) => ({
+              value: p.party_id,
+              label: `${p.full_name} (${p.email})`,
+            }))}
+            value={partyId}
+            onChange={(v) => setPartyId(v ?? "")}
+            searchable
           />
-        </div>
-      </div>
+          <TextInput
+            id="account-name"
+            label="Account Name"
+            placeholder="Main Checking"
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+          />
+          <Select
+            id="account-currency"
+            label="Currency"
+            data={["USD", "EUR", "GBP", "JPY"]}
+            value={currency}
+            onChange={setCurrency}
+          />
+          <Group>
+            <Button id="create-account-button" onClick={create}>
+              Create Account
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
 
-      <div className="form-card" data-testid="create-account-form">
-        <h3>Open New Account</h3>
-        <div className="form-stack">
-          <label>
-            Customer
-            <select
-              id="account-party-select"
-              className="form-select"
-              value={partyId}
-              onChange={(e) => setPartyId(e.target.value)}
-            >
-              <option value="">Select customer</option>
-              {parties.map((p) => (
-                <option key={p.party_id} value={p.party_id}>
-                  {p.full_name} ({p.email})
-                </option>
+      <SegmentedControl
+        value={filterStatus}
+        onChange={setFilterStatus}
+        data={STATUSES}
+      />
+
+      <Paper withBorder radius="md" shadow="sm">
+        <Table.ScrollContainer minWidth={700}>
+          <Table verticalSpacing="sm" highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Account ID</Table.Th>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Currency</Table.Th>
+                <Table.Th ta="right">Balance</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th>Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {filtered.map((a) => (
+                <Table.Tr key={a.account_id}>
+                  <Table.Td ff="monospace">{truncateID(a.account_id)}</Table.Td>
+                  <Table.Td fw={500}>{a.name}</Table.Td>
+                  <Table.Td>{a.currency}</Table.Td>
+                  <Table.Td ta="right" ff="monospace" fw={500}>
+                    {formatAmount(a.balance, a.currency)}
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge
+                      variant="light"
+                      color={statusColor(a.status)}
+                      radius="sm"
+                    >
+                      {capitalize(a.status)}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Button
+                      component={Link}
+                      href={`/accounts/${a.account_id}`}
+                      size="xs"
+                      variant="light"
+                    >
+                      View
+                    </Button>
+                  </Table.Td>
+                </Table.Tr>
               ))}
-            </select>
-          </label>
-          <label>
-            Account Name
-            <input
-              id="account-name"
-              type="text"
-              className="form-input"
-              placeholder="Main Checking"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label>
-            Currency
-            <select
-              id="account-currency"
-              className="form-select"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-            >
-              {["USD", "EUR", "GBP", "JPY"].map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            id="create-account-button"
-            type="button"
-            className="btn btn-primary"
-            onClick={create}
-          >
-            Create Account
-          </button>
-        </div>
-      </div>
-
-      <div className="filter-bar">
-        {STATUSES.map((s) => {
-          const active = filterStatus === s || (s === "all" && !filterStatus);
-          return (
-            <button
-              key={s}
-              type="button"
-              className={`filter-btn${active ? " active" : ""}`}
-              onClick={() => setFilterStatus(s === "all" ? "" : s)}
-            >
-              {capitalize(s)}
-            </button>
-          );
-        })}
-      </div>
-
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Account ID</th>
-            <th>Name</th>
-            <th>Currency</th>
-            <th>Balance</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((a) => (
-            <tr key={a.account_id}>
-              <td className="cell-mono">{truncateID(a.account_id)}</td>
-              <td className="cell-primary">{a.name}</td>
-              <td>{a.currency}</td>
-              <td className="cell-balance">{formatAmount(a.balance, a.currency)}</td>
-              <td>
-                <span className={`status-badge ${a.status}`}>
-                  {capitalize(a.status)}
-                </span>
-              </td>
-              <td>
-                <Link
-                  className="btn btn-sm btn-primary"
-                  href={`/accounts/${a.account_id}`}
-                >
-                  View
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {filtered.length === 0 && (
-        <div className="empty-state-large">No accounts found</div>
-      )}
-    </div>
+              {filtered.length === 0 && (
+                <Table.Tr>
+                  <Table.Td colSpan={6} ta="center" py="xl" c="dimmed">
+                    No accounts found
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Paper>
+    </Stack>
   );
 }

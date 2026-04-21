@@ -2,6 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  Anchor,
+  Button,
+  Card,
+  Group,
+  Select,
+  SimpleGrid,
+  Stack,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { parseAmount } from "@/lib/format";
@@ -13,15 +25,22 @@ interface FormProps {
   endpoint: string;
   bodyKey: "source_account_id" | "dest_account_id";
   label: string;
-  buttonClass: string;
+  color: string;
   successMessage: string;
 }
 
-function MoveForm({ prefix, endpoint, bodyKey, label, buttonClass, successMessage }: FormProps) {
+function MoveForm({
+  prefix,
+  endpoint,
+  bodyKey,
+  label,
+  color,
+  successMessage,
+}: FormProps) {
   const { setError, setSuccess } = useNotify();
   const [account, setAccount] = useState("");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState<string | null>("USD");
   const [desc, setDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,85 +70,70 @@ function MoveForm({ prefix, endpoint, bodyKey, label, buttonClass, successMessag
   };
 
   return (
-    <div className="form-card">
-      <h3>{label}</h3>
-      <div className="form-stack">
-        <label>
-          Account ID
-          <input
-            id={`${prefix}-account`}
-            type="text"
-            className="form-input"
-            placeholder="Enter account ID"
-            value={account}
-            onChange={(e) => setAccount(e.target.value)}
-          />
-        </label>
-        <label>
-          Amount
-          <input
-            id={`${prefix}-amount`}
-            type="text"
-            className="form-input"
-            placeholder="Enter amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </label>
-        <label>
-          Currency
-          <select
-            id={`${prefix}-currency`}
-            className="form-select"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Description
-          <input
-            id={`${prefix}-desc`}
-            type="text"
-            className="form-input"
-            placeholder="Enter description"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className={`btn ${buttonClass} btn-lg`}
+    <Card withBorder shadow="sm" radius="md" padding="lg">
+      <Title order={4} mb="md">
+        {label}
+      </Title>
+      <Stack>
+        <TextInput
+          id={`${prefix}-account`}
+          label="Account ID"
+          placeholder="Enter account ID"
+          value={account}
+          onChange={(e) => setAccount(e.currentTarget.value)}
+        />
+        <TextInput
+          id={`${prefix}-amount`}
+          label="Amount"
+          placeholder="Enter amount"
+          value={amount}
+          onChange={(e) => setAmount(e.currentTarget.value)}
+        />
+        <Select
+          id={`${prefix}-currency`}
+          label="Currency"
+          data={CURRENCIES}
+          value={currency}
+          onChange={setCurrency}
+        />
+        <TextInput
+          id={`${prefix}-desc`}
+          label="Description"
+          placeholder="Enter description"
+          value={desc}
+          onChange={(e) => setDesc(e.currentTarget.value)}
+        />
+        <Button
+          color={color}
           onClick={submit}
           disabled={submitting}
+          loading={submitting}
         >
           {label}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Stack>
+    </Card>
   );
 }
 
 export default function DepositWithdrawPage() {
   return (
-    <div className="deposit-view">
-      <Link className="btn btn-ghost back-btn" href="/dashboard">
-        ← Back
-      </Link>
-      <h2>Deposit / Withdraw</h2>
+    <Stack gap="lg">
+      <Anchor component={Link} href="/dashboard" size="sm">
+        <Group gap={4}>
+          <IconArrowLeft size={14} />
+          Back
+        </Group>
+      </Anchor>
+      <Title order={3}>Deposit / Withdraw</Title>
 
-      <div className="two-col-forms">
+      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
         <MoveForm
           prefix="deposit"
           endpoint="/transactions/deposit"
           bodyKey="dest_account_id"
           label="Deposit"
-          buttonClass="btn-success"
+          color="teal"
           successMessage="Deposit successful!"
         />
         <MoveForm
@@ -137,10 +141,10 @@ export default function DepositWithdrawPage() {
           endpoint="/transactions/withdraw"
           bodyKey="source_account_id"
           label="Withdraw"
-          buttonClass="btn-warning"
+          color="yellow"
           successMessage="Withdrawal successful!"
         />
-      </div>
-    </div>
+      </SimpleGrid>
+    </Stack>
   );
 }

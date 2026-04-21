@@ -1,6 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Button,
+  Card,
+  Group,
+  NumberInput,
+  Select,
+  SimpleGrid,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -20,34 +33,40 @@ export default function ProductsPage() {
   // Savings form
   const [sName, setSName] = useState("");
   const [sDesc, setSDesc] = useState("");
-  const [sRate, setSRate] = useState("");
+  const [sRate, setSRate] = useState<string | number>("");
   const [sMin, setSMin] = useState("");
-  const [sCurrency, setSCurrency] = useState("USD");
-  const [sInterestType, setSInterestType] = useState("simple");
-  const [sCompounding, setSCompounding] = useState("daily");
+  const [sCurrency, setSCurrency] = useState<string | null>("USD");
+  const [sInterestType, setSInterestType] = useState<string | null>("simple");
+  const [sCompounding, setSCompounding] = useState<string | null>("daily");
 
   // Loan form
   const [lName, setLName] = useState("");
   const [lDesc, setLDesc] = useState("");
   const [lMin, setLMin] = useState("");
   const [lMax, setLMax] = useState("");
-  const [lMinTerm, setLMinTerm] = useState("");
-  const [lMaxTerm, setLMaxTerm] = useState("");
-  const [lRate, setLRate] = useState("");
-  const [lCurrency, setLCurrency] = useState("USD");
-  const [lInterestType, setLInterestType] = useState("flat");
+  const [lMinTerm, setLMinTerm] = useState<string | number>("");
+  const [lMaxTerm, setLMaxTerm] = useState<string | number>("");
+  const [lRate, setLRate] = useState<string | number>("");
+  const [lCurrency, setLCurrency] = useState<string | null>("USD");
+  const [lInterestType, setLInterestType] = useState<string | null>("flat");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const sResp = await api<ListResponse<SavingsProduct>>("GET", "/savings-products");
+        const sResp = await api<ListResponse<SavingsProduct>>(
+          "GET",
+          "/savings-products",
+        );
         if (!cancelled) setSavings(sResp.items ?? []);
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
       }
       try {
-        const lResp = await api<ListResponse<LoanProduct>>("GET", "/loan-products");
+        const lResp = await api<ListResponse<LoanProduct>>(
+          "GET",
+          "/loan-products",
+        );
         if (!cancelled) setLoans(lResp.items ?? []);
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
@@ -59,7 +78,8 @@ export default function ProductsPage() {
   }, [tick, setError]);
 
   const createSavings = async () => {
-    const rateBps = parseInt(sRate, 10);
+    const rateBps =
+      typeof sRate === "number" ? sRate : parseInt(sRate, 10);
     if (!Number.isFinite(rateBps)) {
       setError("Invalid interest rate");
       return;
@@ -89,9 +109,12 @@ export default function ProductsPage() {
   };
 
   const createLoan = async () => {
-    const minTerm = parseInt(lMinTerm, 10);
-    const maxTerm = parseInt(lMaxTerm, 10);
-    const rateBps = parseInt(lRate, 10);
+    const minTerm =
+      typeof lMinTerm === "number" ? lMinTerm : parseInt(lMinTerm, 10);
+    const maxTerm =
+      typeof lMaxTerm === "number" ? lMaxTerm : parseInt(lMaxTerm, 10);
+    const rateBps =
+      typeof lRate === "number" ? lRate : parseInt(lRate, 10);
     if (!Number.isFinite(minTerm) || !Number.isFinite(maxTerm)) {
       setError("Invalid loan product term");
       return;
@@ -129,312 +152,233 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="products-view">
-      <div className="view-toolbar">
-        <h3>Product Management</h3>
-        <button type="button" className="btn btn-secondary" onClick={bump}>
+    <Stack gap="lg">
+      <Group justify="space-between">
+        <Title order={3}>Product Management</Title>
+        <Button variant="light" onClick={bump}>
           Refresh Products
-        </button>
-      </div>
+        </Button>
+      </Group>
 
-      <div className="two-col-forms">
-        <div className="form-card">
-          <h3>Create Savings Product</h3>
-          <div className="form-stack">
-            <label>
-              Name
-              <input
-                id="savings-name"
-                type="text"
-                className="form-input"
-                placeholder="High Yield Savings"
-                value={sName}
-                onChange={(e) => setSName(e.target.value)}
-              />
-            </label>
-            <label>
-              Description
-              <input
-                id="savings-description"
-                type="text"
-                className="form-input"
-                placeholder="Product description"
-                value={sDesc}
-                onChange={(e) => setSDesc(e.target.value)}
-              />
-            </label>
-            <label>
-              Interest Rate (bps)
-              <input
-                id="savings-rate-bps"
-                type="number"
-                className="form-input"
-                placeholder="450"
-                value={sRate}
-                onChange={(e) => setSRate(e.target.value)}
-              />
-            </label>
-            <label>
-              Minimum Balance
-              <input
-                id="savings-minimum-balance"
-                type="text"
-                className="form-input"
-                placeholder="100.00"
-                value={sMin}
-                onChange={(e) => setSMin(e.target.value)}
-              />
-            </label>
-            <label>
-              Currency
-              <select
-                id="savings-currency"
-                className="form-select"
-                value={sCurrency}
-                onChange={(e) => setSCurrency(e.target.value)}
-              >
-                {["USD", "EUR", "GBP", "JPY"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Interest Type
-              <select
-                id="savings-interest-type"
-                className="form-select"
-                value={sInterestType}
-                onChange={(e) => setSInterestType(e.target.value)}
-              >
-                {["simple", "compound"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Compounding Period
-              <select
-                id="savings-compounding-period"
-                className="form-select"
-                value={sCompounding}
-                onChange={(e) => setSCompounding(e.target.value)}
-              >
-                {["daily", "monthly", "quarterly", "annually"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              id="create-savings-product-button"
-              type="button"
-              className="btn btn-primary"
-              onClick={createSavings}
-            >
+      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Title order={4} mb="md">
+            Create Savings Product
+          </Title>
+          <Stack>
+            <TextInput
+              id="savings-name"
+              label="Name"
+              placeholder="High Yield Savings"
+              value={sName}
+              onChange={(e) => setSName(e.currentTarget.value)}
+            />
+            <TextInput
+              id="savings-description"
+              label="Description"
+              value={sDesc}
+              onChange={(e) => setSDesc(e.currentTarget.value)}
+            />
+            <NumberInput
+              id="savings-rate-bps"
+              label="Interest Rate (bps)"
+              placeholder="450"
+              value={sRate}
+              onChange={setSRate}
+            />
+            <TextInput
+              id="savings-minimum-balance"
+              label="Minimum Balance"
+              placeholder="100.00"
+              value={sMin}
+              onChange={(e) => setSMin(e.currentTarget.value)}
+            />
+            <Select
+              id="savings-currency"
+              label="Currency"
+              data={["USD", "EUR", "GBP", "JPY"]}
+              value={sCurrency}
+              onChange={setSCurrency}
+            />
+            <Select
+              id="savings-interest-type"
+              label="Interest Type"
+              data={["simple", "compound"]}
+              value={sInterestType}
+              onChange={setSInterestType}
+            />
+            <Select
+              id="savings-compounding-period"
+              label="Compounding Period"
+              data={["daily", "monthly", "quarterly", "annually"]}
+              value={sCompounding}
+              onChange={setSCompounding}
+            />
+            <Button id="create-savings-product-button" onClick={createSavings}>
               Create Savings Product
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Stack>
+        </Card>
 
-        <div className="form-card">
-          <h3>Create Loan Product</h3>
-          <div className="form-stack">
-            <label>
-              Name
-              <input
-                id="loan-product-name"
-                type="text"
-                className="form-input"
-                placeholder="Starter Loan"
-                value={lName}
-                onChange={(e) => setLName(e.target.value)}
-              />
-            </label>
-            <label>
-              Description
-              <input
-                id="loan-product-description"
-                type="text"
-                className="form-input"
-                placeholder="Loan product description"
-                value={lDesc}
-                onChange={(e) => setLDesc(e.target.value)}
-              />
-            </label>
-            <label>
-              Min Amount
-              <input
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Title order={4} mb="md">
+            Create Loan Product
+          </Title>
+          <Stack>
+            <TextInput
+              id="loan-product-name"
+              label="Name"
+              placeholder="Starter Loan"
+              value={lName}
+              onChange={(e) => setLName(e.currentTarget.value)}
+            />
+            <TextInput
+              id="loan-product-description"
+              label="Description"
+              value={lDesc}
+              onChange={(e) => setLDesc(e.currentTarget.value)}
+            />
+            <Group grow>
+              <TextInput
                 id="loan-product-min-amount"
-                type="text"
-                className="form-input"
+                label="Min Amount"
                 placeholder="100.00"
                 value={lMin}
-                onChange={(e) => setLMin(e.target.value)}
+                onChange={(e) => setLMin(e.currentTarget.value)}
               />
-            </label>
-            <label>
-              Max Amount
-              <input
+              <TextInput
                 id="loan-product-max-amount"
-                type="text"
-                className="form-input"
+                label="Max Amount"
                 placeholder="5000.00"
                 value={lMax}
-                onChange={(e) => setLMax(e.target.value)}
+                onChange={(e) => setLMax(e.currentTarget.value)}
               />
-            </label>
-            <label>
-              Min Term (months)
-              <input
+            </Group>
+            <Group grow>
+              <NumberInput
                 id="loan-product-min-term"
-                type="number"
-                className="form-input"
-                placeholder="6"
+                label="Min Term (months)"
                 value={lMinTerm}
-                onChange={(e) => setLMinTerm(e.target.value)}
+                onChange={setLMinTerm}
               />
-            </label>
-            <label>
-              Max Term (months)
-              <input
+              <NumberInput
                 id="loan-product-max-term"
-                type="number"
-                className="form-input"
-                placeholder="24"
+                label="Max Term (months)"
                 value={lMaxTerm}
-                onChange={(e) => setLMaxTerm(e.target.value)}
+                onChange={setLMaxTerm}
               />
-            </label>
-            <label>
-              Interest Rate (bps)
-              <input
-                id="loan-product-rate-bps"
-                type="number"
-                className="form-input"
-                placeholder="1200"
-                value={lRate}
-                onChange={(e) => setLRate(e.target.value)}
-              />
-            </label>
-            <label>
-              Currency
-              <select
-                id="loan-product-currency"
-                className="form-select"
-                value={lCurrency}
-                onChange={(e) => setLCurrency(e.target.value)}
-              >
-                {["USD", "EUR", "GBP", "JPY"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Interest Type
-              <select
-                id="loan-product-interest-type"
-                className="form-select"
-                value={lInterestType}
-                onChange={(e) => setLInterestType(e.target.value)}
-              >
-                {["flat", "declining"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              id="create-loan-product-button"
-              type="button"
-              className="btn btn-primary"
-              onClick={createLoan}
-            >
+            </Group>
+            <NumberInput
+              id="loan-product-rate-bps"
+              label="Interest Rate (bps)"
+              placeholder="1200"
+              value={lRate}
+              onChange={setLRate}
+            />
+            <Select
+              id="loan-product-currency"
+              label="Currency"
+              data={["USD", "EUR", "GBP", "JPY"]}
+              value={lCurrency}
+              onChange={setLCurrency}
+            />
+            <Select
+              id="loan-product-interest-type"
+              label="Interest Type"
+              data={["flat", "declining"]}
+              value={lInterestType}
+              onChange={setLInterestType}
+            />
+            <Button id="create-loan-product-button" onClick={createLoan}>
               Create Loan Product
-            </button>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </Stack>
+        </Card>
+      </SimpleGrid>
 
-      <div className="dashboard-card">
-        <h3>Savings Products</h3>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Savings Products
+        </Title>
         {savings.length === 0 ? (
-          <div className="empty-state">No savings products yet</div>
+          <Text c="dimmed">No savings products yet</Text>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Currency</th>
-                <th>Rate</th>
-                <th>Type</th>
-                <th>Minimum Balance</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {savings.map((p) => (
-                <tr key={p.product_id}>
-                  <td>{p.name}</td>
-                  <td>{p.currency}</td>
-                  <td>{p.interest_rate_bps} bps</td>
-                  <td>
-                    {capitalize(p.interest_type)} / {capitalize(p.compounding_period)}
-                  </td>
-                  <td>{formatAmount(p.minimum_balance, p.currency)}</td>
-                  <td>{capitalize(p.status)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table.ScrollContainer minWidth={700}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Currency</Table.Th>
+                  <Table.Th>Rate</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th>Minimum Balance</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {savings.map((p) => (
+                  <Table.Tr key={p.product_id}>
+                    <Table.Td>{p.name}</Table.Td>
+                    <Table.Td>{p.currency}</Table.Td>
+                    <Table.Td>{p.interest_rate_bps} bps</Table.Td>
+                    <Table.Td>
+                      {capitalize(p.interest_type)} /{" "}
+                      {capitalize(p.compounding_period)}
+                    </Table.Td>
+                    <Table.Td>
+                      {formatAmount(p.minimum_balance, p.currency)}
+                    </Table.Td>
+                    <Table.Td>{capitalize(p.status)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         )}
-      </div>
+      </Card>
 
-      <div className="dashboard-card">
-        <h3>Loan Products</h3>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Loan Products
+        </Title>
         {loans.length === 0 ? (
-          <div className="empty-state">No loan products yet</div>
+          <Text c="dimmed">No loan products yet</Text>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Currency</th>
-                <th>Amount Range</th>
-                <th>Term Range</th>
-                <th>Rate</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loans.map((p) => (
-                <tr key={p.product_id}>
-                  <td>{p.name}</td>
-                  <td>{p.currency}</td>
-                  <td>
-                    {formatAmount(p.min_amount, p.currency)} -{" "}
-                    {formatAmount(p.max_amount, p.currency)}
-                  </td>
-                  <td>
-                    {p.min_term_months}-{p.max_term_months} mo
-                  </td>
-                  <td>
-                    {p.interest_rate_bps} bps {capitalize(p.interest_type)}
-                  </td>
-                  <td>{capitalize(p.status)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table.ScrollContainer minWidth={700}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Currency</Table.Th>
+                  <Table.Th>Amount Range</Table.Th>
+                  <Table.Th>Term Range</Table.Th>
+                  <Table.Th>Rate</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {loans.map((p) => (
+                  <Table.Tr key={p.product_id}>
+                    <Table.Td>{p.name}</Table.Td>
+                    <Table.Td>{p.currency}</Table.Td>
+                    <Table.Td>
+                      {formatAmount(p.min_amount, p.currency)} -{" "}
+                      {formatAmount(p.max_amount, p.currency)}
+                    </Table.Td>
+                    <Table.Td>
+                      {p.min_term_months}-{p.max_term_months} mo
+                    </Table.Td>
+                    <Table.Td>
+                      {p.interest_rate_bps} bps {capitalize(p.interest_type)}
+                    </Table.Td>
+                    <Table.Td>{capitalize(p.status)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         )}
-      </div>
-    </div>
+      </Card>
+    </Stack>
   );
 }

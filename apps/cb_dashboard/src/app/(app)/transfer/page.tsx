@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  Anchor,
+  Button,
+  Card,
+  Group,
+  Select,
+  Stack,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { parseAmount } from "@/lib/format";
@@ -13,7 +24,7 @@ export default function TransferPage() {
   const [source, setSource] = useState("");
   const [dest, setDest] = useState("");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState<string | null>("USD");
   const [desc, setDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,73 +55,62 @@ export default function TransferPage() {
   };
 
   return (
-    <div className="transfer-view">
-      <Link className="btn btn-ghost back-btn" href="/dashboard">
-        ← Back
-      </Link>
-      <h2>Transfer Funds</h2>
+    <Stack gap="lg" maw={600}>
+      <Anchor component={Link} href="/dashboard" size="sm">
+        <Group gap={4}>
+          <IconArrowLeft size={14} />
+          Back
+        </Group>
+      </Anchor>
+      <Title order={3}>Transfer Funds</Title>
 
-      <div className="form-card">
-        <div className="form-grid">
-          <label>Source Account ID</label>
-          <input
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Stack>
+          <TextInput
             id="transfer-source"
-            type="text"
-            className="form-input"
+            label="Source Account ID"
             placeholder="Enter source account ID"
             value={source}
-            onChange={(e) => setSource(e.target.value)}
+            onChange={(e) => setSource(e.currentTarget.value)}
           />
-          <label>Destination Account ID</label>
-          <input
+          <TextInput
             id="transfer-dest"
-            type="text"
-            className="form-input"
+            label="Destination Account ID"
             placeholder="Enter destination account ID"
             value={dest}
-            onChange={(e) => setDest(e.target.value)}
+            onChange={(e) => setDest(e.currentTarget.value)}
           />
-          <label>Amount</label>
-          <input
+          <TextInput
             id="transfer-amount"
-            type="text"
-            className="form-input"
+            label="Amount"
             placeholder="Enter amount (e.g., 100.00)"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(e.currentTarget.value)}
           />
-          <label>Currency</label>
-          <select
+          <Select
             id="transfer-currency"
-            className="form-select"
+            label="Currency"
+            data={CURRENCIES}
             value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <label>Description</label>
-          <input
+            onChange={setCurrency}
+          />
+          <TextInput
             id="transfer-desc"
-            type="text"
-            className="form-input"
+            label="Description"
             placeholder="Enter description"
             value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            onChange={(e) => setDesc(e.currentTarget.value)}
           />
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-lg"
-          onClick={submit}
-          disabled={submitting}
-        >
-          Transfer Funds
-        </button>
-      </div>
-    </div>
+          <Button
+            size="md"
+            onClick={submit}
+            disabled={submitting}
+            loading={submitting}
+          >
+            Transfer Funds
+          </Button>
+        </Stack>
+      </Card>
+    </Stack>
   );
 }

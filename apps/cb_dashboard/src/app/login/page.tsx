@@ -2,6 +2,22 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Alert,
+  Button,
+  Center,
+  Container,
+  Loader,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+  Group,
+} from "@mantine/core";
+import { IconAlertCircle, IconBuildingBank } from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -24,67 +40,82 @@ export default function LoginPage() {
   const loading = state.status === "loading";
 
   return (
-    <div className="app-layout">
-      <div className="main-content">
-        <div className="content-area login-shell">
-          <div className="login-hero">
-            <h1 className="login-hero-title">IronLedger Dashboard</h1>
-            <p className="login-hero-subtitle">
-              Modern core banking operations with real-time visibility and controls.
-            </p>
-            <div className="login-hero-meta">Secure operator access</div>
-          </div>
-          <div className="login-auth">
-            <div className="dashboard-card login-card" data-testid="login-form">
-              <h2 className="page-title">Dashboard Sign In</h2>
-              <p>Use the configured IronLedger operator credentials to continue.</p>
+    <Center mih="100vh" px="md">
+      <Container size={420} w="100%">
+        <Stack align="center" gap="xs" mb="xl">
+          <ThemeIcon
+            size={56}
+            radius="lg"
+            variant="gradient"
+            gradient={{ from: "indigo", to: "violet" }}
+          >
+            <IconBuildingBank size={32} />
+          </ThemeIcon>
+          <Title order={2} ta="center">
+            IronLedger Dashboard
+          </Title>
+          <Text c="dimmed" ta="center" size="sm">
+            Modern core banking operations with real-time visibility and
+            controls.
+          </Text>
+        </Stack>
+
+        <Paper
+          withBorder
+          shadow="sm"
+          p="xl"
+          radius="md"
+          data-testid="login-form"
+        >
+          <form onSubmit={submit}>
+            <Stack>
               {state.error && (
-                <div className="alert alert-error" data-testid="error-banner">
+                <Alert
+                  color="red"
+                  icon={<IconAlertCircle size={18} />}
+                  data-testid="error-banner"
+                  variant="light"
+                >
                   {state.error}
-                </div>
+                </Alert>
               )}
               {loading && (
-                <div className="loading-spinner" data-testid="loading">
-                  Signing in...
-                </div>
+                <Group gap="sm" data-testid="loading">
+                  <Loader size="sm" />
+                  <Text size="sm" c="dimmed">
+                    Signing in…
+                  </Text>
+                </Group>
               )}
-              <form className="login-form" onSubmit={submit}>
-                <label className="form-label" htmlFor="login-email">
-                  Email
-                </label>
-                <input
-                  className="form-input"
-                  id="login-email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <label className="form-label" htmlFor="login-password">
-                  Password
-                </label>
-                <input
-                  className="form-input"
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  id="login-submit"
-                  className="btn btn-primary"
-                  type="submit"
-                  disabled={loading}
-                >
-                  Sign In
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              <TextInput
+                id="login-email"
+                label="Email"
+                placeholder="admin@example.com"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.currentTarget.value)}
+                required
+              />
+              <PasswordInput
+                id="login-password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.currentTarget.value)}
+                required
+              />
+              <Button
+                id="login-submit"
+                type="submit"
+                fullWidth
+                disabled={loading}
+                loading={loading}
+              >
+                Sign In
+              </Button>
+            </Stack>
+          </form>
+        </Paper>
+      </Container>
+    </Center>
   );
 }

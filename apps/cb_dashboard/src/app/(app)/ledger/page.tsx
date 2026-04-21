@@ -1,9 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  Paper,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
-import { capitalize, formatAmount, formatTimestamp, truncateID } from "@/lib/format";
+import {
+  capitalize,
+  formatAmount,
+  formatTimestamp,
+  truncateID,
+} from "@/lib/format";
 import type { LedgerEntry } from "@/lib/types";
 
 interface ListResponse<T> {
@@ -31,60 +48,75 @@ export default function LedgerPage() {
   };
 
   return (
-    <div className="ledger-view">
-      <div className="section-header">
-        <h3>Ledger Entries</h3>
-      </div>
+    <Stack gap="lg">
+      <Title order={3}>Ledger Entries</Title>
 
-      <div className="filter-card">
-        <label>Filter by Account ID:</label>
-        <input
-          type="text"
-          id="ledger-account-filter"
-          className="form-input"
-          placeholder="Enter account ID"
-          value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-        />
-        <button type="button" className="btn btn-primary" onClick={filter}>
-          Filter
-        </button>
-      </div>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Group align="flex-end" wrap="nowrap">
+          <TextInput
+            id="ledger-account-filter"
+            label="Filter by Account ID"
+            placeholder="Enter account ID"
+            value={accountId}
+            onChange={(e) => setAccountId(e.currentTarget.value)}
+            style={{ flex: 1 }}
+          />
+          <Button onClick={filter}>Filter</Button>
+        </Group>
+      </Card>
 
       {!loaded || entries.length === 0 ? (
-        <div className="empty-state-large">
-          {loaded ? "No ledger entries found" : "Select an account to view ledger entries"}
-        </div>
+        <Card withBorder padding="xl" radius="md">
+          <Text c="dimmed" ta="center">
+            {loaded
+              ? "No ledger entries found"
+              : "Select an account to view ledger entries"}
+          </Text>
+        </Card>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Entry ID</th>
-              <th>Transaction ID</th>
-              <th>Account ID</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Description</th>
-              <th>Posted At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((e) => (
-              <tr key={e.entry_id}>
-                <td className="cell-mono">{truncateID(e.entry_id)}</td>
-                <td className="cell-mono">{truncateID(e.txn_id)}</td>
-                <td className="cell-mono">{truncateID(e.account_id)}</td>
-                <td>
-                  <span className={`type-badge ${e.entry_type}`}>{capitalize(e.entry_type)}</span>
-                </td>
-                <td className="cell-balance">{formatAmount(e.amount, e.currency)}</td>
-                <td>{e.description}</td>
-                <td>{formatTimestamp(e.posted_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Paper withBorder radius="md" shadow="sm">
+          <Table.ScrollContainer minWidth={900}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Entry ID</Table.Th>
+                  <Table.Th>Transaction ID</Table.Th>
+                  <Table.Th>Account ID</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th ta="right">Amount</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Posted At</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {entries.map((e) => (
+                  <Table.Tr key={e.entry_id}>
+                    <Table.Td ff="monospace">{truncateID(e.entry_id)}</Table.Td>
+                    <Table.Td ff="monospace">{truncateID(e.txn_id)}</Table.Td>
+                    <Table.Td ff="monospace">
+                      {truncateID(e.account_id)}
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge
+                        variant="light"
+                        color={e.entry_type === "debit" ? "red" : "teal"}
+                        radius="sm"
+                      >
+                        {capitalize(e.entry_type)}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace" fw={500}>
+                      {formatAmount(e.amount, e.currency)}
+                    </Table.Td>
+                    <Table.Td>{e.description}</Table.Td>
+                    <Table.Td>{formatTimestamp(e.posted_at)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </Paper>
       )}
-    </div>
+    </Stack>
   );
 }

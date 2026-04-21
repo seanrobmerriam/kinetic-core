@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Card, Code, Group, Stack, Text, Title } from "@mantine/core";
 import { getApiBase } from "@/lib/api";
 
 export default function SettingsPage() {
@@ -12,28 +13,31 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="settings-view">
-      <h2>Settings</h2>
-      <div className="settings-card">
-        <div className="setting-item">
-          <div className="setting-label">
-            <h4>API Endpoint</h4>
-            <p>The backend API URL</p>
-          </div>
-          <div className="setting-value">
-            <code>{endpoint}</code>
-          </div>
-        </div>
-        <div className="setting-item">
-          <div className="setting-label">
-            <h4>Application Version</h4>
-            <p>Current dashboard version</p>
-          </div>
-          <div className="setting-value">
-            <span>1.0.0</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Stack gap="lg" maw={700}>
+      <Title order={3}>Settings</Title>
+
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Stack gap="lg">
+          <Group justify="space-between" align="flex-start">
+            <div>
+              <Title order={5}>API Endpoint</Title>
+              <Text size="sm" c="dimmed">
+                The backend API URL
+              </Text>
+            </div>
+            <Code>{endpoint}</Code>
+          </Group>
+          <Group justify="space-between" align="flex-start">
+            <div>
+              <Title order={5}>Application Version</Title>
+              <Text size="sm" c="dimmed">
+                Current dashboard version
+              </Text>
+            </div>
+            <Text>1.0.0</Text>
+          </Group>
+        </Stack>
+      </Card>
+    </Stack>
   );
 }

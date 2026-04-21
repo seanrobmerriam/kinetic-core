@@ -2,6 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  Paper,
+  Stack,
+  Table,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { IconSearch } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -10,6 +22,13 @@ import type { Party } from "@/lib/types";
 
 interface ListResponse<T> {
   items: T[];
+}
+
+function statusColor(s: string) {
+  if (s === "active") return "teal";
+  if (s === "suspended") return "yellow";
+  if (s === "closed") return "gray";
+  return "gray";
 }
 
 export default function CustomersPage() {
@@ -84,106 +103,121 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="customers-view">
-      <div className="view-toolbar">
-        <div className="search-wrapper">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search customers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
+    <Stack gap="lg">
+      <TextInput
+        leftSection={<IconSearch size={16} />}
+        placeholder="Search customers..."
+        value={search}
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        maw={400}
+      />
 
-      <div className="form-card">
-        <h3>New Customer</h3>
-        <div className="form-grid">
-          <input
-            type="text"
-            id="customer-name"
-            placeholder="Full Name"
-            className="form-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            type="email"
-            id="customer-email"
-            placeholder="Email Address"
-            className="form-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="form-actions">
-          <button
-            id="create-customer-button"
-            type="button"
-            className="btn btn-primary"
-            onClick={create}
-            disabled={submitting}
-          >
-            Create Customer
-          </button>
-        </div>
-      </div>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          New Customer
+        </Title>
+        <Stack>
+          <Group grow>
+            <TextInput
+              id="customer-name"
+              label="Full Name"
+              placeholder="Full name"
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
+            />
+            <TextInput
+              id="customer-email"
+              label="Email"
+              placeholder="user@example.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.currentTarget.value)}
+            />
+          </Group>
+          <Group>
+            <Button
+              id="create-customer-button"
+              onClick={create}
+              disabled={submitting}
+              loading={submitting}
+            >
+              Create Customer
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((party) => (
-            <tr key={party.party_id}>
-              <td className="cell-primary">{party.full_name}</td>
-              <td>{party.email}</td>
-              <td>
-                <span className={`status-badge ${party.status}`}>
-                  {capitalize(party.status)}
-                </span>
-              </td>
-              <td>{formatDate(party.created_at)}</td>
-              <td>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  onClick={() => router.push(`/accounts?party=${party.party_id}`)}
-                >
-                  View
-                </button>
-                {party.status === "active" && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-warning"
-                    onClick={() => suspend(party.party_id)}
-                  >
-                    Suspend
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={() => close(party.party_id)}
-                >
-                  Close
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {filtered.length === 0 && (
-        <div className="empty-state-large">No customers found</div>
-      )}
-    </div>
+      <Paper withBorder radius="md" shadow="sm">
+        <Table.ScrollContainer minWidth={700}>
+          <Table verticalSpacing="sm" highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th>Created</Table.Th>
+                <Table.Th>Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {filtered.map((party) => (
+                <Table.Tr key={party.party_id}>
+                  <Table.Td fw={500}>{party.full_name}</Table.Td>
+                  <Table.Td>{party.email}</Table.Td>
+                  <Table.Td>
+                    <Badge
+                      variant="light"
+                      color={statusColor(party.status)}
+                      radius="sm"
+                    >
+                      {capitalize(party.status)}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>{formatDate(party.created_at)}</Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() =>
+                          router.push(`/accounts?party=${party.party_id}`)
+                        }
+                      >
+                        View
+                      </Button>
+                      {party.status === "active" && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="yellow"
+                          onClick={() => suspend(party.party_id)}
+                        >
+                          Suspend
+                        </Button>
+                      )}
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="red"
+                        onClick={() => close(party.party_id)}
+                      >
+                        Close
+                      </Button>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+              {filtered.length === 0 && (
+                <Table.Tr>
+                  <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
+                    No customers found
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Paper>
+    </Stack>
   );
 }

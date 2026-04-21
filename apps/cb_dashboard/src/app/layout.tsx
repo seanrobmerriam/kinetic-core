@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
-import "./globals.css";
+import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
+import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import { Providers } from "./providers";
+import { theme } from "./theme";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -19,16 +23,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="light" className={manrope.variable} suppressHydrationWarning>
+    <html lang="en" className={manrope.variable} {...mantineHtmlProps}>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('ironledger.theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`,
-          }}
-        />
+        <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <MantineProvider theme={theme} defaultColorScheme="auto">
+          <Notifications position="top-right" />
+          <Providers>{children}</Providers>
+        </MantineProvider>
       </body>
     </html>
   );

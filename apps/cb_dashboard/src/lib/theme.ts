@@ -1,32 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+import { useMantineColorScheme } from "@mantine/core";
 
-const THEME_STORAGE_KEY = "ironledger.theme";
+function subscribe(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+
+function getSnapshot(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getServerSnapshot(): "light" | "dark" {
+  return "light";
+}
 
 export function useTheme(): { theme: "light" | "dark"; toggle: () => void } {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const attr = document.documentElement.getAttribute("data-theme");
-    if (attr === "dark" || attr === "light") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTheme(attr);
-    }
-  }, []);
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const systemScheme = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+  const resolved: "light" | "dark" =
+    colorScheme === "auto" ? systemScheme : colorScheme;
 
   const toggle = () => {
-    if (typeof document === "undefined") return;
-    const next: "light" | "dark" = theme === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, next);
-    } catch {
-      /* ignore */
-    }
-    setTheme(next);
+    setColorScheme(resolved === "dark" ? "light" : "dark");
   };
 
-  return { theme, toggle };
+  return { theme: resolved, toggle };
 }

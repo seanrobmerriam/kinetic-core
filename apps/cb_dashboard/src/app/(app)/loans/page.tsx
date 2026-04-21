@@ -1,11 +1,38 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  NumberInput,
+  Paper,
+  Select,
+  SimpleGrid,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
-import { capitalize, formatAmount, formatTimestamp, parseAmount, truncateID } from "@/lib/format";
-import type { Account, Loan, LoanProduct, LoanRepayment, Party } from "@/lib/types";
+import {
+  capitalize,
+  formatAmount,
+  formatTimestamp,
+  parseAmount,
+  truncateID,
+} from "@/lib/format";
+import type {
+  Account,
+  Loan,
+  LoanProduct,
+  LoanRepayment,
+  Party,
+} from "@/lib/types";
 
 interface ListResponse<T> {
   items: T[];
@@ -18,17 +45,16 @@ export default function LoansPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [products, setProducts] = useState<LoanProduct[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [partyId, setPartyId] = useState("");
-  const [productId, setProductId] = useState("");
-  const [accountId, setAccountId] = useState("");
+  const [partyId, setPartyId] = useState<string | null>("");
+  const [productId, setProductId] = useState<string | null>("");
+  const [accountId, setAccountId] = useState<string | null>("");
   const [principal, setPrincipal] = useState("");
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState<string | number>("");
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [repayments, setRepayments] = useState<LoanRepayment[]>([]);
   const [repayAmount, setRepayAmount] = useState("");
-  const [repayType, setRepayType] = useState("partial");
+  const [repayType, setRepayType] = useState<string | null>("partial");
 
-  // Bootstrap: parties, accounts, loan products
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -39,7 +65,10 @@ export default function LoansPage() {
         let allAccounts: Account[] = [];
         for (const p of ps) {
           try {
-            const accResp = await api<ListResponse<Account>>("GET", `/parties/${p.party_id}/accounts`);
+            const accResp = await api<ListResponse<Account>>(
+              "GET",
+              `/parties/${p.party_id}/accounts`,
+            );
             if (accResp.items) allAccounts = allAccounts.concat(accResp.items);
           } catch {
             /* skip */
@@ -50,7 +79,10 @@ export default function LoansPage() {
         if (!cancelled) setError((err as Error).message);
       }
       try {
-        const lp = await api<ListResponse<LoanProduct>>("GET", "/loan-products");
+        const lp = await api<ListResponse<LoanProduct>>(
+          "GET",
+          "/loan-products",
+        );
         if (!cancelled) setProducts(lp.items ?? []);
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
@@ -61,7 +93,6 @@ export default function LoansPage() {
     };
   }, [tick, setError]);
 
-  // Loans for selected party
   useEffect(() => {
     if (!partyId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,7 +102,10 @@ export default function LoansPage() {
     let cancelled = false;
     (async () => {
       try {
-        const resp = await api<ListResponse<Loan>>("GET", `/loans?party_id=${partyId}`);
+        const resp = await api<ListResponse<Loan>>(
+          "GET",
+          `/loans?party_id=${partyId}`,
+        );
         if (!cancelled) setLoans(resp.items ?? []);
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
@@ -87,7 +121,8 @@ export default function LoansPage() {
     [accounts, partyId],
   );
 
-  const productName = (id: string) => products.find((p) => p.product_id === id)?.name ?? truncateID(id);
+  const productName = (id: string) =>
+    products.find((p) => p.product_id === id)?.name ?? truncateID(id);
 
   const createLoan = async () => {
     if (!partyId) {
@@ -101,7 +136,7 @@ export default function LoansPage() {
       setError("Invalid principal amount");
       return;
     }
-    const termMonths = parseInt(term, 10);
+    const termMonths = typeof term === "number" ? term : parseInt(term, 10);
     if (!Number.isFinite(termMonths)) {
       setError("Invalid loan term");
       return;
@@ -181,248 +216,258 @@ export default function LoansPage() {
   };
 
   return (
-    <div className="loans-view">
-      <div className="view-toolbar">
-        <label>
-          Customer
-          <select
-            id="loan-party-select"
-            className="form-select"
-            value={partyId}
-            onChange={(e) => {
-              setPartyId(e.target.value);
-              setSelectedLoan(null);
-              setRepayments([]);
-            }}
-          >
-            <option value="">Select customer</option>
-            {parties.map((p) => (
-              <option key={p.party_id} value={p.party_id}>
-                {p.full_name} ({p.email})
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" className="btn btn-secondary" onClick={bump}>
+    <Stack gap="lg">
+      <Group align="flex-end">
+        <Select
+          id="loan-party-select"
+          label="Customer"
+          placeholder="Select customer"
+          searchable
+          data={parties.map((p) => ({
+            value: p.party_id,
+            label: `${p.full_name} (${p.email})`,
+          }))}
+          value={partyId}
+          onChange={(v) => {
+            setPartyId(v);
+            setSelectedLoan(null);
+            setRepayments([]);
+          }}
+          style={{ flex: 1, maxWidth: 400 }}
+        />
+        <Button variant="light" onClick={bump}>
           Refresh Loans
-        </button>
-      </div>
+        </Button>
+      </Group>
 
-      <div className="form-card">
-        <h3>Create Loan</h3>
-        <div className="form-stack">
-          <label>
-            Loan Product
-            <select
-              id="loan-create-product"
-              className="form-select"
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-            >
-              <option value="">Select product</option>
-              {products.map((p) => (
-                <option key={p.product_id} value={p.product_id}>
-                  {p.name} ({p.currency})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Disbursement Account
-            <select
-              id="loan-create-account"
-              className="form-select"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              <option value="">Select account</option>
-              {partyAccounts.map((a) => (
-                <option key={a.account_id} value={a.account_id}>
-                  {a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Principal
-            <input
-              id="loan-create-principal"
-              type="text"
-              className="form-input"
-              placeholder="1000.00"
-              value={principal}
-              onChange={(e) => setPrincipal(e.target.value)}
-            />
-          </label>
-          <label>
-            Term (months)
-            <input
-              id="loan-create-term"
-              type="number"
-              className="form-input"
-              placeholder="12"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-          </label>
-          <button
-            id="create-loan-button"
-            type="button"
-            className="btn btn-primary"
-            onClick={createLoan}
-          >
-            Create Loan
-          </button>
-        </div>
-      </div>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Create Loan
+        </Title>
+        <Stack>
+          <Select
+            id="loan-create-product"
+            label="Loan Product"
+            placeholder="Select product"
+            data={products.map((p) => ({
+              value: p.product_id,
+              label: `${p.name} (${p.currency})`,
+            }))}
+            value={productId}
+            onChange={setProductId}
+          />
+          <Select
+            id="loan-create-account"
+            label="Disbursement Account"
+            placeholder="Select account"
+            data={partyAccounts.map((a) => ({
+              value: a.account_id,
+              label: `${a.name} (${a.currency})`,
+            }))}
+            value={accountId}
+            onChange={setAccountId}
+          />
+          <TextInput
+            id="loan-create-principal"
+            label="Principal"
+            placeholder="1000.00"
+            value={principal}
+            onChange={(e) => setPrincipal(e.currentTarget.value)}
+          />
+          <NumberInput
+            id="loan-create-term"
+            label="Term (months)"
+            placeholder="12"
+            value={term}
+            onChange={setTerm}
+          />
+          <Group>
+            <Button id="create-loan-button" onClick={createLoan}>
+              Create Loan
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
 
-      <div className="dashboard-card">
-        <h3>Loans</h3>
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Loans
+        </Title>
         {loans.length === 0 ? (
-          <div className="empty-state">
-            {partyId ? "No loans for the selected customer" : "Select a customer to view loans"}
-          </div>
+          <Text c="dimmed">
+            {partyId
+              ? "No loans for the selected customer"
+              : "Select a customer to view loans"}
+          </Text>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Loan</th>
-                <th>Product</th>
-                <th>Principal</th>
-                <th>Outstanding</th>
-                <th>Monthly Payment</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loans.map((l) => (
-                <tr key={l.loan_id}>
-                  <td>{truncateID(l.loan_id)}</td>
-                  <td>{productName(l.product_id)}</td>
-                  <td>{formatAmount(l.principal, l.currency)}</td>
-                  <td>{formatAmount(l.outstanding_balance, l.currency)}</td>
-                  <td>{formatAmount(l.monthly_payment, l.currency)}</td>
-                  <td>{capitalize(l.status)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary"
-                      onClick={() => loadLoan(l.loan_id)}
-                    >
-                      View
-                    </button>
-                    {l.status === "pending" && (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-success"
-                        onClick={() => approve(l.loan_id)}
-                      >
-                        Approve
-                      </button>
-                    )}
-                    {l.status === "approved" && (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-warning"
-                        onClick={() => disburse(l.loan_id)}
-                      >
-                        Disburse
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table.ScrollContainer minWidth={900}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Loan</Table.Th>
+                  <Table.Th>Product</Table.Th>
+                  <Table.Th>Principal</Table.Th>
+                  <Table.Th>Outstanding</Table.Th>
+                  <Table.Th>Monthly</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {loans.map((l) => (
+                  <Table.Tr key={l.loan_id}>
+                    <Table.Td ff="monospace">{truncateID(l.loan_id)}</Table.Td>
+                    <Table.Td>{productName(l.product_id)}</Table.Td>
+                    <Table.Td>
+                      {formatAmount(l.principal, l.currency)}
+                    </Table.Td>
+                    <Table.Td>
+                      {formatAmount(l.outstanding_balance, l.currency)}
+                    </Table.Td>
+                    <Table.Td>
+                      {formatAmount(l.monthly_payment, l.currency)}
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge variant="light" radius="sm">
+                        {capitalize(l.status)}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => loadLoan(l.loan_id)}
+                        >
+                          View
+                        </Button>
+                        {l.status === "pending" && (
+                          <Button
+                            size="xs"
+                            color="teal"
+                            variant="light"
+                            onClick={() => approve(l.loan_id)}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                        {l.status === "approved" && (
+                          <Button
+                            size="xs"
+                            color="yellow"
+                            variant="light"
+                            onClick={() => disburse(l.loan_id)}
+                          >
+                            Disburse
+                          </Button>
+                        )}
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         )}
-      </div>
+      </Card>
 
       {selectedLoan && (
-        <div className="dashboard-card">
-          <h3>Loan Details and Repayments</h3>
-          <div className="detail-stats">
-            <div className="detail-stat">
-              <div className="stat-label">Loan ID</div>
-              <div className="stat-value">{truncateID(selectedLoan.loan_id)}</div>
-            </div>
-            <div className="detail-stat">
-              <div className="stat-label">Outstanding</div>
-              <div className="stat-value">
-                {formatAmount(selectedLoan.outstanding_balance, selectedLoan.currency)}
-              </div>
-            </div>
-            <div className="detail-stat">
-              <div className="stat-label">Status</div>
-              <div className="stat-value">{capitalize(selectedLoan.status)}</div>
-            </div>
-          </div>
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Title order={4} mb="md">
+            Loan Details and Repayments
+          </Title>
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="md">
+            <Paper p="md" withBorder radius="md">
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                Loan ID
+              </Text>
+              <Text mt={4} ff="monospace">
+                {truncateID(selectedLoan.loan_id)}
+              </Text>
+            </Paper>
+            <Paper p="md" withBorder radius="md">
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                Outstanding
+              </Text>
+              <Text mt={4} fw={600}>
+                {formatAmount(
+                  selectedLoan.outstanding_balance,
+                  selectedLoan.currency,
+                )}
+              </Text>
+            </Paper>
+            <Paper p="md" withBorder radius="md">
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                Status
+              </Text>
+              <Text mt={4}>{capitalize(selectedLoan.status)}</Text>
+            </Paper>
+          </SimpleGrid>
 
-          <div className="form-stack">
-            <label>
-              Repayment Amount
-              <input
-                id="loan-repayment-amount"
-                type="text"
-                className="form-input"
-                placeholder="50.00"
-                value={repayAmount}
-                onChange={(e) => setRepayAmount(e.target.value)}
-              />
-            </label>
-            <label>
-              Payment Type
-              <select
-                id="loan-repayment-type"
-                className="form-select"
-                value={repayType}
-                onChange={(e) => setRepayType(e.target.value)}
-              >
-                {["partial", "full"].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              id="record-loan-repayment-button"
-              type="button"
-              className="btn btn-primary"
-              onClick={recordRepayment}
-            >
-              Record Repayment
-            </button>
-          </div>
+          <Stack mb="md">
+            <TextInput
+              id="loan-repayment-amount"
+              label="Repayment Amount"
+              placeholder="50.00"
+              value={repayAmount}
+              onChange={(e) => setRepayAmount(e.currentTarget.value)}
+            />
+            <Select
+              id="loan-repayment-type"
+              label="Payment Type"
+              data={["partial", "full"]}
+              value={repayType}
+              onChange={setRepayType}
+            />
+            <Group>
+              <Button id="record-loan-repayment-button" onClick={recordRepayment}>
+                Record Repayment
+              </Button>
+            </Group>
+          </Stack>
 
           {repayments.length === 0 ? (
-            <div className="empty-state">No repayments recorded yet</div>
+            <Text c="dimmed">No repayments recorded yet</Text>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Amount</th>
-                  <th>Principal</th>
-                  <th>Interest</th>
-                  <th>Status</th>
-                  <th>Paid At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {repayments.map((r) => (
-                  <tr key={r.repayment_id}>
-                    <td>{formatAmount(r.amount, selectedLoan.currency)}</td>
-                    <td>{formatAmount(r.principal_portion, selectedLoan.currency)}</td>
-                    <td>{formatAmount(r.interest_portion, selectedLoan.currency)}</td>
-                    <td>{capitalize(r.status)}</td>
-                    <td>{formatTimestamp(r.paid_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table.ScrollContainer minWidth={700}>
+              <Table verticalSpacing="sm" highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Amount</Table.Th>
+                    <Table.Th>Principal</Table.Th>
+                    <Table.Th>Interest</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Paid At</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {repayments.map((r) => (
+                    <Table.Tr key={r.repayment_id}>
+                      <Table.Td>
+                        {formatAmount(r.amount, selectedLoan.currency)}
+                      </Table.Td>
+                      <Table.Td>
+                        {formatAmount(
+                          r.principal_portion,
+                          selectedLoan.currency,
+                        )}
+                      </Table.Td>
+                      <Table.Td>
+                        {formatAmount(
+                          r.interest_portion,
+                          selectedLoan.currency,
+                        )}
+                      </Table.Td>
+                      <Table.Td>{capitalize(r.status)}</Table.Td>
+                      <Table.Td>{formatTimestamp(r.paid_at)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
           )}
-        </div>
+        </Card>
       )}
-    </div>
+    </Stack>
   );
 }

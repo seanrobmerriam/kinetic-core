@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AppShell, Center, Loader, Stack, Text } from "@mantine/core";
 import { useAuth } from "@/lib/auth";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -32,33 +33,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (state.status !== "authenticated") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div
-          data-testid="loading"
-          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-500 shadow-sm"
-        >
-          <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-indigo-500" />
-          Loading…
-        </div>
-      </div>
+      <Center mih="100vh">
+        <Stack align="center" gap="sm" data-testid="loading">
+          <Loader />
+          <Text size="sm" c="dimmed">
+            Loading…
+          </Text>
+        </Stack>
+      </Center>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <AppShell
+      header={{ height: 70 }}
+      navbar={{ width: 260, breakpoint: "sm" }}
+      padding="lg"
+    >
+      <Header
+        onRefresh={() => {
+          bump();
+          router.refresh();
+        }}
+      />
       <Sidebar />
-      <div className="ml-64 flex min-h-screen flex-col">
-        <Header
-          onRefresh={() => {
-            bump();
-            router.refresh();
-          }}
-        />
-        <main className="flex-1 px-8 py-8">
-          <Alerts />
-          {children}
-        </main>
-      </div>
-    </div>
+      <AppShell.Main>
+        <Alerts />
+        {children}
+      </AppShell.Main>
+    </AppShell>
   );
 }

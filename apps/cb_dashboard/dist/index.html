@@ -19,9 +19,9 @@
                 --color-border-light: #f1f5f9;
 
                 /* Brand Colors */
-                --color-primary: #3b82f6;
-                --color-primary-dark: #2563eb;
-                --color-primary-light: #60a5fa;
+                --color-primary: #E8470A;
+                --color-primary-dark: #C73C08;
+                --color-primary-light: #FEF0EB;
                 --color-secondary: #64748b;
                 --color-accent: #10b981;
 
@@ -81,7 +81,7 @@
                 --transition-slow: 350ms ease;
 
                 /* Layout */
-                --sidebar-width: 260px;
+                --sidebar-width: 224px;
                 --header-height: 64px;
             }
 
@@ -189,15 +189,7 @@
                 margin-bottom: var(--space-xs);
             }
 
-            .nav-item:hover {
-                background: var(--color-border-light);
-                color: var(--color-text);
-            }
-
-            .nav-item.active {
-                background: var(--color-primary);
-                color: white;
-            }
+            /* nav-item hover/active: see Baseella reskin section below */
 
             .nav-icon {
                 font-size: 20px;
@@ -1139,41 +1131,6 @@
                 .summary-cards {
                     grid-template-columns: 1fr;
                 }
-            }
-
-            /* Baseella-inspired orange reskin */
-            :root {
-                --color-bg: #F6F7F9;
-                --color-surface: #ffffff;
-                --color-surface-elevated: #ffffff;
-                --color-text: #111827;
-                --color-text-secondary: #4B5563;
-                --color-text-muted: #9CA3AF;
-                --color-border: #E5E7EB;
-                --color-border-light: #F3F4F6;
-
-                --color-primary: #E8470A;
-                --color-primary-dark: #C73C08;
-                --color-primary-light: #FEF0EB;
-                --color-success: #059669;
-                --color-success-light: #D1FAE5;
-                --color-warning: #D97706;
-                --color-warning-light: #FEF3C7;
-                --color-error: #DC2626;
-                --color-error-light: #FEE2E2;
-                --color-info: #2563EB;
-                --color-info-light: #DBEAFE;
-
-                --radius-sm: 6px;
-                --radius-md: 10px;
-                --radius-lg: 14px;
-                --radius-xl: 18px;
-
-                --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
-                --shadow-md: 0 4px 8px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.04);
-                --shadow-lg: 0 12px 24px rgba(16, 24, 40, 0.10), 0 4px 8px rgba(16, 24, 40, 0.06);
-
-                --sidebar-width: 224px;
             }
 
             [data-theme="dark"] {

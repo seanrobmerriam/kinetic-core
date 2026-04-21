@@ -7,13 +7,89 @@ import (
 	"time"
 )
 
-// renderDashboardHome renders the dashboard home view (Baseella-inspired layout)
+// renderDashboardHome renders the modern core banking dashboard home view.
+// Layout: hero greeting + quick actions, KPI strip, then a 2-column section grid
+// (Recent Activity + Overview) with a full-width Tasks/Approvals queue.
 func (a *App) renderDashboardHome() js.Value {
 	doc := js.Global().Get("document")
 	container := doc.Call("createElement", "div")
 	container.Set("className", "dashboard-view")
 
-	// ── Stat strip: 4 slim metric cards ──────────────────────────────
+	// ── Hero greeting ────────────────────────────────────────────────
+	hero := doc.Call("createElement", "div")
+	hero.Set("className", "dash-hero")
+
+	heroText := doc.Call("createElement", "div")
+	heroText.Set("className", "dash-hero-text")
+	greet := doc.Call("createElement", "h1")
+	name := "Operator"
+	if a.CurrentUser != nil && a.CurrentUser.Email != "" {
+		name = a.CurrentUser.Email
+		if at := indexByte(name, '@'); at > 0 {
+			name = name[:at]
+		}
+		name = capitalize(name)
+	}
+	hour := time.Now().Hour()
+	salute := "Good evening"
+	switch {
+	case hour < 12:
+		salute = "Good morning"
+	case hour < 18:
+		salute = "Good afternoon"
+	}
+	greet.Set("textContent", salute+", "+name)
+	heroText.Call("appendChild", greet)
+
+	subtitle := doc.Call("createElement", "p")
+	subtitle.Set("textContent", "Here's the operational pulse of IronLedger today — "+time.Now().Format("Monday, Jan 2"))
+	heroText.Call("appendChild", subtitle)
+	hero.Call("appendChild", heroText)
+
+	heroActions := doc.Call("createElement", "div")
+	heroActions.Set("className", "dash-hero-actions")
+
+	type quickAction struct {
+		label string
+		view  string
+		icon  string
+		prim  bool
+	}
+	for _, q := range []quickAction{
+		{"New Customer", "customers", "person_add", false},
+		{"Open Account", "accounts", "account_balance", false},
+		{"New Transfer", "transfer", "swap_horiz", true},
+	} {
+		btn := doc.Call("createElement", "button")
+		cls := "btn-quick"
+		if q.prim {
+			cls = "btn-quick primary"
+		}
+		btn.Set("className", cls)
+		btn.Call("appendChild", createMaterialIcon(doc, q.icon, ""))
+		lbl := doc.Call("createElement", "span")
+		lbl.Set("textContent", q.label)
+		btn.Call("appendChild", lbl)
+		view := q.view
+		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			a.CurrentView = view
+			switch view {
+			case "customers":
+				a.ShowNewCustomerForm = true
+				a.ListParties(js.Value{}, nil)
+			case "accounts":
+				a.ListParties(js.Value{}, nil)
+				a.ListAllAccounts(js.Value{}, nil)
+			}
+			a.Render()
+			return nil
+		}))
+		heroActions.Call("appendChild", btn)
+	}
+	hero.Call("appendChild", heroActions)
+	container.Call("appendChild", hero)
+
+	// ── KPI strip ────────────────────────────────────────────────────
 	strip := doc.Call("createElement", "div")
 	strip.Set("className", "stat-strip")
 
@@ -22,12 +98,18 @@ func (a *App) renderDashboardHome() js.Value {
 		value string
 		icon  string
 		color string
+		trend string
+		dir   string // "up" | "down" | "flat"
 	}
 	statsData := []statCard{
-		{"Total Customers", formatNumber(a.Stats.TotalCustomers), "group", "blue"},
-		{"Total Accounts", formatNumber(a.Stats.TotalAccounts), "account_balance", "green"},
-		{"Portfolio Balance", FormatAmount(a.Stats.TotalBalance, "USD"), "payments", "orange"},
-		{"Today's Transactions", formatNumber(a.Stats.TodayTxns), "receipt_long", "amber"},
+		{"Total Customers", formatNumber(a.Stats.TotalCustomers), "group", "blue", "", "flat"},
+		{"Active Accounts", formatNumber(a.Stats.TotalAccounts), "account_balance", "green", "", "flat"},
+		{"Portfolio Balance", FormatAmount(a.Stats.TotalBalance, "USD"), "savings", "orange", "", "flat"},
+		{"Today's Transactions", formatNumber(a.Stats.TodayTxns), "receipt_long", "amber", "", "flat"},
+	}
+	if a.Stats.PendingTxns > 0 {
+		statsData[3].trend = strconv.Itoa(a.Stats.PendingTxns) + " pending"
+		statsData[3].dir = "flat"
 	}
 
 	for _, s := range statsData {
@@ -52,52 +134,36 @@ func (a *App) renderDashboardHome() js.Value {
 		lblEl.Set("textContent", s.label)
 		body.Call("appendChild", lblEl)
 
+		if s.trend != "" {
+			tr := doc.Call("createElement", "div")
+			tr.Set("className", "stat-strip-trend "+s.dir)
+			tr.Set("textContent", s.trend)
+			body.Call("appendChild", tr)
+		}
+
 		card.Call("appendChild", body)
 		strip.Call("appendChild", card)
 	}
 	container.Call("appendChild", strip)
 
-	// ── Two-column section grid ───────────────────────────────────────
+	// ── Two-column grid: Recent Activity + Overview ──────────────────
 	grid := doc.Call("createElement", "div")
 	grid.Set("className", "dashboard-section-grid")
 
-	// ── Left: Recent Activity ─────────────────────────────────────────
+	// Recent Activity
 	activitySection := doc.Call("createElement", "div")
 	activitySection.Set("className", "metric-section")
-
-	actHdr := doc.Call("createElement", "div")
-	actHdr.Set("className", "section-header")
-
-	actHdrLeft := doc.Call("createElement", "div")
-	actHdrLeft.Set("className", "section-header-left")
-	actIcon := doc.Call("createElement", "div")
-	actIcon.Set("className", "section-icon")
-	actIcon.Call("appendChild", createMaterialIcon(doc, "receipt_long", ""))
-	actIcon.Get("firstChild").Set("style", "font-size:14px; line-height:30px;")
-	actHdrLeft.Call("appendChild", actIcon)
-	actTitle := doc.Call("createElement", "h3")
-	actTitle.Set("className", "section-title")
-	actTitle.Set("textContent", "Recent Activity")
-	actHdrLeft.Call("appendChild", actTitle)
-	actHdr.Call("appendChild", actHdrLeft)
-
-	viewAllBtn := doc.Call("createElement", "button")
-	viewAllBtn.Set("className", "section-link")
-	viewAllBtn.Set("textContent", "View all ↗")
-	viewAllBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	activitySection.Call("appendChild", a.sectionHeaderWithLink(doc, "receipt_long", "Recent Activity", "View all ↗", func() {
 		a.CurrentView = "transactions"
 		a.ListAllTransactions(js.Value{}, nil)
 		a.Render()
-		return nil
 	}))
-	actHdr.Call("appendChild", viewAllBtn)
-	activitySection.Call("appendChild", actHdr)
 
 	actList := doc.Call("createElement", "div")
 	if len(a.RecentActivity) == 0 {
 		empty := doc.Call("createElement", "div")
 		empty.Set("className", "empty-state")
-		empty.Set("textContent", "No recent activity")
+		empty.Set("textContent", "No recent activity yet — transactions will appear here as they post.")
 		actList.Call("appendChild", empty)
 	} else {
 		for _, item := range a.RecentActivity {
@@ -130,7 +196,7 @@ func (a *App) renderDashboardHome() js.Value {
 			row.Call("appendChild", meta)
 
 			amt := doc.Call("createElement", "div")
-			amt.Set("className", "activity-row-amount "+amtClass)
+			amt.Set("className", "activity-row-amount " + amtClass)
 			prefix := ""
 			if isCredit {
 				prefix = "+"
@@ -144,134 +210,232 @@ func (a *App) renderDashboardHome() js.Value {
 	activitySection.Call("appendChild", actList)
 	grid.Call("appendChild", activitySection)
 
-	// ── Right: Overview metrics + quick-navigate ──────────────────────
+	// Overview metrics + quick navigate
 	overviewSection := doc.Call("createElement", "div")
 	overviewSection.Set("className", "metric-section")
+	overviewSection.Call("appendChild", a.sectionHeaderWithLink(doc, "bar_chart", "Overview", "", nil))
 
-	ovHdr := doc.Call("createElement", "div")
-	ovHdr.Set("className", "section-header")
-	ovHdrLeft := doc.Call("createElement", "div")
-	ovHdrLeft.Set("className", "section-header-left")
-	ovIcon := doc.Call("createElement", "div")
-	ovIcon.Set("className", "section-icon")
-	ovIcon.Call("appendChild", createMaterialIcon(doc, "bar_chart", ""))
-	ovIcon.Get("firstChild").Set("style", "font-size:14px; line-height:30px;")
-	ovHdrLeft.Call("appendChild", ovIcon)
-	ovTitle := doc.Call("createElement", "h3")
-	ovTitle.Set("className", "section-title")
-	ovTitle.Set("textContent", "Overview")
-	ovHdrLeft.Call("appendChild", ovTitle)
-	ovHdr.Call("appendChild", ovHdrLeft)
-	overviewSection.Call("appendChild", ovHdr)
-
-	// Metric rows
 	type metricRow struct {
 		label string
 		value string
-		delta string
 	}
-	metrics := []metricRow{
-		{"Customers", formatNumber(a.Stats.TotalCustomers), ""},
-		{"Active Accounts", formatNumber(a.Stats.TotalAccounts), ""},
-		{"Portfolio Balance", FormatAmount(a.Stats.TotalBalance, "USD"), ""},
-		{"Transactions Today", formatNumber(a.Stats.TodayTxns), ""},
-	}
-
-	for _, m := range metrics {
+	for _, m := range []metricRow{
+		{"Customers", formatNumber(a.Stats.TotalCustomers)},
+		{"Active Accounts", formatNumber(a.Stats.TotalAccounts)},
+		{"Portfolio Balance", FormatAmount(a.Stats.TotalBalance, "USD")},
+		{"Transactions Today", formatNumber(a.Stats.TodayTxns)},
+		{"Pending Transactions", formatNumber(a.Stats.PendingTxns)},
+	} {
 		row := doc.Call("createElement", "div")
 		row.Set("className", "metric-row")
-
 		lbl := doc.Call("createElement", "div")
 		lbl.Set("className", "metric-label")
 		lbl.Set("textContent", m.label)
 		row.Call("appendChild", lbl)
-
 		valGroup := doc.Call("createElement", "div")
 		valGroup.Set("className", "metric-value-group")
-
 		val := doc.Call("createElement", "div")
 		val.Set("className", "metric-value")
 		val.Set("textContent", m.value)
 		valGroup.Call("appendChild", val)
-
-		if m.delta != "" {
-			delta := doc.Call("createElement", "div")
-			delta.Set("className", "metric-delta positive")
-			delta.Set("textContent", m.delta)
-			valGroup.Call("appendChild", delta)
-		}
-
 		row.Call("appendChild", valGroup)
 		overviewSection.Call("appendChild", row)
 	}
 
-	// Navigate shortcuts
-	navHdr := doc.Call("createElement", "div")
-	navHdr.Set("style", "margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border-light);")
-	navLabel := doc.Call("createElement", "div")
-	navLabel.Set("style", "font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 10px;")
-	navLabel.Set("textContent", "Quick Navigate")
-	navHdr.Call("appendChild", navLabel)
-
-	shortcuts := []struct {
-		label string
-		view  string
-		icon  string
-	}{
-		{"Customers", "customers", "group"},
-		{"Accounts", "accounts", "account_balance"},
-		{"Products", "products", "inventory_2"},
-		{"Loans", "loans", "request_quote"},
-	}
-
-	shortcutGrid := doc.Call("createElement", "div")
-	shortcutGrid.Set("style", "display: grid; grid-template-columns: 1fr 1fr; gap: 6px;")
-
-	for _, sc := range shortcuts {
-		scBtn := doc.Call("createElement", "button")
-		scBtn.Set("style", "display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--color-border-light); border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.82rem; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; transition: all 120ms;")
-		scBtn.Set("onmouseover", "this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)';")
-		scBtn.Set("onmouseout", "this.style.borderColor='var(--color-border)'; this.style.color='var(--color-text-secondary)';")
-
-		scBtn.Call("appendChild", createMaterialIcon(doc, sc.icon, ""))
-		scBtn.Get("firstChild").Set("style", "font-size: 15px;")
-
-		scLabel := doc.Call("createElement", "span")
-		scLabel.Set("textContent", sc.label)
-		scBtn.Call("appendChild", scLabel)
-
-		viewName := sc.view
-		scBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.CurrentView = viewName
-			a.Error = ""
-			a.Success = ""
-			if viewName == "customers" {
-				a.ListParties(js.Value{}, nil)
-			} else if viewName == "accounts" {
-				a.ListParties(js.Value{}, nil)
-				a.ListAllAccounts(js.Value{}, nil)
-			} else if viewName == "products" {
-				a.ListSavingsProducts(js.Value{}, nil)
-				a.ListLoanProducts(js.Value{}, nil)
-			} else if viewName == "loans" {
-				a.ListParties(js.Value{}, nil)
-				a.ListAllAccounts(js.Value{}, nil)
-				a.ListLoanProducts(js.Value{}, nil)
-				a.ListLoansForSelectedParty()
-			}
-			a.Render()
-			return nil
-		}))
-		shortcutGrid.Call("appendChild", scBtn)
-	}
-
-	navHdr.Call("appendChild", shortcutGrid)
-	overviewSection.Call("appendChild", navHdr)
-
 	grid.Call("appendChild", overviewSection)
 	container.Call("appendChild", grid)
 
+	// ── Tasks / Approvals queue (full width) ─────────────────────────
+	tasksSection := doc.Call("createElement", "div")
+	tasksSection.Set("className", "metric-section tasks-section")
+	tasksSection.Set("style", "margin-top: 20px;")
+	tasksSection.Call("appendChild", a.sectionHeaderWithLink(doc, "checklist", "Tasks & Approvals", "Open queue ↗", func() {
+		a.CurrentView = "customers"
+		a.ListParties(js.Value{}, nil)
+		a.Render()
+	}))
+
+	tasks := a.buildTaskList()
+	if len(tasks) == 0 {
+		empty := doc.Call("createElement", "div")
+		empty.Set("className", "empty-state")
+		empty.Set("textContent", "All caught up — no pending approvals or exceptions to review. ✓")
+		tasksSection.Call("appendChild", empty)
+	} else {
+		tgrid := doc.Call("createElement", "div")
+		tgrid.Set("className", "tasks-grid")
+		for _, t := range tasks {
+			card := doc.Call("createElement", "div")
+			card.Set("className", "task-card")
+			card.Call("setAttribute", "data-testid", "task-card")
+
+			ic := doc.Call("createElement", "div")
+			ic.Set("className", "task-icon "+t.kind)
+			ic.Call("appendChild", createMaterialIcon(doc, t.icon, ""))
+			card.Call("appendChild", ic)
+
+			body := doc.Call("createElement", "div")
+			body.Set("className", "task-body")
+			tt := doc.Call("createElement", "div")
+			tt.Set("className", "task-title")
+			tt.Set("textContent", t.title)
+			body.Call("appendChild", tt)
+			tm := doc.Call("createElement", "div")
+			tm.Set("className", "task-meta")
+			tm.Set("textContent", t.meta)
+			body.Call("appendChild", tm)
+			pill := doc.Call("createElement", "span")
+			pill.Set("className", "task-pill "+t.priority)
+			pill.Set("textContent", t.priorityLabel)
+			body.Call("appendChild", pill)
+			card.Call("appendChild", body)
+
+			view := t.targetView
+			card.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.CurrentView = view
+				switch view {
+				case "customers":
+					a.ListParties(js.Value{}, nil)
+				case "accounts":
+					a.ListParties(js.Value{}, nil)
+					a.ListAllAccounts(js.Value{}, nil)
+				case "transactions":
+					a.ListAllTransactions(js.Value{}, nil)
+				}
+				a.Render()
+				return nil
+			}))
+			tgrid.Call("appendChild", card)
+		}
+		tasksSection.Call("appendChild", tgrid)
+	}
+	container.Call("appendChild", tasksSection)
+
 	return container
+}
+
+// taskItem represents a single operational task on the dashboard queue.
+type taskItem struct {
+	kind          string // "kyc" | "approval" | "exception" | "review"
+	icon          string
+	title         string
+	meta          string
+	priority      string // "high" | "med" | "low"
+	priorityLabel string
+	targetView    string
+}
+
+// buildTaskList derives an actionable operations queue from current app state.
+// Sources: pending KYC parties, frozen/suspended accounts, pending transactions.
+func (a *App) buildTaskList() []taskItem {
+	tasks := []taskItem{}
+
+	// KYC reviews
+	kycCount := 0
+	for _, p := range a.Parties {
+		if p.KycStatus == "" || p.KycStatus == "approved" || p.KycStatus == "verified" {
+			continue
+		}
+		if kycCount < 4 {
+			tasks = append(tasks, taskItem{
+				kind:          "kyc",
+				icon:          "fact_check",
+				title:         "KYC review: " + p.FullName,
+				meta:          "Status: " + capitalize(p.KycStatus),
+				priority:      "med",
+				priorityLabel: "KYC",
+				targetView:    "customers",
+			})
+		}
+		kycCount++
+	}
+	if kycCount > 4 {
+		tasks = append(tasks, taskItem{
+			kind:          "kyc",
+			icon:          "more_horiz",
+			title:         strconv.Itoa(kycCount-4) + " more KYC reviews pending",
+			meta:          "Open the customers queue to triage",
+			priority:      "med",
+			priorityLabel: "KYC",
+			targetView:    "customers",
+		})
+	}
+
+	// Frozen / suspended accounts
+	for _, ac := range a.Accounts {
+		if ac.Status == "frozen" || ac.Status == "suspended" {
+			tasks = append(tasks, taskItem{
+				kind:          "exception",
+				icon:          "ac_unit",
+				title:         capitalize(ac.Status) + " account: " + ac.Name,
+				meta:          "Acct " + ac.AccountID + " · balance " + FormatAmount(ac.Balance, ac.Currency),
+				priority:      "high",
+				priorityLabel: "Exception",
+				targetView:    "accounts",
+			})
+			if len(tasks) >= 8 {
+				break
+			}
+		}
+	}
+
+	// Pending transactions
+	if a.Stats.PendingTxns > 0 {
+		tasks = append(tasks, taskItem{
+			kind:          "approval",
+			icon:          "pending_actions",
+			title:         strconv.Itoa(a.Stats.PendingTxns) + " transactions awaiting approval",
+			meta:          "Review and approve in the transactions view",
+			priority:      "high",
+			priorityLabel: "Approval",
+			targetView:    "transactions",
+		})
+	}
+
+	return tasks
+}
+
+// sectionHeaderWithLink builds a standard section header (icon + title + optional action link).
+func (a *App) sectionHeaderWithLink(doc js.Value, icon, title, linkText string, onClick func()) js.Value {
+	hdr := doc.Call("createElement", "div")
+	hdr.Set("className", "section-header")
+
+	left := doc.Call("createElement", "div")
+	left.Set("className", "section-header-left")
+	ic := doc.Call("createElement", "div")
+	ic.Set("className", "section-icon")
+	ic.Call("appendChild", createMaterialIcon(doc, icon, ""))
+	if first := ic.Get("firstChild"); !first.IsNull() && !first.IsUndefined() {
+		first.Set("style", "font-size:16px; line-height:30px;")
+	}
+	left.Call("appendChild", ic)
+	t := doc.Call("createElement", "h3")
+	t.Set("className", "section-title")
+	t.Set("textContent", title)
+	left.Call("appendChild", t)
+	hdr.Call("appendChild", left)
+
+	if linkText != "" && onClick != nil {
+		btn := doc.Call("createElement", "button")
+		btn.Set("className", "section-link")
+		btn.Set("textContent", linkText)
+		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			onClick()
+			return nil
+		}))
+		hdr.Call("appendChild", btn)
+	}
+	return hdr
+}
+
+// indexByte returns the index of the first occurrence of c in s, or -1 if not present.
+func indexByte(s string, c byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == c {
+			return i
+		}
+	}
+	return -1
 }
 
 // renderCustomersView renders the customers list view with search

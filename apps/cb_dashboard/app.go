@@ -505,6 +505,7 @@ func (a *App) renderSidebar() js.Value {
 				case "dashboard":
 					a.FetchDashboardStats(js.Value{}, nil)
 					a.ListParties(js.Value{}, nil)
+					a.ListAllAccounts(js.Value{}, nil)
 				case "customers":
 					a.ListParties(js.Value{}, nil)
 				case "accounts":

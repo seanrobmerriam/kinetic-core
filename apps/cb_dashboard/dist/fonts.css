@@ -1,9 +1,9 @@
 @font-face {
-    font-family: 'Google Sans Flex';
+    font-family: 'Commissioner';
     font-style: normal;
-    font-weight: 400 700;
+    font-weight: 100 900;
     font-display: swap;
-    src: url('./fonts/google-sans-flex.ttf') format('truetype');
+    src: url('./fonts/commissioner.woff2') format('woff2');
 }
 
 @font-face {

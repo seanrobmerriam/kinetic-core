@@ -60,6 +60,18 @@
 %% - closed: Party record is permanently closed
 -type party_status() :: active | suspended | closed.
 
+%% @doc KYC (Know Your Customer) verification status.
+%% - not_started: No KYC process has been initiated
+%% - pending: KYC documents submitted, awaiting review
+%% - approved: KYC review passed, party is verified
+%% - rejected: KYC review failed; notes explain the reason
+-type kyc_status() :: not_started | pending | approved | rejected.
+
+%% @doc Onboarding completion status for a party.
+%% - incomplete: Profile setup is not yet complete
+%% - complete: Onboarding steps are finished
+-type onboarding_status() :: incomplete | complete.
+
 %% @doc Status of a financial transaction.
 %% - pending: Transaction created but not yet processed
 %% - posted: Transaction successfully recorded in the ledger
@@ -96,15 +108,23 @@
 %% - full_name: Legal name of the party (UTF-8 binary)
 %% - email: Contact email address (UTF-8 binary)
 %% - status: Current status of the party relationship
+%% - kyc_status: KYC verification state (not_started | pending | approved | rejected)
+%% - onboarding_status: Onboarding completion state (incomplete | complete)
+%% - review_notes: Optional notes from the most recent KYC review
+%% - doc_refs: List of document reference identifiers provided for KYC
 %% - created_at: Timestamp when the party record was created
 %% - updated_at: Timestamp of last modification to the party record
 -record(party, {
-    party_id    :: uuid(),
-    full_name   :: binary(),
-    email       :: binary(),
-    status      :: party_status(),
-    created_at  :: timestamp_ms(),
-    updated_at  :: timestamp_ms()
+    party_id            :: uuid(),
+    full_name           :: binary(),
+    email               :: binary(),
+    status              :: party_status(),
+    kyc_status          :: kyc_status(),
+    onboarding_status   :: onboarding_status(),
+    review_notes        :: binary() | undefined,
+    doc_refs            :: [binary()],
+    created_at          :: timestamp_ms(),
+    updated_at          :: timestamp_ms()
 }).
 
 %% @doc Represents a financial account within the banking system.

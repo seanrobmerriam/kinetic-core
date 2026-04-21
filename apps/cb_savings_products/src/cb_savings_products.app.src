@@ -9,7 +9,8 @@
         mnesia,
         uuid,
         cb_ledger,
-        cb_accounts
+        cb_accounts,
+        cb_events
     ]},
     {env, []}
 ]}.

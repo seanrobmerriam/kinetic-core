@@ -6,10 +6,12 @@
   {applications, [
                   kernel,
                   stdlib,
-                  mnesia
+                  mnesia,
+                  cb_interest,
+                  cb_events
                  ]},
   {env, []},
-  {modules, []},
+  {modules, [cb_statements, cb_exports]},
   {mod, {cb_reporting_app, []}},
   {licenses, ["Apache-2.0"]},
   {links, []}

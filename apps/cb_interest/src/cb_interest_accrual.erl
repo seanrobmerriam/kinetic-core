@@ -33,7 +33,8 @@
     get_accrual/1,
     close_accrual/1,
     get_active_accruals/0,
-    get_accruals_for_account/1
+    get_accruals_for_account/1,
+    process_expired_accruals/0
 ]).
 
 -dialyzer({nowarn_function, get_active_accruals/0}).
@@ -233,3 +234,26 @@ get_accruals_for_account(AccountId) ->
     end,
     {atomic, Accruals} = mnesia:transaction(F),
     Accruals.
+
+%%%
+%%% @doc Close all active accruals whose end_date has passed.
+%%%
+%%% This function is the entry point for the `maturity_check` scheduled job. It
+%%% scans all accruing records and closes those whose `end_date` is set to a
+%%% timestamp that has already elapsed. Accruals with `end_date = undefined` are
+%%% assumed to have no fixed term and are left untouched.
+%%%
+%%% Called by `cb_jobs` as the handler for the `maturity_check` job.
+%%%
+%%% @returns `{ok, ClosedCount}` — the number of accruals transitioned to closed.
+%%%
+-spec process_expired_accruals() -> {ok, non_neg_integer()}.
+process_expired_accruals() ->
+    Now = erlang:system_time(millisecond),
+    Active = get_active_accruals(),
+    Expired = [A || A <- Active,
+                    A#interest_accrual.end_date =/= undefined,
+                    A#interest_accrual.end_date =< Now],
+    Results = [close_accrual(A#interest_accrual.accrual_id) || A <- Expired],
+    Closed = length([ok || {ok, _} <- Results]),
+    {ok, Closed}.

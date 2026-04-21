@@ -50,6 +50,7 @@
 -module(cb_savings_products).
 
 -include("savings_product.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -export([
     create_product/7,
@@ -128,6 +129,11 @@ create_product(Name, Description, Currency, InterestRate, InterestType, Compound
                                     updated_at = Now
                                 },
                                 mnesia:write(Product),
+                                cb_events:write_outbox(<<"savings_product.created">>, #{
+                                    product_id => ProductId,
+                                    name       => Name,
+                                    currency   => Currency
+                                }),
                                 {ok, Product}
                             end,
                             case mnesia:transaction(F) of
@@ -242,6 +248,7 @@ activate_product(ProductId) when is_binary(ProductId) ->
                         Now = erlang:system_time(millisecond),
                         Updated = Product#savings_product{status = active, updated_at = Now},
                         mnesia:write(Updated),
+                        cb_events:write_outbox(<<"savings_product.activated">>, #{product_id => ProductId}),
                         {ok, Updated};
                     active ->
                         {error, product_already_active}
@@ -298,6 +305,7 @@ deactivate_product(ProductId) when is_binary(ProductId) ->
                         Now = erlang:system_time(millisecond),
                         Updated = Product#savings_product{status = inactive, updated_at = Now},
                         mnesia:write(Updated),
+                        cb_events:write_outbox(<<"savings_product.deactivated">>, #{product_id => ProductId}),
                         {ok, Updated};
                     inactive ->
                         {error, product_already_inactive}

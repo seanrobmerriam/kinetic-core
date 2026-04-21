@@ -421,7 +421,7 @@ func (a *App) renderSidebar() js.Value {
 	brandLogo.Set("className", "brand-logo")
 	brandMark := doc.Call("createElement", "div")
 	brandMark.Set("className", "brand-mark")
-	brandMark.Set("textContent", "Fe")
+	brandMark.Set("textContent", "IL")
 	brandLogo.Call("appendChild", brandMark)
 	brandTextWrap := doc.Call("createElement", "div")
 	brandTextWrap.Set("className", "brand-text")
@@ -430,135 +430,141 @@ func (a *App) renderSidebar() js.Value {
 	brandText.Set("className", "brand-title")
 	brandTextWrap.Call("appendChild", brandText)
 	brandSubtitle := doc.Call("createElement", "span")
-	brandSubtitle.Set("textContent", "Core Banking")
+	brandSubtitle.Set("textContent", "CORE BANKING")
 	brandSubtitle.Set("className", "brand-subtitle")
 	brandTextWrap.Call("appendChild", brandSubtitle)
 	brandLogo.Call("appendChild", brandTextWrap)
 	brand.Call("appendChild", brandLogo)
 	sidebar.Call("appendChild", brand)
 
-	// Navigation items
-	navItems := []struct {
+	type navItem struct {
 		id    string
 		label string
 		icon  string
-	}{
-		{"dashboard", "Dashboard", "dashboard"},
-		{"customers", "Customers", "group"},
-		{"accounts", "Accounts", "account_balance"},
-		{"transactions", "Transactions", "swap_horiz"},
-		{"ledger", "Ledger", "book"},
-		{"products", "Products", "inventory_2"},
-		{"loans", "Loans", "request_quote"},
+	}
+	type navGroup struct {
+		label string
+		items []navItem
 	}
 
-	nav := doc.Call("createElement", "nav")
-	nav.Set("className", "sidebar-nav")
+	groups := []navGroup{
+		{"Overview", []navItem{
+			{"dashboard", "Dashboard", "dashboard"},
+		}},
+		{"Banking", []navItem{
+			{"customers", "Customers", "group"},
+			{"accounts", "Accounts", "account_balance"},
+			{"transactions", "Transactions", "swap_horiz"},
+			{"ledger", "Ledger", "book"},
+			{"loans", "Loans", "request_quote"},
+		}},
+		{"Operations", []navItem{
+			{"transfer", "Transfer Funds", "swap_horiz"},
+			{"deposit", "Deposit / Withdraw", "payments"},
+			{"products", "Products", "inventory_2"},
+		}},
+		{"Workspace", []navItem{
+			{"settings", "Settings", "settings"},
+		}},
+	}
 
-	for _, item := range navItems {
-		btn := doc.Call("createElement", "button")
-		btn.Set("className", "nav-item")
-		btn.Call("setAttribute", "data-testid", "nav-"+item.id)
-		if a.CurrentView == item.id {
-			btn.Get("classList").Call("add", "active")
+	for gi, g := range groups {
+		label := doc.Call("createElement", "div")
+		label.Set("className", "sidebar-section-label")
+		label.Set("textContent", g.label)
+		sidebar.Call("appendChild", label)
+
+		nav := doc.Call("createElement", "nav")
+		if gi == 0 {
+			nav.Set("className", "sidebar-nav primary")
+		} else {
+			nav.Set("className", "sidebar-nav")
 		}
 
-		icon := createMaterialIcon(doc, item.icon, "nav-icon")
-
-		label := doc.Call("createElement", "span")
-		label.Set("textContent", item.label)
-		label.Set("className", "nav-label")
-
-		btn.Call("appendChild", icon)
-		btn.Call("appendChild", label)
-
-		viewName := item.id
-		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.CurrentView = viewName
-			a.Error = ""
-			a.Success = ""
-			if viewName == "dashboard" {
-				a.FetchDashboardStats(js.Value{}, nil)
-			} else if viewName == "customers" {
-				a.ListParties(js.Value{}, nil)
-			} else if viewName == "accounts" {
-				a.ListParties(js.Value{}, nil)
-				a.ListAllAccounts(js.Value{}, nil)
-			} else if viewName == "transactions" {
-				a.ListAllTransactions(js.Value{}, nil)
-			} else if viewName == "products" {
-				a.ListSavingsProducts(js.Value{}, nil)
-				a.ListLoanProducts(js.Value{}, nil)
-			} else if viewName == "loans" {
-				a.ListParties(js.Value{}, nil)
-				a.ListAllAccounts(js.Value{}, nil)
-				a.ListLoanProducts(js.Value{}, nil)
-				a.ListLoansForSelectedParty()
+		for _, item := range g.items {
+			btn := doc.Call("createElement", "button")
+			btn.Set("className", "nav-item")
+			btn.Call("setAttribute", "data-testid", "nav-"+item.id)
+			if a.CurrentView == item.id {
+				btn.Get("classList").Call("add", "active")
 			}
-			a.Render()
-			return nil
-		}))
 
-		nav.Call("appendChild", btn)
-	}
+			icon := createMaterialIcon(doc, item.icon, "nav-icon")
+			lbl := doc.Call("createElement", "span")
+			lbl.Set("textContent", item.label)
+			lbl.Set("className", "nav-label")
+			btn.Call("appendChild", icon)
+			btn.Call("appendChild", lbl)
 
-	sidebar.Call("appendChild", nav)
+			viewName := item.id
+			btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.CurrentView = viewName
+				a.Error = ""
+				a.Success = ""
+				switch viewName {
+				case "dashboard":
+					a.FetchDashboardStats(js.Value{}, nil)
+					a.ListParties(js.Value{}, nil)
+				case "customers":
+					a.ListParties(js.Value{}, nil)
+				case "accounts":
+					a.ListParties(js.Value{}, nil)
+					a.ListAllAccounts(js.Value{}, nil)
+				case "transactions":
+					a.ListAllTransactions(js.Value{}, nil)
+				case "products":
+					a.ListSavingsProducts(js.Value{}, nil)
+					a.ListLoanProducts(js.Value{}, nil)
+				case "loans":
+					a.ListParties(js.Value{}, nil)
+					a.ListAllAccounts(js.Value{}, nil)
+					a.ListLoanProducts(js.Value{}, nil)
+					a.ListLoansForSelectedParty()
+				}
+				a.Render()
+				return nil
+			}))
 
-	// Divider + Operations section
-	divider := doc.Call("createElement", "div")
-	divider.Set("className", "nav-divider")
-	sidebar.Call("appendChild", divider)
-
-	opsLabel := doc.Call("createElement", "div")
-	opsLabel.Set("className", "sidebar-section-label")
-	opsLabel.Set("textContent", "Operations")
-	sidebar.Call("appendChild", opsLabel)
-
-	opsNav := doc.Call("createElement", "nav")
-	opsNav.Set("className", "sidebar-nav")
-	opsNav.Set("style", "flex: 0; padding-top: 0;")
-
-	opsItems := []struct {
-		id    string
-		label string
-		icon  string
-	}{
-		{"transfer", "Transfer Funds", "swap_horiz"},
-		{"deposit", "Deposit / Withdraw", "payments"},
-		{"settings", "Settings", "settings"},
-	}
-	for _, item := range opsItems {
-		btn := doc.Call("createElement", "button")
-		btn.Set("className", "nav-item")
-		btn.Call("setAttribute", "data-testid", "nav-"+item.id)
-		if a.CurrentView == item.id {
-			btn.Get("classList").Call("add", "active")
+			nav.Call("appendChild", btn)
 		}
-		icon := createMaterialIcon(doc, item.icon, "nav-icon")
-		label := doc.Call("createElement", "span")
-		label.Set("textContent", item.label)
-		label.Set("className", "nav-label")
-		btn.Call("appendChild", icon)
-		btn.Call("appendChild", label)
-		viewName := item.id
-		btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.CurrentView = viewName
-			a.Error = ""
-			a.Success = ""
-			a.Render()
-			return nil
-		}))
-		opsNav.Call("appendChild", btn)
+		sidebar.Call("appendChild", nav)
 	}
-	sidebar.Call("appendChild", opsNav)
 
-	// Sidebar footer
+	// Sidebar footer with user pill
 	footer := doc.Call("createElement", "div")
 	footer.Set("className", "sidebar-footer")
-	footerText := doc.Call("createElement", "div")
-	footerText.Set("style", "font-size: 0.72rem; color: var(--color-text-muted);")
-	footerText.Set("textContent", "IronLedger v0.1")
-	footer.Call("appendChild", footerText)
+	if a.CurrentUser != nil {
+		pill := doc.Call("createElement", "div")
+		pill.Set("className", "sidebar-user-pill")
+
+		av := doc.Call("createElement", "div")
+		av.Set("className", "avatar")
+		initials := "U"
+		if len(a.CurrentUser.Email) > 0 {
+			initials = string([]rune(a.CurrentUser.Email)[0:1])
+		}
+		av.Set("textContent", initials)
+		pill.Call("appendChild", av)
+
+		info := doc.Call("createElement", "div")
+		info.Set("className", "user-info")
+		nm := doc.Call("createElement", "span")
+		nm.Set("className", "user-name")
+		nm.Set("textContent", a.CurrentUser.Email)
+		info.Call("appendChild", nm)
+		rl := doc.Call("createElement", "span")
+		rl.Set("className", "user-role")
+		rl.Set("textContent", capitalize(a.CurrentUser.Role))
+		info.Call("appendChild", rl)
+		pill.Call("appendChild", info)
+
+		footer.Call("appendChild", pill)
+	} else {
+		footerText := doc.Call("createElement", "div")
+		footerText.Set("style", "font-size: 0.72rem;")
+		footerText.Set("textContent", "IronLedger v0.1")
+		footer.Call("appendChild", footerText)
+	}
 	sidebar.Call("appendChild", footer)
 
 	return sidebar
@@ -580,38 +586,33 @@ func (a *App) renderHeader() js.Value {
 
 	header.Call("appendChild", title)
 
+	// Global search
+	search := doc.Call("createElement", "div")
+	search.Set("className", "header-search")
+	search.Call("appendChild", createMaterialIcon(doc, "search", ""))
+	searchInput := doc.Call("createElement", "input")
+	searchInput.Set("type", "search")
+	searchInput.Set("placeholder", "Search customers, accounts, transactions…")
+	searchInput.Call("setAttribute", "data-testid", "global-search")
+	if a.SearchQuery != "" {
+		searchInput.Set("value", a.SearchQuery)
+	}
+	searchInput.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 && args[0].Get("key").String() == "Enter" {
+			q := this.Get("value").String()
+			a.SearchQuery = q
+			a.CurrentView = "customers"
+			a.ListParties(js.Value{}, nil)
+			a.Render()
+		}
+		return nil
+	}))
+	search.Call("appendChild", searchInput)
+	header.Call("appendChild", search)
+
 	// Header actions
 	headerActions := doc.Call("createElement", "div")
 	headerActions.Set("className", "header-actions")
-
-	if a.CurrentUser != nil {
-		// User avatar pill
-		userPill := doc.Call("createElement", "div")
-		userPill.Set("className", "user-pill")
-		userPill.Call("setAttribute", "data-testid", "current-user")
-
-		avatar := doc.Call("createElement", "div")
-		avatar.Set("className", "user-avatar")
-		// Get initials from email
-		initials := "U"
-		if len(a.CurrentUser.Email) > 0 {
-			initials = string([]rune(a.CurrentUser.Email)[0:1])
-		}
-		avatar.Set("textContent", initials)
-		userPill.Call("appendChild", avatar)
-
-		nameEl := doc.Call("createElement", "span")
-		nameEl.Set("textContent", a.CurrentUser.Email)
-		nameEl.Set("style", "max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")
-		userPill.Call("appendChild", nameEl)
-
-		roleEl := doc.Call("createElement", "span")
-		roleEl.Set("style", "color: var(--color-text-muted); font-size: 0.75rem;")
-		roleEl.Set("textContent", capitalize(a.CurrentUser.Role))
-		userPill.Call("appendChild", roleEl)
-
-		headerActions.Call("appendChild", userPill)
-	}
 
 	if a.DevToolsEnabled {
 		mockBtn := doc.Call("createElement", "button")
@@ -632,6 +633,19 @@ func (a *App) renderHeader() js.Value {
 		}))
 		headerActions.Call("appendChild", mockBtn)
 	}
+
+	// Notifications (badge dot if there are pending tasks)
+	notifBtn := doc.Call("createElement", "button")
+	notifBtn.Set("className", "header-btn")
+	notifBtn.Call("setAttribute", "title", "Notifications")
+	notifBtn.Call("setAttribute", "data-testid", "notifications-button")
+	notifBtn.Call("appendChild", createMaterialIcon(doc, "notifications", "header-icon"))
+	if a.pendingTaskCount() > 0 {
+		dot := doc.Call("createElement", "span")
+		dot.Set("className", "badge-dot")
+		notifBtn.Call("appendChild", dot)
+	}
+	headerActions.Call("appendChild", notifBtn)
 
 	// Theme toggle
 	themeBtn := doc.Call("createElement", "button")
@@ -654,16 +668,35 @@ func (a *App) renderHeader() js.Value {
 	refreshBtn := doc.Call("createElement", "button")
 	refreshBtn.Set("className", "header-btn")
 	refreshBtn.Call("setAttribute", "title", "Refresh")
-
-	refreshIcon := createMaterialIcon(doc, "autorenew", "header-icon")
-	refreshBtn.Call("appendChild", refreshIcon)
-
+	refreshBtn.Call("appendChild", createMaterialIcon(doc, "autorenew", "header-icon"))
 	refreshBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		a.RefreshCurrentView()
 		return nil
 	}))
-
 	headerActions.Call("appendChild", refreshBtn)
+
+	// User pill
+	if a.CurrentUser != nil {
+		userPill := doc.Call("createElement", "div")
+		userPill.Set("className", "user-pill")
+		userPill.Call("setAttribute", "data-testid", "current-user")
+
+		avatar := doc.Call("createElement", "div")
+		avatar.Set("className", "user-avatar")
+		initials := "U"
+		if len(a.CurrentUser.Email) > 0 {
+			initials = string([]rune(a.CurrentUser.Email)[0:1])
+		}
+		avatar.Set("textContent", initials)
+		userPill.Call("appendChild", avatar)
+
+		nameEl := doc.Call("createElement", "span")
+		nameEl.Set("textContent", a.CurrentUser.Email)
+		nameEl.Set("style", "max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; font-weight: 600;")
+		userPill.Call("appendChild", nameEl)
+
+		headerActions.Call("appendChild", userPill)
+	}
 
 	logoutBtn := doc.Call("createElement", "button")
 	logoutBtn.Set("className", "header-btn")
@@ -679,6 +712,24 @@ func (a *App) renderHeader() js.Value {
 	header.Call("appendChild", headerActions)
 
 	return header
+}
+
+// pendingTaskCount returns the number of items in the operations queue
+// (KYC reviews, pending transactions, frozen accounts, etc.)
+func (a *App) pendingTaskCount() int {
+	n := 0
+	for _, p := range a.Parties {
+		if p.KycStatus != "" && p.KycStatus != "approved" && p.KycStatus != "verified" {
+			n++
+		}
+	}
+	n += a.Stats.PendingTxns
+	for _, ac := range a.Accounts {
+		if ac.Status == "frozen" || ac.Status == "suspended" {
+			n++
+		}
+	}
+	return n
 }
 
 func (a *App) renderLoginView() js.Value {

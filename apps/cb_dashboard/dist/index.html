@@ -1863,7 +1863,146 @@
             .activity-row-amount.credit { color: #059669; }
             .activity-row-amount.debit  { color: var(--color-error); }
 
-                </style>
+            /* ── Customers page panels ── */
+            .customers-view {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .customers-filter-panel {
+                background: var(--color-surface);
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius-md) var(--radius-md) 0 0;
+                padding: 16px 20px;
+                box-shadow: var(--shadow-sm);
+            }
+
+            .customers-filter-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 14px;
+            }
+
+            .customers-filter-title {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                font-size: 0.8rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                color: var(--color-text-muted);
+            }
+
+            .customers-filter-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .customers-search {
+                flex: 1;
+                min-width: 200px;
+            }
+
+            .filter-chip-group {
+                display: flex;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            .filter-chip {
+                padding: 5px 12px;
+                border-radius: 999px;
+                border: 1px solid var(--color-border);
+                background: transparent;
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: var(--color-text-secondary);
+                cursor: pointer;
+                transition: all 120ms;
+            }
+
+            .filter-chip:hover {
+                border-color: var(--color-primary);
+                color: var(--color-primary);
+            }
+
+            .filter-chip.active {
+                background: var(--color-primary);
+                border-color: var(--color-primary);
+                color: white;
+            }
+
+            .customers-inline-form {
+                margin-top: 14px;
+                padding-top: 14px;
+                border-top: 1px dashed var(--color-border);
+            }
+
+            .customers-inline-form-label {
+                font-size: 0.78rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--color-text-muted);
+                margin-bottom: 10px;
+            }
+
+            .customers-inline-form-fields {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .customers-inline-form-fields .form-input {
+                flex: 1;
+                min-width: 160px;
+            }
+
+            /* Divider between panels — a thick border shadow line */
+            .customers-results-panel {
+                background: var(--color-surface);
+                border: 1px solid var(--color-border);
+                border-top: 3px solid var(--color-primary);
+                border-radius: 0 0 var(--radius-md) var(--radius-md);
+                box-shadow: var(--shadow-sm);
+                overflow: hidden;
+            }
+
+            .customers-results-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px 20px;
+                border-bottom: 1px solid var(--color-border);
+                background: var(--color-border-light);
+            }
+
+            .customers-results-count {
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: var(--color-text-secondary);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .customers-results-panel .data-table {
+                border-radius: 0;
+                box-shadow: none;
+                border: none;
+            }
+
+            .customers-results-panel .empty-state-large {
+                padding: 48px 20px;
+                text-align: center;
+            }
+
+            </style>
     </head>
     <body>
         <div id="root">

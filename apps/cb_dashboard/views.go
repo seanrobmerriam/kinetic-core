@@ -280,32 +280,51 @@ func (a *App) renderCustomersView() js.Value {
 	container := doc.Call("createElement", "div")
 	container.Set("className", "customers-view")
 
-	// Toolbar
-	toolbar := doc.Call("createElement", "div")
-	toolbar.Set("className", "view-toolbar")
+	// ── Search & Filter Panel ─────────────────────────────────────────
+	filterPanel := doc.Call("createElement", "div")
+	filterPanel.Set("className", "customers-filter-panel")
 
-	// Search
+	filterPanelHeader := doc.Call("createElement", "div")
+	filterPanelHeader.Set("className", "customers-filter-header")
+
+	filterTitle := doc.Call("createElement", "div")
+	filterTitle.Set("className", "customers-filter-title")
+	filterTitle.Call("appendChild", createMaterialIcon(doc, "search", ""))
+	filterTitle.Get("lastChild").Set("style", "font-size: 16px; color: var(--color-text-muted);")
+	filterTitleText := doc.Call("createElement", "span")
+	filterTitleText.Set("textContent", "Search & Filter")
+	filterTitle.Call("appendChild", filterTitleText)
+	filterPanelHeader.Call("appendChild", filterTitle)
+
+	addBtn := doc.Call("createElement", "button")
+	addBtn.Set("className", "btn btn-primary")
+	addBtnIcon := createMaterialIcon(doc, "person_add", "")
+	addBtnIcon.Set("style", "font-size: 16px; margin-right: 6px;")
+	addBtn.Call("appendChild", addBtnIcon)
+	addBtnLabel := doc.Call("createElement", "span")
+	addBtnLabel.Set("textContent", "New Customer")
+	addBtn.Call("appendChild", addBtnLabel)
+	addBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		a.ShowNewCustomerForm = !a.ShowNewCustomerForm
+		a.Render()
+		return nil
+	}))
+	filterPanelHeader.Call("appendChild", addBtn)
+	filterPanel.Call("appendChild", filterPanelHeader)
+
+	// Search row
+	filterRow := doc.Call("createElement", "div")
+	filterRow.Set("className", "customers-filter-row")
+
+	// Search input
 	searchWrapper := doc.Call("createElement", "div")
-	searchWrapper.Set("className", "search-wrapper")
-
-	searchIcon := doc.Call("createElement", "svg")
-	searchIcon.Set("className", "search-icon")
-	searchIcon.Call("setAttribute", "fill", "none")
-	searchIcon.Call("setAttribute", "viewBox", "0 0 24 24")
-	searchIcon.Call("setAttribute", "stroke", "currentColor")
-	searchIcon.Call("setAttribute", "stroke-width", "2")
-
-	searchPath := doc.Call("createElement", "path")
-	searchPath.Call("setAttribute", "stroke-linecap", "round")
-	searchPath.Call("setAttribute", "stroke-linejoin", "round")
-	searchPath.Set("d", "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z")
-	searchIcon.Call("appendChild", searchPath)
+	searchWrapper.Set("className", "search-wrapper customers-search")
+	searchIcon := createMaterialIcon(doc, "search", "search-icon")
 	searchWrapper.Call("appendChild", searchIcon)
-
 	searchInput := doc.Call("createElement", "input")
 	searchInput.Set("type", "text")
 	searchInput.Set("className", "search-input")
-	searchInput.Set("placeholder", "Search customers...")
+	searchInput.Set("placeholder", "Search by name or email…")
 	searchInput.Set("value", a.SearchQuery)
 	searchInput.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		a.SearchQuery = this.Get("value").String()
@@ -313,169 +332,215 @@ func (a *App) renderCustomersView() js.Value {
 		return nil
 	}))
 	searchWrapper.Call("appendChild", searchInput)
+	filterRow.Call("appendChild", searchWrapper)
 
-	toolbar.Call("appendChild", searchWrapper)
+	// Status filter chips
+	chipGroup := doc.Call("createElement", "div")
+	chipGroup.Set("className", "filter-chip-group")
 
-	// Add customer button
-	addBtn := doc.Call("createElement", "button")
-	addBtn.Set("className", "btn btn-primary")
-	addBtn.Set("textContent", "Add Customer")
-	addBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		a.ShowNewCustomerForm = !a.ShowNewCustomerForm
-		a.Render()
-		return nil
-	}))
-	toolbar.Call("appendChild", addBtn)
-
-	container.Call("appendChild", toolbar)
-
-	// Customer form (collapsible)
-	formCard := doc.Call("createElement", "div")
-	formCard.Set("className", "form-card")
-	if !a.ShowNewCustomerForm {
-		formCard.Get("style").Set("display", "none")
+	statuses := []struct{ label, value string }{
+		{"All", ""},
+		{"Active", "active"},
+		{"Suspended", "suspended"},
+		{"Closed", "closed"},
 	}
-
-	formTitle := doc.Call("createElement", "h3")
-	formTitle.Set("textContent", "New Customer")
-	formCard.Call("appendChild", formTitle)
-
-	formGrid := doc.Call("createElement", "div")
-	formGrid.Set("className", "form-grid")
-
-	nameInput := doc.Call("createElement", "input")
-	nameInput.Set("type", "text")
-	nameInput.Set("id", "customer-name")
-	nameInput.Set("placeholder", "Full Name")
-	nameInput.Set("className", "form-input")
-	formGrid.Call("appendChild", nameInput)
-
-	emailInput := doc.Call("createElement", "input")
-	emailInput.Set("type", "email")
-	emailInput.Set("id", "customer-email")
-	emailInput.Set("placeholder", "Email Address")
-	emailInput.Set("className", "form-input")
-	formGrid.Call("appendChild", emailInput)
-
-	formCard.Call("appendChild", formGrid)
-
-	formActions := doc.Call("createElement", "div")
-	formActions.Set("className", "form-actions")
-
-	saveBtn := doc.Call("createElement", "button")
-	saveBtn.Set("id", "create-customer-button")
-	saveBtn.Set("className", "btn btn-primary")
-	saveBtn.Set("textContent", "Create Customer")
-	saveBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		name := doc.Call("getElementById", "customer-name").Get("value").String()
-		email := doc.Call("getElementById", "customer-email").Get("value").String()
-		if name == "" || email == "" {
-			a.Error = "Name and email are required"
-			a.Render()
-			return nil
+	for _, s := range statuses {
+		chip := doc.Call("createElement", "button")
+		cls := "filter-chip"
+		if a.FilterStatus == s.value {
+			cls += " active"
 		}
-		a.ShowNewCustomerForm = false
-		a.CreateParty(js.Value{}, []js.Value{js.ValueOf(name), js.ValueOf(email)})
-		return nil
-	}))
-	formActions.Call("appendChild", saveBtn)
-
-	cancelBtn := doc.Call("createElement", "button")
-	cancelBtn.Set("className", "btn btn-ghost")
-	cancelBtn.Set("textContent", "Cancel")
-	cancelBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		a.ShowNewCustomerForm = false
-		a.Render()
-		return nil
-	}))
-	formActions.Call("appendChild", cancelBtn)
-
-	formCard.Call("appendChild", formActions)
-	container.Call("appendChild", formCard)
-
-	// Filtered parties
-	filteredParties := a.filterParties(a.SearchQuery)
-
-	// Customers table
-	table := doc.Call("createElement", "table")
-	table.Set("className", "data-table")
-
-	thead := doc.Call("createElement", "thead")
-	theadRow := doc.Call("createElement", "tr")
-	headers := []string{"Name", "Email", "Status", "Created", "Actions"}
-	for _, h := range headers {
-		th := doc.Call("createElement", "th")
-		th.Set("textContent", h)
-		theadRow.Call("appendChild", th)
-	}
-	thead.Call("appendChild", theadRow)
-	table.Call("appendChild", thead)
-
-	tbody := doc.Call("createElement", "tbody")
-
-	for _, party := range filteredParties {
-		row := doc.Call("createElement", "tr")
-
-		nameCell := doc.Call("createElement", "td")
-		nameCell.Set("className", "cell-primary")
-		nameCell.Set("textContent", party.FullName)
-		row.Call("appendChild", nameCell)
-
-		emailCell := doc.Call("createElement", "td")
-		emailCell.Set("textContent", party.Email)
-		row.Call("appendChild", emailCell)
-
-		statusCell := doc.Call("createElement", "td")
-		statusBadge := doc.Call("createElement", "span")
-		statusBadge.Set("className", "status-badge "+party.Status)
-		statusBadge.Set("textContent", capitalize(party.Status))
-		statusCell.Call("appendChild", statusBadge)
-		row.Call("appendChild", statusCell)
-
-		dateCell := doc.Call("createElement", "td")
-		dateCell.Set("textContent", formatDate(party.CreatedAt))
-		row.Call("appendChild", dateCell)
-
-		actionsCell := doc.Call("createElement", "td")
-
-		viewBtn := doc.Call("createElement", "button")
-		viewBtn.Set("className", "btn btn-sm btn-ghost")
-		viewBtn.Set("textContent", "View")
-		p := party
-		viewBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			a.SelectedParty = &p
-			a.CurrentView = "accounts"
-			a.ListAccounts(js.Value{}, []js.Value{js.ValueOf(p.PartyID)})
+		chip.Set("className", cls)
+		chip.Set("textContent", s.label)
+		val := s.value
+		chip.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			a.FilterStatus = val
 			a.Render()
 			return nil
 		}))
-		actionsCell.Call("appendChild", viewBtn)
+		chipGroup.Call("appendChild", chip)
+	}
+	filterRow.Call("appendChild", chipGroup)
+	filterPanel.Call("appendChild", filterRow)
 
-		if party.Status == "active" {
-			actionsCell.Call("appendChild", a.createActionButton("Suspend", "warning", func() {
-				a.SuspendParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
-			}))
-		}
+	// Inline new customer form (shown when toggled)
+	if a.ShowNewCustomerForm {
+		formRow := doc.Call("createElement", "div")
+		formRow.Set("className", "customers-inline-form")
 
-		actionsCell.Call("appendChild", a.createActionButton("Close", "danger", func() {
-			a.CloseParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
+		formLabel := doc.Call("createElement", "div")
+		formLabel.Set("className", "customers-inline-form-label")
+		formLabel.Set("textContent", "New Customer")
+		formRow.Call("appendChild", formLabel)
+
+		formFields := doc.Call("createElement", "div")
+		formFields.Set("className", "customers-inline-form-fields")
+
+		nameInput := doc.Call("createElement", "input")
+		nameInput.Set("type", "text")
+		nameInput.Set("id", "customer-name")
+		nameInput.Set("placeholder", "Full Name")
+		nameInput.Set("className", "form-input")
+		formFields.Call("appendChild", nameInput)
+
+		emailInput := doc.Call("createElement", "input")
+		emailInput.Set("type", "email")
+		emailInput.Set("id", "customer-email")
+		emailInput.Set("placeholder", "Email Address")
+		emailInput.Set("className", "form-input")
+		formFields.Call("appendChild", emailInput)
+
+		saveBtn := doc.Call("createElement", "button")
+		saveBtn.Set("id", "create-customer-button")
+		saveBtn.Set("className", "btn btn-primary")
+		saveBtn.Set("textContent", "Create")
+		saveBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			name := doc.Call("getElementById", "customer-name").Get("value").String()
+			email := doc.Call("getElementById", "customer-email").Get("value").String()
+			if name == "" || email == "" {
+				a.Error = "Name and email are required"
+				a.Render()
+				return nil
+			}
+			a.ShowNewCustomerForm = false
+			a.CreateParty(js.Value{}, []js.Value{js.ValueOf(name), js.ValueOf(email)})
+			return nil
 		}))
+		formFields.Call("appendChild", saveBtn)
 
-		row.Call("appendChild", actionsCell)
-		tbody.Call("appendChild", row)
+		cancelBtn := doc.Call("createElement", "button")
+		cancelBtn.Set("className", "btn btn-ghost")
+		cancelBtn.Set("textContent", "Cancel")
+		cancelBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			a.ShowNewCustomerForm = false
+			a.Render()
+			return nil
+		}))
+		formFields.Call("appendChild", cancelBtn)
+
+		formRow.Call("appendChild", formFields)
+		filterPanel.Call("appendChild", formRow)
 	}
 
-	table.Call("appendChild", tbody)
-	container.Call("appendChild", table)
+	container.Call("appendChild", filterPanel)
 
-	// Empty state
+	// ── Results Panel ─────────────────────────────────────────────────
+	resultsPanel := doc.Call("createElement", "div")
+	resultsPanel.Set("className", "customers-results-panel")
+
+	// Apply both search and status filter
+	filteredParties := a.filterPartiesWithStatus(a.SearchQuery, a.FilterStatus)
+
+	// Results header
+	resultsHeader := doc.Call("createElement", "div")
+	resultsHeader.Set("className", "customers-results-header")
+
+	countLabel := doc.Call("createElement", "div")
+	countLabel.Set("className", "customers-results-count")
+	countText := "All customers"
+	if a.SearchQuery != "" || a.FilterStatus != "" {
+		countText = formatNumber(len(filteredParties)) + " result"
+		if len(filteredParties) != 1 {
+			countText += "s"
+		}
+	} else {
+		countText = formatNumber(len(filteredParties)) + " customer"
+		if len(filteredParties) != 1 {
+			countText += "s"
+		}
+	}
+	countLabel.Set("textContent", countText)
+	resultsHeader.Call("appendChild", countLabel)
+	resultsPanel.Call("appendChild", resultsHeader)
+
 	if len(filteredParties) == 0 {
 		empty := doc.Call("createElement", "div")
 		empty.Set("className", "empty-state-large")
-		empty.Set("textContent", "No customers found")
-		container.Call("appendChild", empty)
+		emptyIcon := createMaterialIcon(doc, "person_search", "")
+		emptyIcon.Set("style", "font-size: 36px; color: var(--color-text-muted); display: block; margin-bottom: 8px;")
+		empty.Call("appendChild", emptyIcon)
+		emptyMsg := doc.Call("createElement", "div")
+		if a.SearchQuery != "" || a.FilterStatus != "" {
+			emptyMsg.Set("textContent", "No customers match your search")
+		} else {
+			emptyMsg.Set("textContent", "No customers yet — add your first customer above")
+		}
+		empty.Call("appendChild", emptyMsg)
+		resultsPanel.Call("appendChild", empty)
+	} else {
+		table := doc.Call("createElement", "table")
+		table.Set("className", "data-table")
+
+		thead := doc.Call("createElement", "thead")
+		theadRow := doc.Call("createElement", "tr")
+		headers := []string{"Name", "Email", "Status", "Created", "Actions"}
+		for _, h := range headers {
+			th := doc.Call("createElement", "th")
+			th.Set("textContent", h)
+			theadRow.Call("appendChild", th)
+		}
+		thead.Call("appendChild", theadRow)
+		table.Call("appendChild", thead)
+
+		tbody := doc.Call("createElement", "tbody")
+
+		for _, party := range filteredParties {
+			row := doc.Call("createElement", "tr")
+
+			nameCell := doc.Call("createElement", "td")
+			nameCell.Set("className", "cell-primary")
+			nameCell.Set("textContent", party.FullName)
+			row.Call("appendChild", nameCell)
+
+			emailCell := doc.Call("createElement", "td")
+			emailCell.Set("textContent", party.Email)
+			row.Call("appendChild", emailCell)
+
+			statusCell := doc.Call("createElement", "td")
+			statusBadge := doc.Call("createElement", "span")
+			statusBadge.Set("className", "status-badge "+party.Status)
+			statusBadge.Set("textContent", capitalize(party.Status))
+			statusCell.Call("appendChild", statusBadge)
+			row.Call("appendChild", statusCell)
+
+			dateCell := doc.Call("createElement", "td")
+			dateCell.Set("textContent", formatDate(party.CreatedAt))
+			row.Call("appendChild", dateCell)
+
+			actionsCell := doc.Call("createElement", "td")
+
+			viewBtn := doc.Call("createElement", "button")
+			viewBtn.Set("className", "btn btn-sm btn-ghost")
+			viewBtn.Set("textContent", "View")
+			p := party
+			viewBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.SelectedParty = &p
+				a.CurrentView = "accounts"
+				a.ListAccounts(js.Value{}, []js.Value{js.ValueOf(p.PartyID)})
+				a.Render()
+				return nil
+			}))
+			actionsCell.Call("appendChild", viewBtn)
+
+			if party.Status == "active" {
+				actionsCell.Call("appendChild", a.createActionButton("Suspend", "warning", func() {
+					a.SuspendParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
+				}))
+			}
+
+			actionsCell.Call("appendChild", a.createActionButton("Close", "danger", func() {
+				a.CloseParty(js.Value{}, []js.Value{js.ValueOf(party.PartyID)})
+			}))
+
+			row.Call("appendChild", actionsCell)
+			tbody.Call("appendChild", row)
+		}
+
+		table.Call("appendChild", tbody)
+		resultsPanel.Call("appendChild", table)
 	}
 
+	container.Call("appendChild", resultsPanel)
 	return container
 }
 
@@ -2321,6 +2386,20 @@ func (a *App) filterParties(query string) []Party {
 	lowerQuery := toLower(query)
 	for _, p := range a.Parties {
 		if contains(toLower(p.FullName), lowerQuery) || contains(toLower(p.Email), lowerQuery) {
+			filtered = append(filtered, p)
+		}
+	}
+	return filtered
+}
+
+func (a *App) filterPartiesWithStatus(query string, status string) []Party {
+	var filtered []Party
+	lowerQuery := toLower(query)
+	for _, p := range a.Parties {
+		if status != "" && p.Status != status {
+			continue
+		}
+		if query == "" || contains(toLower(p.FullName), lowerQuery) || contains(toLower(p.Email), lowerQuery) {
 			filtered = append(filtered, p)
 		}
 	}

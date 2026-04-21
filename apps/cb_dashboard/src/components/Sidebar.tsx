@@ -31,7 +31,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-slate-900 text-slate-300">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-slate-900 text-slate-300">
       <div className="flex items-center gap-3 px-6 pt-7 pb-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md">
           <MaterialIcon name="account_balance" className="text-[22px]" />

@@ -84,6 +84,7 @@ dispatch() ->
             {<<"/api/v1/parties/:party_id/suspend">>, cb_party_suspend_handler, []},
             {<<"/api/v1/parties/:party_id/reactivate">>, cb_party_reactivate_handler, []},
             {<<"/api/v1/parties/:party_id/close">>, cb_party_close_handler, []},
+            {<<"/api/v1/parties/:party_id/kyc">>, cb_party_kyc_handler, []},
 
             %% Accounts
             {<<"/api/v1/accounts">>, cb_accounts_list_handler, []},

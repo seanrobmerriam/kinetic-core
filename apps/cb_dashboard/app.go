@@ -67,6 +67,10 @@ type App struct {
 	StatementToDate     string
 	StatementAccountID  string
 
+	// KYC panel state
+	SelectedKycParty   *Party
+	ShowKycPanel       bool
+
 	// Dashboard specific
 	Stats               DashboardStats
 	RecentActivity     []ActivityItem
@@ -78,12 +82,16 @@ type App struct {
 
 // Party represents a customer/party
 type Party struct {
-	PartyID   string `json:"party_id"`
-	FullName  string `json:"full_name"`
-	Email     string `json:"email"`
-	Status    string `json:"status"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	PartyID           string   `json:"party_id"`
+	FullName          string   `json:"full_name"`
+	Email             string   `json:"email"`
+	Status            string   `json:"status"`
+	KycStatus         string   `json:"kyc_status"`
+	OnboardingStatus  string   `json:"onboarding_status"`
+	ReviewNotes       string   `json:"review_notes"`
+	DocRefs           []string `json:"doc_refs"`
+	CreatedAt         int64    `json:"created_at"`
+	UpdatedAt         int64    `json:"updated_at"`
 }
 
 // Account represents a bank account

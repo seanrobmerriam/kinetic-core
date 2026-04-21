@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"syscall/js"
 )
@@ -1409,4 +1412,61 @@ a.Call("click")
 doc.Get("body").Call("removeChild", a)
 }()
 return nil
+}
+
+// UpdateKycStatus sends a PATCH to /api/v1/parties/:id/kyc
+func (a *App) UpdateKycStatus(partyID, kycStatus, reviewNotes string) {
+	type kycPayload struct {
+		KycStatus   string `json:"kyc_status"`
+		ReviewNotes string `json:"review_notes,omitempty"`
+	}
+	payload, _ := json.Marshal(kycPayload{KycStatus: kycStatus, ReviewNotes: reviewNotes})
+
+	url := apiBaseURL + "/parties/" + partyID + "/kyc"
+	req, err := http.NewRequest("PATCH", url, bytes.NewReader(payload))
+	if err != nil {
+		a.Error = "Failed to build request: " + err.Error()
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		a.Error = "Request failed: " + err.Error()
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		a.Error = "KYC update failed: " + string(body)
+		return
+	}
+
+	a.Success = "KYC status updated"
+	a.Error = ""
+}
+
+// FetchParty refreshes the SelectedKycParty data from the API
+func (a *App) FetchParty(partyID string) {
+	url := apiBaseURL + "/parties/" + partyID
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	var party Party
+	if err := json.Unmarshal(body, &party); err != nil {
+		return
+	}
+	a.SelectedKycParty = &party
+	// Also update the party in the list
+	for i, p := range a.Parties {
+		if p.PartyID == partyID {
+			a.Parties[i] = party
+			break
+		}
+	}
 }

@@ -1073,6 +1073,121 @@
             .type-badge.credit { background: #dcfce7; color: #15803d; }
             .type-badge.debit  { background: #fee2e2; color: #b91c1c; }
 
+            /* KYC status badges */
+            .status-badge.kyc-not_started { background: #f1f5f9; color: #64748b; }
+            .status-badge.kyc-pending     { background: #fef3c7; color: #92400e; }
+            .status-badge.kyc-approved    { background: #dcfce7; color: #15803d; }
+            .status-badge.kyc-rejected    { background: #fee2e2; color: #b91c1c; }
+            .status-badge.onb-incomplete  { background: #fef3c7; color: #92400e; }
+            .status-badge.onb-complete    { background: #dcfce7; color: #15803d; }
+
+            /* KYC Panel */
+            .kyc-panel-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.35);
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .kyc-panel {
+                background: var(--color-surface);
+                border: 1px solid var(--color-border);
+                border-radius: 12px;
+                padding: 24px 28px;
+                width: 480px;
+                max-width: 96vw;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            }
+            .kyc-panel-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 16px;
+            }
+            .kyc-panel-header h3 {
+                font-size: var(--font-size-lg);
+                font-weight: 600;
+                color: var(--color-text-primary);
+                margin: 0;
+            }
+            .kyc-close-btn {
+                padding: 2px 8px;
+                font-size: 16px;
+                line-height: 1;
+                color: var(--color-text-muted);
+            }
+            .kyc-status-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+            }
+            .kyc-field-label {
+                font-size: var(--font-size-sm);
+                color: var(--color-text-muted);
+                font-weight: 500;
+            }
+            .kyc-notes-display {
+                background: var(--color-bg);
+                border: 1px solid var(--color-border);
+                border-radius: 6px;
+                padding: 8px 12px;
+                margin-bottom: 12px;
+                font-size: var(--font-size-sm);
+                color: var(--color-text-secondary);
+            }
+            .kyc-docs-list {
+                margin-bottom: 12px;
+            }
+            .kyc-doc-ref {
+                font-size: var(--font-size-xs);
+                color: var(--color-text-muted);
+                font-family: monospace;
+                background: var(--color-bg);
+                border-radius: 4px;
+                padding: 2px 6px;
+                margin-top: 4px;
+            }
+            .kyc-divider {
+                border: none;
+                border-top: 1px solid var(--color-border);
+                margin: 16px 0;
+            }
+            .kyc-form-title {
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+                color: var(--color-text-primary);
+                margin-bottom: 10px;
+            }
+            .kyc-form-row {
+                margin-bottom: 10px;
+            }
+            .kyc-select {
+                width: 100%;
+            }
+            .kyc-notes-input {
+                width: 100%;
+                margin-bottom: 12px;
+                resize: vertical;
+            }
+            .kyc-update-btn {
+                width: 100%;
+            }
+
+            /* btn-outline variant */
+            .btn-outline {
+                background: transparent;
+                border: 1px solid var(--color-border);
+                color: var(--color-text-secondary);
+            }
+            .btn-outline:hover {
+                background: var(--color-bg);
+                color: var(--color-text-primary);
+            }
+
             /* Settings View */
             .settings-view {
                 max-width: 800px;
@@ -2063,7 +2178,7 @@
         <script>
             const go = new Go();
             WebAssembly.instantiateStreaming(
-                fetch("ironledger.wasm?v=11"),
+                fetch("ironledger.wasm?v=12"),
                 go.importObject,
             )
                 .then((result) => {

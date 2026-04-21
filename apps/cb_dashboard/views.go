@@ -473,7 +473,7 @@ func (a *App) renderCustomersView() js.Value {
 
 		thead := doc.Call("createElement", "thead")
 		theadRow := doc.Call("createElement", "tr")
-		headers := []string{"Name", "Email", "Status", "Created", "Actions"}
+		headers := []string{"Name", "Email", "Status", "KYC", "Created", "Actions"}
 		for _, h := range headers {
 			th := doc.Call("createElement", "th")
 			th.Set("textContent", h)
@@ -503,6 +503,17 @@ func (a *App) renderCustomersView() js.Value {
 			statusCell.Call("appendChild", statusBadge)
 			row.Call("appendChild", statusCell)
 
+			kycCell := doc.Call("createElement", "td")
+			kycBadge := doc.Call("createElement", "span")
+			kycStatus := party.KycStatus
+			if kycStatus == "" {
+				kycStatus = "not_started"
+			}
+			kycBadge.Set("className", "status-badge kyc-"+kycStatus)
+			kycBadge.Set("textContent", kycStatusLabel(kycStatus))
+			kycCell.Call("appendChild", kycBadge)
+			row.Call("appendChild", kycCell)
+
 			dateCell := doc.Call("createElement", "td")
 			dateCell.Set("textContent", formatDate(party.CreatedAt))
 			row.Call("appendChild", dateCell)
@@ -521,6 +532,18 @@ func (a *App) renderCustomersView() js.Value {
 				return nil
 			}))
 			actionsCell.Call("appendChild", viewBtn)
+
+			kycBtn := doc.Call("createElement", "button")
+			kycBtn.Set("className", "btn btn-sm btn-outline")
+			kycBtn.Set("textContent", "KYC")
+			pk := party
+			kycBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				a.SelectedKycParty = &pk
+				a.ShowKycPanel = true
+				a.Render()
+				return nil
+			}))
+			actionsCell.Call("appendChild", kycBtn)
 
 			if party.Status == "active" {
 				actionsCell.Call("appendChild", a.createActionButton("Suspend", "warning", func() {
@@ -541,6 +564,12 @@ func (a *App) renderCustomersView() js.Value {
 	}
 
 	container.Call("appendChild", resultsPanel)
+
+	// KYC Management Panel (shown when a party is selected for KYC)
+	if a.ShowKycPanel && a.SelectedKycParty != nil {
+		container.Call("appendChild", a.renderKycPanel(doc))
+	}
+
 	return container
 }
 
@@ -2760,4 +2789,177 @@ func dateStringToEndOfDayMs(dateStr string) int64 {
 		return 0
 	}
 	return t.Add(24*time.Hour - time.Millisecond).UnixMilli()
+}
+
+// kycStatusLabel returns a human-readable label for a KYC status string
+func kycStatusLabel(status string) string {
+switch status {
+case "not_started":
+return "Not Started"
+case "pending":
+return "Pending Review"
+case "approved":
+return "Approved"
+case "rejected":
+return "Rejected"
+default:
+return capitalize(status)
+}
+}
+
+// renderKycPanel renders the KYC management overlay panel for a selected party
+func (a *App) renderKycPanel(doc js.Value) js.Value {
+party := a.SelectedKycParty
+overlay := doc.Call("createElement", "div")
+overlay.Set("className", "kyc-panel-overlay")
+
+panel := doc.Call("createElement", "div")
+panel.Set("className", "kyc-panel")
+
+// Header
+header := doc.Call("createElement", "div")
+header.Set("className", "kyc-panel-header")
+
+title := doc.Call("createElement", "h3")
+title.Set("textContent", "KYC Management — "+party.FullName)
+header.Call("appendChild", title)
+
+closeBtn := doc.Call("createElement", "button")
+closeBtn.Set("className", "btn btn-ghost kyc-close-btn")
+closeBtn.Set("textContent", "✕")
+closeBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+a.ShowKycPanel = false
+a.SelectedKycParty = nil
+a.Render()
+return nil
+}))
+header.Call("appendChild", closeBtn)
+panel.Call("appendChild", header)
+
+// Current status row
+statusRow := doc.Call("createElement", "div")
+statusRow.Set("className", "kyc-status-row")
+
+kycLabel := doc.Call("createElement", "span")
+kycLabel.Set("className", "kyc-field-label")
+kycLabel.Set("textContent", "KYC Status:")
+statusRow.Call("appendChild", kycLabel)
+
+kycBadge := doc.Call("createElement", "span")
+ks := party.KycStatus
+if ks == "" {
+ks = "not_started"
+}
+kycBadge.Set("className", "status-badge kyc-"+ks)
+kycBadge.Set("textContent", kycStatusLabel(ks))
+statusRow.Call("appendChild", kycBadge)
+
+onbLabel := doc.Call("createElement", "span")
+onbLabel.Set("className", "kyc-field-label")
+onbLabel.Set("style", "margin-left: 16px;")
+onbLabel.Set("textContent", "Onboarding:")
+statusRow.Call("appendChild", onbLabel)
+
+onbBadge := doc.Call("createElement", "span")
+obs := party.OnboardingStatus
+if obs == "" {
+obs = "incomplete"
+}
+onbBadge.Set("className", "status-badge onb-"+obs)
+onbBadge.Set("textContent", capitalize(obs))
+statusRow.Call("appendChild", onbBadge)
+panel.Call("appendChild", statusRow)
+
+// Review notes display
+if party.ReviewNotes != "" {
+notesDisplay := doc.Call("createElement", "div")
+notesDisplay.Set("className", "kyc-notes-display")
+notesLbl := doc.Call("createElement", "span")
+notesLbl.Set("className", "kyc-field-label")
+notesLbl.Set("textContent", "Last Review Notes: ")
+notesDisplay.Call("appendChild", notesLbl)
+notesText := doc.Call("createElement", "span")
+notesText.Set("textContent", party.ReviewNotes)
+notesDisplay.Call("appendChild", notesText)
+panel.Call("appendChild", notesDisplay)
+}
+
+// Doc refs
+if len(party.DocRefs) > 0 {
+docsDiv := doc.Call("createElement", "div")
+docsDiv.Set("className", "kyc-docs-list")
+docsLbl := doc.Call("createElement", "div")
+docsLbl.Set("className", "kyc-field-label")
+docsLbl.Set("textContent", "Document References:")
+docsDiv.Call("appendChild", docsLbl)
+for _, ref := range party.DocRefs {
+refItem := doc.Call("createElement", "div")
+refItem.Set("className", "kyc-doc-ref")
+refItem.Set("textContent", ref)
+docsDiv.Call("appendChild", refItem)
+}
+panel.Call("appendChild", docsDiv)
+}
+
+// Divider
+divider := doc.Call("createElement", "hr")
+divider.Set("className", "kyc-divider")
+panel.Call("appendChild", divider)
+
+// Update KYC status form
+formTitle := doc.Call("createElement", "div")
+formTitle.Set("className", "kyc-form-title")
+formTitle.Set("textContent", "Update KYC Status")
+panel.Call("appendChild", formTitle)
+
+formRow := doc.Call("createElement", "div")
+formRow.Set("className", "kyc-form-row")
+
+kycSelect := doc.Call("createElement", "select")
+kycSelect.Set("id", "kyc-status-select")
+kycSelect.Set("className", "form-select kyc-select")
+statuses := []struct{ val, label string }{
+{"not_started", "Not Started"},
+{"pending", "Pending Review"},
+{"approved", "Approved"},
+{"rejected", "Rejected"},
+}
+for _, s := range statuses {
+opt := doc.Call("createElement", "option")
+opt.Set("value", s.val)
+opt.Set("textContent", s.label)
+if s.val == ks {
+opt.Set("selected", true)
+}
+kycSelect.Call("appendChild", opt)
+}
+formRow.Call("appendChild", kycSelect)
+panel.Call("appendChild", formRow)
+
+notesInput := doc.Call("createElement", "textarea")
+notesInput.Set("id", "kyc-notes-input")
+notesInput.Set("className", "form-textarea kyc-notes-input")
+notesInput.Set("placeholder", "Review notes (optional for approved; required for rejected)")
+notesInput.Set("rows", 3)
+notesInput.Set("value", party.ReviewNotes)
+panel.Call("appendChild", notesInput)
+
+updateBtn := doc.Call("createElement", "button")
+	updateBtn.Set("className", "btn btn-primary kyc-update-btn")
+	updateBtn.Set("textContent", "Update KYC Status")
+	updateBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		selectedStatus := doc.Call("getElementById", "kyc-status-select").Get("value").String()
+		notes := doc.Call("getElementById", "kyc-notes-input").Get("value").String()
+		pid := party.PartyID
+		go func() {
+			a.UpdateKycStatus(pid, selectedStatus, notes)
+			a.FetchParty(pid)
+			a.Render()
+		}()
+		return nil
+	}))
+	panel.Call("appendChild", updateBtn)
+
+overlay.Call("appendChild", panel)
+return overlay
 }

@@ -65,7 +65,10 @@
     list_parties/2,
     suspend_party/1,
     reactivate_party/1,
-    close_party/1
+    close_party/1,
+    update_kyc_status/3,
+    update_onboarding_status/2,
+    add_doc_ref/2
 ]).
 
 %% @doc
@@ -101,6 +104,10 @@ create_party(FullName, Email) when is_binary(FullName), is_binary(Email) ->
                     full_name = FullName,
                     email = Email,
                     status = active,
+                    kyc_status = not_started,
+                    onboarding_status = incomplete,
+                    review_notes = undefined,
+                    doc_refs = [],
                     created_at = Now,
                     updated_at = Now
                 },
@@ -337,6 +344,94 @@ close_party(PartyId) ->
                                 {ok, Updated}
                         end
                 end;
+            [] ->
+                {error, party_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end.
+
+%% @doc
+%% Updates the KYC verification status for a party.
+%%
+%% Valid statuses: not_started | pending | approved | rejected.
+%% Notes is an optional binary explaining the review outcome.
+%%
+%% @spec update_kyc_status(uuid(), kyc_status(), binary() | undefined) -> {ok, #party{}} | {error, atom()}
+update_kyc_status(PartyId, KycStatus, Notes)
+        when KycStatus =:= not_started; KycStatus =:= pending;
+             KycStatus =:= approved; KycStatus =:= rejected ->
+    F = fun() ->
+        case mnesia:read(party, PartyId) of
+            [Party] ->
+                Now = erlang:system_time(millisecond),
+                Updated = Party#party{
+                    kyc_status = KycStatus,
+                    review_notes = Notes,
+                    updated_at = Now
+                },
+                mnesia:write(Updated),
+                {ok, Updated};
+            [] ->
+                {error, party_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end;
+update_kyc_status(_PartyId, _KycStatus, _Notes) ->
+    {error, invalid_kyc_status}.
+
+%% @doc
+%% Updates the onboarding completion status for a party.
+%%
+%% Valid statuses: incomplete | complete.
+%%
+%% @spec update_onboarding_status(uuid(), onboarding_status()) -> {ok, #party{}} | {error, atom()}
+update_onboarding_status(PartyId, OnboardingStatus)
+        when OnboardingStatus =:= incomplete; OnboardingStatus =:= complete ->
+    F = fun() ->
+        case mnesia:read(party, PartyId) of
+            [Party] ->
+                Now = erlang:system_time(millisecond),
+                Updated = Party#party{
+                    onboarding_status = OnboardingStatus,
+                    updated_at = Now
+                },
+                mnesia:write(Updated),
+                {ok, Updated};
+            [] ->
+                {error, party_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end;
+update_onboarding_status(_PartyId, _Status) ->
+    {error, invalid_onboarding_status}.
+
+%% @doc
+%% Adds a document reference to a party's KYC document list.
+%%
+%% DocRef is a binary identifier (e.g. S3 key, file hash) for an uploaded document.
+%%
+%% @spec add_doc_ref(uuid(), binary()) -> {ok, #party{}} | {error, atom()}
+add_doc_ref(PartyId, DocRef) when is_binary(DocRef) ->
+    F = fun() ->
+        case mnesia:read(party, PartyId) of
+            [Party] ->
+                Now = erlang:system_time(millisecond),
+                Existing = Party#party.doc_refs,
+                Updated = Party#party{
+                    doc_refs = [DocRef | Existing],
+                    updated_at = Now
+                },
+                mnesia:write(Updated),
+                {ok, Updated};
             [] ->
                 {error, party_not_found}
         end

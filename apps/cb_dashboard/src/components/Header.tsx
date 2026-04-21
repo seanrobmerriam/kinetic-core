@@ -23,12 +23,49 @@ const PAGE_TITLES: Record<string, string> = {
   deposit: "Deposit / Withdraw",
 };
 
-function pageTitle(pathname: string): string {
+const PAGE_SUBTITLES: Record<string, string> = {
+  dashboard: "Operational overview",
+  customers: "Manage parties and onboarding",
+  accounts: "Customer accounts and balances",
+  "account-detail": "Account activity and holds",
+  transactions: "Payments across all accounts",
+  ledger: "Posted ledger entries",
+  products: "Savings and loan products",
+  loans: "Loan origination and servicing",
+  settings: "Workspace preferences",
+  transfer: "Move money between accounts",
+  deposit: "Cash in and out",
+};
+
+function pageKey(pathname: string): string {
   if (pathname.startsWith("/accounts/") && pathname.length > "/accounts/".length) {
-    return PAGE_TITLES["account-detail"];
+    return "account-detail";
   }
-  const segment = pathname.split("/")[1] || "dashboard";
-  return PAGE_TITLES[segment] ?? "Dashboard";
+  return pathname.split("/")[1] || "dashboard";
+}
+
+interface IconButtonProps {
+  icon: string;
+  title: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  testId?: string;
+}
+
+function IconButton({ icon, title, onClick, disabled, testId }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={testId}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <MaterialIcon name={icon} className="text-[20px]" />
+    </button>
+  );
 }
 
 export function Header({ onRefresh }: { onRefresh?: () => void }) {
@@ -39,7 +76,6 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
   const { setError, setSuccess } = useNotify();
   const [mockImporting, setMockImporting] = useState(false);
 
-  // Probe dev tools capability once after auth.
   useEffect(() => {
     if (state.status !== "authenticated") return;
     let cancelled = false;
@@ -86,56 +122,59 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
     }
   };
 
+  const key = pageKey(pathname);
+  const title = PAGE_TITLES[key] ?? "Dashboard";
+  const subtitle = PAGE_SUBTITLES[key] ?? "";
+  const userInitial = state.status === "authenticated" && state.user
+    ? state.user.email.charAt(0).toUpperCase()
+    : "?";
+
   return (
-    <header className="main-header">
-      <div className="header-title">
-        <h2 className="page-title">{pageTitle(pathname)}</h2>
+    <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-slate-200 bg-white/80 px-8 backdrop-blur">
+      <div className="flex flex-col">
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2>
+        {subtitle ? <p className="text-sm text-slate-500">{subtitle}</p> : null}
       </div>
-      <div className="header-actions">
+
+      <div className="ml-auto flex items-center gap-2">
         {state.status === "authenticated" && state.user && (
-          <div className="header-btn" data-testid="current-user">
-            {state.user.email} ({capitalize(state.user.role)})
+          <div
+            data-testid="current-user"
+            className="hidden items-center gap-3 rounded-full border border-slate-200 bg-white px-2 py-1.5 pr-4 sm:flex"
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-xs font-semibold text-white">
+              {userInitial}
+            </div>
+            <div className="leading-tight">
+              <div className="text-xs font-semibold text-slate-800">{state.user.email}</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-500">
+                {capitalize(state.user.role)}
+              </div>
+            </div>
           </div>
         )}
         {devToolsEnabled && (
-          <button
-            type="button"
-            className="header-btn"
+          <IconButton
+            icon={mockImporting ? "hourglass_top" : "upload"}
             title="Import mock data"
-            data-testid="mock-import-button"
+            testId="mock-import-button"
             onClick={importMock}
             disabled={mockImporting}
-          >
-            <MaterialIcon
-              name={mockImporting ? "hourglass_top" : "upload"}
-              className="header-icon"
-            />
-          </button>
-        )}
-        <button
-          type="button"
-          className="header-btn"
-          title="Toggle theme"
-          data-testid="theme-toggle"
-          onClick={toggle}
-        >
-          <MaterialIcon
-            name={theme === "dark" ? "light_mode" : "dark_mode"}
-            className="header-icon"
           />
-        </button>
-        <button type="button" className="header-btn" title="Refresh" onClick={refresh}>
-          <MaterialIcon name="autorenew" className="header-icon" />
-        </button>
-        <button
-          type="button"
-          className="header-btn"
+        )}
+        <IconButton
+          icon={theme === "dark" ? "light_mode" : "dark_mode"}
+          title="Toggle theme"
+          testId="theme-toggle"
+          onClick={toggle}
+        />
+        <IconButton icon="autorenew" title="Refresh" onClick={refresh} />
+        <IconButton
+          icon="logout"
           title="Sign out"
-          data-testid="logout-button"
+          testId="logout-button"
           onClick={() => void logout()}
-        >
-          <MaterialIcon name="logout" className="header-icon" />
-        </button>
+        />
       </div>
     </header>
   );

@@ -17,7 +17,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { bump } = useRefresh();
   const lastPath = useRef<string | null>(null);
 
-  // Clear banner messages on route change.
   useEffect(() => {
     if (lastPath.current !== pathname) {
       lastPath.current = pathname;
@@ -33,32 +32,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (state.status !== "authenticated") {
     return (
-      <div className="app-layout">
-        <div className="main-content">
-          <div className="content-area">
-            <div className="loading-spinner" data-testid="loading">
-              Loading...
-            </div>
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div
+          data-testid="loading"
+          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-500 shadow-sm"
+        >
+          <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-indigo-500" />
+          Loading…
         </div>
       </div>
     );
   }
 
   return (
-    <div className="app-layout">
+    <div className="min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="main-content">
+      <div className="ml-64 flex min-h-screen flex-col">
         <Header
           onRefresh={() => {
             bump();
             router.refresh();
           }}
         />
-        <div className="content-area">
+        <main className="flex-1 px-8 py-8">
           <Alerts />
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

@@ -16,8 +16,8 @@ const NAV_ITEMS = [
 ] as const;
 
 const QUICK_ACTIONS = [
-  { id: "transfer", label: "Transfer Funds", color: "primary" },
-  { id: "deposit", label: "Deposit / Withdraw", color: "success" },
+  { id: "transfer", label: "Transfer Funds", icon: "swap_horiz" },
+  { id: "deposit", label: "Deposit / Withdraw", icon: "payments" },
 ] as const;
 
 export function Sidebar() {
@@ -31,35 +31,62 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <h1 className="brand-title">IronLedger</h1>
-        <span className="brand-subtitle">Core Banking</span>
+    <aside className="sidebar fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-slate-900 text-slate-300">
+      <div className="flex items-center gap-3 px-6 pt-7 pb-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md">
+          <MaterialIcon name="account_balance" className="text-[22px]" />
+        </div>
+        <div className="leading-tight">
+          <div className="text-base font-semibold text-white tracking-tight">IronLedger</div>
+          <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+            Core Banking
+          </div>
+        </div>
       </div>
-      <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
+
+      <div className="px-6 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+        Menu
+      </div>
+      <nav className="flex flex-1 flex-col gap-1 px-3">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(item.id);
+          return (
+            <Link
+              key={item.id}
+              href={`/${item.id}`}
+              data-testid={`nav-${item.id}`}
+              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-gradient-to-r from-indigo-500/90 to-violet-500/90 text-white shadow-sm"
+                  : "text-slate-400 hover:bg-slate-800/70 hover:text-white"
+              }`}
+            >
+              <MaterialIcon
+                name={item.icon}
+                className={`text-[20px] ${active ? "text-white" : "text-slate-500 group-hover:text-white"}`}
+              />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="px-6 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+        Quick Actions
+      </div>
+      <div className="flex flex-col gap-2 px-3 pb-6">
+        {QUICK_ACTIONS.map((a) => (
           <Link
-            key={item.id}
-            href={`/${item.id}`}
-            className={`nav-item${isActive(item.id) ? " active" : ""}`}
-            data-testid={`nav-${item.id}`}
+            key={a.id}
+            href={`/${a.id}`}
+            data-testid={`quick-${a.id}`}
+            className="flex items-center gap-3 rounded-xl border border-slate-700/60 bg-slate-800/40 px-3 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:border-indigo-400/40 hover:bg-slate-800 hover:text-white"
           >
-            <MaterialIcon name={item.icon} className="nav-icon" />
-            <span className="nav-label">{item.label}</span>
+            <MaterialIcon name={a.icon} className="text-[18px] text-indigo-300" />
+            <span>{a.label}</span>
           </Link>
         ))}
-      </nav>
-      <div className="sidebar-section-title">Quick Actions</div>
-      {QUICK_ACTIONS.map((action) => (
-        <Link
-          key={action.id}
-          href={`/${action.id}`}
-          className={`quick-action-btn btn btn-${action.color}`}
-          data-testid={`quick-${action.id}`}
-        >
-          {action.label}
-        </Link>
-      ))}
+      </div>
     </aside>
   );
 }

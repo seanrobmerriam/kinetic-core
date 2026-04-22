@@ -4,6 +4,7 @@
 -include_lib("stdlib/include/assert.hrl").
 -include("cb_interest.hrl").
 -include_lib("cb_ledger/include/cb_ledger.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2, end_per_testcase/2]).
 -export([
@@ -84,7 +85,8 @@ all() ->
 init_per_suite(Config) ->
     mnesia:start(),
     % Create required tables
-    Tables = [party, account, transaction, ledger_entry, interest_accrual],
+    Tables = [party, party_audit, account, transaction, ledger_entry,
+              interest_accrual, event_outbox],
     lists:foreach(fun create_table/1, Tables),
     Config.
 
@@ -123,6 +125,18 @@ table_spec(transaction) ->
         {attributes, record_info(fields, transaction)},
         {index, [idempotency_key, source_account_id, dest_account_id, status]}
     ];
+table_spec(party_audit) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, party_audit)},
+        {index, [party_id, action, version]}
+    ];
+table_spec(event_outbox) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, event_outbox)},
+        {index, [status]}
+    ];
 table_spec(ledger_entry) ->
     [
         {ram_copies, [node()]},
@@ -138,7 +152,8 @@ end_per_suite(_Config) ->
 init_per_testcase(_TestCase, Config) ->
     % Clear all relevant tables before each test
     lists:foreach(fun(T) -> mnesia:clear_table(T) end,
-                  [party, account, transaction, ledger_entry, interest_accrual]),
+                  [party, party_audit, account, transaction, ledger_entry,
+                   interest_accrual, event_outbox]),
     Config.
 
 end_per_testcase(_TestCase, _Config) ->

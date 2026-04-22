@@ -11,7 +11,7 @@
     logout_revokes_session/1
 ]).
 
--define(PORT, 18081).
+-define(PORT, 18083).
 
 all() ->
     [

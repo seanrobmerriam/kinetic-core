@@ -61,7 +61,7 @@ end_per_suite(_Config) ->
 
 init_per_testcase(_TestCase, Config) ->
     lists:foreach(fun mnesia:clear_table/1,
-                  [party, account, transaction, ledger_entry, event_outbox]),
+                  [party, party_audit, account, transaction, ledger_entry, event_outbox]),
     Config.
 
 end_per_testcase(_TestCase, _Config) ->
@@ -177,11 +177,13 @@ write_entry_at(AccountId, Type, Amount, PostedAt) ->
     {atomic, ok} = mnesia:transaction(fun() -> mnesia:write(Entry) end).
 
 create_tables() ->
-    Tables = [party, account, transaction, ledger_entry, event_outbox, webhook_subscription, webhook_delivery],
+    Tables = [party, party_audit, account, transaction, ledger_entry, event_outbox, webhook_subscription, webhook_delivery],
     lists:foreach(fun create_table/1, Tables).
 
 create_table(party) ->
     ensure_table(party, [{attributes, record_info(fields, party)}, {index, [email, status]}]);
+create_table(party_audit) ->
+    ensure_table(party_audit, [{attributes, record_info(fields, party_audit)}, {index, [party_id, action, version]}]);
 create_table(account) ->
     ensure_table(account, [{attributes, record_info(fields, account)}, {index, [party_id, status]}]);
 create_table(transaction) ->

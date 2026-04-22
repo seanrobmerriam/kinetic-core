@@ -16,6 +16,7 @@
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("cb_interest/include/cb_interest.hrl").
 -include_lib("cb_ledger/include/cb_ledger.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -export([all/0, groups/0, init_per_suite/1, end_per_suite/1,
          init_per_testcase/2, end_per_testcase/2]).
@@ -74,7 +75,8 @@ end_per_suite(_Config) ->
 
 init_per_testcase(_TestCase, Config) ->
     lists:foreach(fun mnesia:clear_table/1,
-                  [party, account, transaction, ledger_entry, interest_accrual]),
+                  [party, party_audit, account, transaction, ledger_entry,
+                   interest_accrual, event_outbox, webhook_subscription, webhook_delivery]),
     Config.
 
 end_per_testcase(_TestCase, _Config) ->
@@ -96,10 +98,11 @@ list_jobs_returns_all_registered(_Config) ->
     ?assertEqual(5, length(Jobs)),
     ok.
 
-%% Noop placeholder jobs return {ok, noop}.
+%% Noop placeholder jobs return {ok, noop}. webhook_retry now calls
+%% retry_failed_deliveries/0 which returns ok directly.
 run_noop_job_ok(_Config) ->
     ?assertEqual({ok, noop}, cb_jobs:run(fee_assessment)),
-    ?assertEqual({ok, noop}, cb_jobs:run(webhook_retry)),
+    ?assertEqual(ok,         cb_jobs:run(webhook_retry)),
     ?assertEqual({ok, noop}, cb_jobs:run(statement_generation)),
     ok.
 
@@ -245,7 +248,8 @@ set_accrual_end_date(AccrualId, EndDate) ->
     ok.
 
 create_tables() ->
-    Tables = [party, account, transaction, ledger_entry, interest_accrual],
+    Tables = [party, party_audit, account, transaction, ledger_entry,
+              interest_accrual, event_outbox, webhook_subscription, webhook_delivery],
     lists:foreach(fun create_table/1, Tables).
 
 create_table(interest_accrual) ->
@@ -268,6 +272,10 @@ table_spec(party) ->
     [{ram_copies, [node()]},
      {attributes, record_info(fields, party)},
      {index, [email, status]}];
+table_spec(party_audit) ->
+    [{ram_copies, [node()]},
+     {attributes, record_info(fields, party_audit)},
+     {index, [party_id, action, version]}];
 table_spec(account) ->
     [{ram_copies, [node()]},
      {attributes, record_info(fields, account)},
@@ -279,4 +287,16 @@ table_spec(transaction) ->
 table_spec(ledger_entry) ->
     [{ram_copies, [node()]},
      {attributes, record_info(fields, ledger_entry)},
-     {index, [txn_id, account_id]}].
+     {index, [txn_id, account_id]}];
+table_spec(event_outbox) ->
+    [{ram_copies, [node()]},
+     {attributes, record_info(fields, event_outbox)},
+     {index, [status]}];
+table_spec(webhook_subscription) ->
+    [{ram_copies, [node()]},
+     {attributes, record_info(fields, webhook_subscription)},
+     {index, [event_type, status]}];
+table_spec(webhook_delivery) ->
+    [{ram_copies, [node()]},
+     {attributes, record_info(fields, webhook_delivery)},
+     {index, [event_id, subscription_id]}].

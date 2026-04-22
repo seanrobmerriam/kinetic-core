@@ -3,6 +3,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 -include("savings_product.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2, end_per_testcase/2]).
 -export([
@@ -75,6 +76,15 @@ init_per_suite(Config) ->
         {aborted, {already_exists, _}} -> ok;
         {aborted, Reason} -> error({failed_to_create_table, Reason})
     end,
+    case mnesia:create_table(event_outbox, [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, event_outbox)},
+        {index, [status]}
+    ]) of
+        {atomic, ok} -> ok;
+        {aborted, {already_exists, _}} -> ok;
+        {aborted, Reason2} -> error({failed_to_create_table, Reason2})
+    end,
     Config.
 
 end_per_suite(_Config) ->
@@ -83,8 +93,8 @@ end_per_suite(_Config) ->
     ok.
 
 init_per_testcase(_TestCase, Config) ->
-    % Clear the savings_product table before each test
     mnesia:clear_table(savings_product),
+    mnesia:clear_table(event_outbox),
     Config.
 
 end_per_testcase(_TestCase, _Config) ->

@@ -9,10 +9,11 @@ init(Req, State) ->
         <<"POST">> ->
             {ok, Body, Req2} = cowboy_req:read_body(Req),
             case jsone:try_decode(Body) of
-                {ok, #{<<"email">> := Email, <<"password">> := Password}, _} ->
+                {ok, #{<<"email">> := Email, <<"password">> := Password} = Decoded, _} ->
+                    ChannelType = parse_channel_type(maps:get(<<"channel">>, Decoded, undefined)),
                     case cb_auth:authenticate(Email, Password) of
                         {ok, User} ->
-                            case cb_auth:create_session(maps:get(user_id, User)) of
+                            case cb_auth:create_session(maps:get(user_id, User), ChannelType) of
                                 {ok, Session} ->
                                     Resp = #{
                                         session_id => maps:get(session_id, Session),
@@ -47,6 +48,12 @@ user_to_json(User) ->
         role => maps:get(role, User),
         status => maps:get(status, User)
     }.
+
+parse_channel_type(<<"web">>)    -> web;
+parse_channel_type(<<"mobile">>) -> mobile;
+parse_channel_type(<<"branch">>) -> branch;
+parse_channel_type(<<"atm">>)    -> atm;
+parse_channel_type(_)            -> undefined.
 
 error_reply(Reason, Req, State) ->
     {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),

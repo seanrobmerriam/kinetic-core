@@ -44,6 +44,13 @@
 %% @doc ISO 4217 currency codes supported by the system.
 -type currency() :: 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CHF' | 'AUD' | 'CAD' | 'SGD' | 'HKD' | 'NZD'.
 
+%% @doc Omnichannel access channel type.
+%% - web: Browser-based internet banking
+%% - mobile: iOS/Android mobile banking app
+%% - branch: Bank branch teller system
+%% - atm: Automated teller machine
+-type channel_type() :: web | mobile | branch | atm.
+
 %% @doc Risk classification tier for a party.
 -type risk_tier() :: low | medium | high | critical.
 
@@ -364,4 +371,44 @@
     resolution_notes :: binary() | undefined,
     created_at       :: timestamp_ms(),
     updated_at       :: timestamp_ms()
+}).
+
+%% @doc Per-channel transaction limit configuration.
+%%
+%% Limits are enforced per channel type and currency. The composite
+%% `limit_key' `{channel_type(), currency()}' is used as the Mnesia
+%% primary key so each (channel, currency) pair has exactly one row.
+%% - daily_limit: Maximum cumulative transaction volume per day in minor units
+%% - per_txn_limit: Maximum single transaction amount in minor units
+%% A value of 0 means "unlimited".
+-record(channel_limit, {
+    limit_key     :: {channel_type(), currency()},
+    daily_limit   :: non_neg_integer(),
+    per_txn_limit :: non_neg_integer(),
+    updated_at    :: timestamp_ms()
+}).
+
+%% @doc Immutable channel activity log entry.
+%%
+%% Records each inbound API request with its channel context.
+-record(channel_activity, {
+    log_id      :: uuid(),
+    channel     :: channel_type() | undefined,
+    party_id    :: uuid() | undefined,
+    action      :: binary(),
+    endpoint    :: binary(),
+    status_code :: non_neg_integer(),
+    created_at  :: timestamp_ms()
+}).
+
+%% @doc Notification channel preference for a party.
+%%
+%% Controls which channels receive which event type notifications.
+-record(notification_preference, {
+    pref_id     :: uuid(),
+    party_id    :: uuid(),
+    channel     :: channel_type(),
+    event_types :: [binary()],
+    enabled     :: boolean(),
+    updated_at  :: timestamp_ms()
 }).

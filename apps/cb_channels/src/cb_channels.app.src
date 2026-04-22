@@ -1,0 +1,17 @@
+{application, cb_channels,
+ [
+  {description, "IronLedger Omnichannel Support — channel limits, activity logging, and notification preferences"},
+  {vsn, "0.1.0"},
+  {registered, [cb_channels_sup]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  cb_ledger
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_channels_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

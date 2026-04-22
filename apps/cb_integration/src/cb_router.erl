@@ -163,6 +163,23 @@ dispatch() ->
             {<<"/api/v1/exceptions/:item_id">>, cb_exceptions_handler, []},
             {<<"/api/v1/exceptions/:item_id/resolve">>, cb_exceptions_handler, []},
 
+            %% Omnichannel — channel limits
+            {<<"/api/v1/channel-limits">>, cb_channel_limits_handler, []},
+            {<<"/api/v1/channel-limits/:channel">>, cb_channel_limits_handler, []},
+
+            %% Omnichannel — channel activity log
+            {<<"/api/v1/channel-activity">>, cb_channel_activity_handler, []},
+
+            %% Omnichannel — unified party profile
+            {<<"/api/v1/parties/:party_id/profile">>, cb_party_profile_handler, []},
+
+            %% Omnichannel — notification preferences
+            {<<"/api/v1/parties/:party_id/notification-preferences">>, cb_notification_prefs_handler, []},
+
+            %% ATM baseline interface
+            {<<"/api/v1/atm/inquiry">>, cb_atm_handler, []},
+            {<<"/api/v1/atm/withdraw">>, cb_atm_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

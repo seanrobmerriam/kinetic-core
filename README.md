@@ -136,6 +136,14 @@ Default bootstrap credentials (from `config/sys.config`):
 
 Defined in `apps/cb_integration/src/cb_router.erl`.
 
+The OpenAPI specification is served at `GET /api/v1/openapi.json`. Client SDKs can be generated with:
+
+```bash
+./scripts/generate-sdks.sh
+```
+
+See `sdk/README.md` for details.
+
 ### Auth
 
 - `POST /api/v1/auth/login`

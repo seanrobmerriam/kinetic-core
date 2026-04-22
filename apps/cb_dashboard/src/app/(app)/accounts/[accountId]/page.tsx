@@ -12,7 +12,6 @@ import {
   Paper,
   SimpleGrid,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
@@ -28,6 +27,8 @@ import {
   formatTimestamp,
 } from "@/lib/format";
 import type { Account, AccountHold, Transaction } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -258,52 +259,59 @@ export default function AccountDetailPage({
           Recent Transactions
         </Title>
         <Paper withBorder radius="md" shadow="sm">
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Date</Table.Th>
-                  <Table.Th>Type</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th ta="right">Amount</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {transactions.length === 0 ? (
-                  <Table.Tr>
-                    <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
-                      No transactions yet
-                    </Table.Td>
-                  </Table.Tr>
-                ) : (
-                  transactions.map((t) => (
-                    <Table.Tr key={t.txn_id}>
-                      <Table.Td>{formatTimestamp(t.created_at)}</Table.Td>
-                      <Table.Td>
-                        <Badge variant="light" color="gray" radius="sm">
-                          {capitalize(t.txn_type)}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>{t.description}</Table.Td>
-                      <Table.Td ta="right" ff="monospace" fw={500}>
-                        {formatAmount(t.amount, t.currency)}
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge
-                          variant="light"
-                          color={statusColor(t.status)}
-                          radius="sm"
-                        >
-                          {capitalize(t.status)}
-                        </Badge>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))
-                )}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
+          <SortableTable
+            data={transactions}
+            columns={[
+              {
+                key: "created_at",
+                label: "Date",
+                getValue: (t) => t.created_at,
+                render: (t) => formatTimestamp(t.created_at),
+              },
+              {
+                key: "txn_type",
+                label: "Type",
+                getValue: (t) => t.txn_type,
+                render: (t) => (
+                  <Badge variant="light" color="gray" radius="sm">
+                    {capitalize(t.txn_type)}
+                  </Badge>
+                ),
+              },
+              {
+                key: "description",
+                label: "Description",
+                getValue: (t) => t.description,
+              },
+              {
+                key: "amount",
+                label: "Amount",
+                getValue: (t) => t.amount,
+                render: (t) => formatAmount(t.amount, t.currency),
+                ta: "right",
+                ff: "monospace",
+                fw: 500,
+              },
+              {
+                key: "status",
+                label: "Status",
+                getValue: (t) => t.status,
+                render: (t) => (
+                  <Badge
+                    variant="light"
+                    color={statusColor(t.status)}
+                    radius="sm"
+                  >
+                    {capitalize(t.status)}
+                  </Badge>
+                ),
+              },
+            ] satisfies ColumnDef<Transaction>[]}
+            rowKey={(t) => t.txn_id}
+            searchPlaceholder="Search transactions..."
+            emptyMessage="No transactions yet"
+            minWidth={700}
+          />
         </Paper>
       </div>
 
@@ -345,58 +353,70 @@ export default function AccountDetailPage({
         </Card>
 
         <Paper withBorder radius="md" shadow="sm">
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th ta="right">Amount</Table.Th>
-                  <Table.Th>Reason</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Placed</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {holds.length === 0 ? (
-                  <Table.Tr>
-                    <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
-                      No holds on this account
-                    </Table.Td>
-                  </Table.Tr>
-                ) : (
-                  holds.map((h) => (
-                    <Table.Tr key={h.hold_id}>
-                      <Table.Td ta="right" ff="monospace" fw={500}>
-                        {formatAmount(h.amount, account.currency)}
-                      </Table.Td>
-                      <Table.Td>{h.reason}</Table.Td>
-                      <Table.Td>
-                        <Badge
-                          variant="light"
-                          color={statusColor(h.status)}
-                          radius="sm"
-                        >
-                          {capitalize(h.status)}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>{formatTimestamp(h.placed_at)}</Table.Td>
-                      <Table.Td>
-                        {h.status === "active" && (
-                          <Button
-                            size="xs"
-                            variant="subtle"
-                            onClick={() => releaseHold(h.hold_id)}
-                          >
-                            Release
-                          </Button>
-                        )}
-                      </Table.Td>
-                    </Table.Tr>
-                  ))
-                )}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
+          {(() => {
+            const holdCols: ColumnDef<AccountHold>[] = [
+              {
+                key: "amount",
+                label: "Amount",
+                getValue: (h) => h.amount,
+                render: (h) => formatAmount(h.amount, account.currency),
+                ta: "right",
+                ff: "monospace",
+                fw: 500,
+              },
+              {
+                key: "reason",
+                label: "Reason",
+                getValue: (h) => h.reason,
+              },
+              {
+                key: "status",
+                label: "Status",
+                getValue: (h) => h.status,
+                render: (h) => (
+                  <Badge
+                    variant="light"
+                    color={statusColor(h.status)}
+                    radius="sm"
+                  >
+                    {capitalize(h.status)}
+                  </Badge>
+                ),
+              },
+              {
+                key: "placed_at",
+                label: "Placed",
+                getValue: (h) => h.placed_at,
+                render: (h) => formatTimestamp(h.placed_at),
+              },
+              {
+                key: "actions",
+                label: "Actions",
+                sortable: false,
+                getValue: () => "",
+                render: (h) =>
+                  h.status === "active" ? (
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      onClick={() => releaseHold(h.hold_id)}
+                    >
+                      Release
+                    </Button>
+                  ) : null,
+              },
+            ];
+            return (
+              <SortableTable
+                data={holds}
+                columns={holdCols}
+                rowKey={(h) => h.hold_id}
+                searchPlaceholder="Search holds..."
+                emptyMessage="No holds on this account"
+                minWidth={700}
+              />
+            );
+          })()}
         </Paper>
       </div>
     </Stack>

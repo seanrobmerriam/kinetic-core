@@ -50,20 +50,13 @@ export function Sidebar() {
     <AppShell.Navbar p="md">
       <Stack gap="xs" mb="md">
         <Box style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <ThemeIcon
-            size={40}
-            radius="md"
-            variant="gradient"
-            gradient={{ from: "indigo", to: "violet" }}
-          >
-            <IconBuildingBank size={22} />
-          </ThemeIcon>
+
           <Box>
             <Text fw={700} size="md" lh={1.1}>
-              IronLedger
+              Kinetic Core
             </Text>
             <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-              Core Banking
+              Banking Solution
             </Text>
           </Box>
         </Box>

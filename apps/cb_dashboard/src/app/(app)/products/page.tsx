@@ -5,11 +5,11 @@ import {
   Button,
   Card,
   Group,
+  Modal,
   NumberInput,
   Select,
   SimpleGrid,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
@@ -19,6 +19,8 @@ import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatAmount, parseAmount } from "@/lib/format";
 import type { LoanProduct, SavingsProduct } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -29,6 +31,8 @@ export default function ProductsPage() {
   const { tick, bump } = useRefresh();
   const [savings, setSavings] = useState<SavingsProduct[]>([]);
   const [loans, setLoans] = useState<LoanProduct[]>([]);
+  const [viewSavings, setViewSavings] = useState<SavingsProduct | null>(null);
+  const [viewLoan, setViewLoan] = useState<LoanProduct | null>(null);
 
   // Savings form
   const [sName, setSName] = useState("");
@@ -151,6 +155,97 @@ export default function ProductsPage() {
     }
   };
 
+  const savingsColumns: ColumnDef<SavingsProduct>[] = [
+    { key: "name", label: "Name", getValue: (p) => p.name },
+    { key: "currency", label: "Currency", getValue: (p) => p.currency },
+    {
+      key: "rate",
+      label: "Rate",
+      getValue: (p) => p.interest_rate_bps,
+      render: (p) => `${p.interest_rate_bps} bps`,
+    },
+    {
+      key: "type",
+      label: "Type",
+      getValue: (p) => p.interest_type,
+      render: (p) =>
+        `${capitalize(p.interest_type)} / ${capitalize(p.compounding_period)}`,
+    },
+    {
+      key: "min_balance",
+      label: "Minimum Balance",
+      getValue: (p) => p.minimum_balance,
+      render: (p) => formatAmount(p.minimum_balance, p.currency),
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (p) => p.status,
+      render: (p) => capitalize(p.status),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (p) => (
+        <Button
+          size="xs"
+          variant="light"
+          onClick={() => setViewSavings(p)}
+          aria-label={`View savings product ${p.name}`}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
+  const loanColumns: ColumnDef<LoanProduct>[] = [
+    { key: "name", label: "Name", getValue: (p) => p.name },
+    { key: "currency", label: "Currency", getValue: (p) => p.currency },
+    {
+      key: "amount_range",
+      label: "Amount Range",
+      getValue: (p) => p.min_amount,
+      render: (p) =>
+        `${formatAmount(p.min_amount, p.currency)} \u2013 ${formatAmount(p.max_amount, p.currency)}`,
+    },
+    {
+      key: "term_range",
+      label: "Term Range",
+      getValue: (p) => p.min_term_months,
+      render: (p) => `${p.min_term_months}\u2013${p.max_term_months} mo`,
+    },
+    {
+      key: "rate",
+      label: "Rate",
+      getValue: (p) => p.interest_rate_bps,
+      render: (p) =>
+        `${p.interest_rate_bps} bps ${capitalize(p.interest_type)}`,
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (p) => p.status,
+      render: (p) => capitalize(p.status),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (p) => (
+        <Button
+          size="xs"
+          variant="light"
+          onClick={() => setViewLoan(p)}
+          aria-label={`View loan product ${p.name}`}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <Stack gap="lg">
       <Group justify="space-between">
@@ -160,6 +255,22 @@ export default function ProductsPage() {
         </Button>
       </Group>
 
+      {/* Savings Products table */}
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Savings Products
+        </Title>
+        <SortableTable
+          data={savings}
+          columns={savingsColumns}
+          rowKey={(p) => p.product_id}
+          searchPlaceholder="Search savings products..."
+          emptyMessage="No savings products yet"
+          minWidth={700}
+        />
+      </Card>
+
+      {/* Create Savings Product form */}
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
         <Card withBorder shadow="sm" radius="md" padding="lg">
           <Title order={4} mb="md">
@@ -219,7 +330,25 @@ export default function ProductsPage() {
             </Button>
           </Stack>
         </Card>
+      </SimpleGrid>
 
+      {/* Loan Products table */}
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Loan Products
+        </Title>
+        <SortableTable
+          data={loans}
+          columns={loanColumns}
+          rowKey={(p) => p.product_id}
+          searchPlaceholder="Search loan products..."
+          emptyMessage="No loan products yet"
+          minWidth={700}
+        />
+      </Card>
+
+      {/* Create Loan Product form */}
+      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
         <Card withBorder shadow="sm" radius="md" padding="lg">
           <Title order={4} mb="md">
             Create Loan Product
@@ -296,89 +425,102 @@ export default function ProductsPage() {
         </Card>
       </SimpleGrid>
 
-      <Card withBorder shadow="sm" radius="md" padding="lg">
-        <Title order={4} mb="md">
-          Savings Products
-        </Title>
-        {savings.length === 0 ? (
-          <Text c="dimmed">No savings products yet</Text>
-        ) : (
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Currency</Table.Th>
-                  <Table.Th>Rate</Table.Th>
-                  <Table.Th>Type</Table.Th>
-                  <Table.Th>Minimum Balance</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {savings.map((p) => (
-                  <Table.Tr key={p.product_id}>
-                    <Table.Td>{p.name}</Table.Td>
-                    <Table.Td>{p.currency}</Table.Td>
-                    <Table.Td>{p.interest_rate_bps} bps</Table.Td>
-                    <Table.Td>
-                      {capitalize(p.interest_type)} /{" "}
-                      {capitalize(p.compounding_period)}
-                    </Table.Td>
-                    <Table.Td>
-                      {formatAmount(p.minimum_balance, p.currency)}
-                    </Table.Td>
-                    <Table.Td>{capitalize(p.status)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
+      {/* Savings product detail modal */}
+      <Modal
+        opened={viewSavings !== null}
+        onClose={() => setViewSavings(null)}
+        title={viewSavings?.name ?? "Savings Product"}
+        size="md"
+      >
+        {viewSavings && (
+          <Stack gap="xs">
+            <Group justify="space-between">
+              <Text fw={500}>ID</Text>
+              <Text c="dimmed" size="sm">{viewSavings.product_id}</Text>
+            </Group>
+            {viewSavings.description && (
+              <Group justify="space-between">
+                <Text fw={500}>Description</Text>
+                <Text c="dimmed" size="sm">{viewSavings.description}</Text>
+              </Group>
+            )}
+            <Group justify="space-between">
+              <Text fw={500}>Currency</Text>
+              <Text>{viewSavings.currency}</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Interest Rate</Text>
+              <Text>{viewSavings.interest_rate_bps} bps</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Interest Type</Text>
+              <Text>{capitalize(viewSavings.interest_type)}</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Compounding Period</Text>
+              <Text>{capitalize(viewSavings.compounding_period)}</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Minimum Balance</Text>
+              <Text>{formatAmount(viewSavings.minimum_balance, viewSavings.currency)}</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Status</Text>
+              <Text>{capitalize(viewSavings.status)}</Text>
+            </Group>
+          </Stack>
         )}
-      </Card>
+      </Modal>
 
-      <Card withBorder shadow="sm" radius="md" padding="lg">
-        <Title order={4} mb="md">
-          Loan Products
-        </Title>
-        {loans.length === 0 ? (
-          <Text c="dimmed">No loan products yet</Text>
-        ) : (
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Currency</Table.Th>
-                  <Table.Th>Amount Range</Table.Th>
-                  <Table.Th>Term Range</Table.Th>
-                  <Table.Th>Rate</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {loans.map((p) => (
-                  <Table.Tr key={p.product_id}>
-                    <Table.Td>{p.name}</Table.Td>
-                    <Table.Td>{p.currency}</Table.Td>
-                    <Table.Td>
-                      {formatAmount(p.min_amount, p.currency)} -{" "}
-                      {formatAmount(p.max_amount, p.currency)}
-                    </Table.Td>
-                    <Table.Td>
-                      {p.min_term_months}-{p.max_term_months} mo
-                    </Table.Td>
-                    <Table.Td>
-                      {p.interest_rate_bps} bps {capitalize(p.interest_type)}
-                    </Table.Td>
-                    <Table.Td>{capitalize(p.status)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
+      {/* Loan product detail modal */}
+      <Modal
+        opened={viewLoan !== null}
+        onClose={() => setViewLoan(null)}
+        title={viewLoan?.name ?? "Loan Product"}
+        size="md"
+      >
+        {viewLoan && (
+          <Stack gap="xs">
+            <Group justify="space-between">
+              <Text fw={500}>ID</Text>
+              <Text c="dimmed" size="sm">{viewLoan.product_id}</Text>
+            </Group>
+            {viewLoan.description && (
+              <Group justify="space-between">
+                <Text fw={500}>Description</Text>
+                <Text c="dimmed" size="sm">{viewLoan.description}</Text>
+              </Group>
+            )}
+            <Group justify="space-between">
+              <Text fw={500}>Currency</Text>
+              <Text>{viewLoan.currency}</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Amount Range</Text>
+              <Text>
+                {formatAmount(viewLoan.min_amount, viewLoan.currency)} –{" "}
+                {formatAmount(viewLoan.max_amount, viewLoan.currency)}
+              </Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Term Range</Text>
+              <Text>{viewLoan.min_term_months}–{viewLoan.max_term_months} months</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Interest Rate</Text>
+              <Text>{viewLoan.interest_rate_bps} bps</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Interest Type</Text>
+              <Text>{capitalize(viewLoan.interest_type)}</Text>
+            </Group>
+            <Group justify="space-between">
+              <Text fw={500}>Status</Text>
+              <Text>{capitalize(viewLoan.status)}</Text>
+            </Group>
+          </Stack>
         )}
-      </Card>
+      </Modal>
     </Stack>
   );
 }

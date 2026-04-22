@@ -11,7 +11,6 @@ import {
   SegmentedControl,
   Select,
   Stack,
-  Table,
   Title,
 } from "@mantine/core";
 import { api } from "@/lib/api";
@@ -19,6 +18,8 @@ import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatTimestamp } from "@/lib/format";
 import type { ChannelActivity, ChannelLimit } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 type Tab = "limits" | "activity";
 
@@ -189,59 +190,74 @@ function ChannelLimitsTab() {
       )}
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={600}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Channel</Table.Th>
-                <Table.Th>Currency</Table.Th>
-                <Table.Th ta="right">Daily Limit</Table.Th>
-                <Table.Th ta="right">Per-Txn Limit</Table.Th>
-                <Table.Th>Updated</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {limits.map((l) => (
-                <Table.Tr key={`${l.channel_type}-${l.currency}`}>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={channelColor(l.channel_type)}
-                      radius="sm"
-                    >
-                      {capitalize(l.channel_type)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{l.currency}</Table.Td>
-                  <Table.Td ta="right" ff="monospace">
-                    {l.daily_limit === 0 ? "Unlimited" : l.daily_limit.toLocaleString()}
-                  </Table.Td>
-                  <Table.Td ta="right" ff="monospace">
-                    {l.per_txn_limit === 0 ? "Unlimited" : l.per_txn_limit.toLocaleString()}
-                  </Table.Td>
-                  <Table.Td c="dimmed">{formatTimestamp(l.updated_at)}</Table.Td>
-                  <Table.Td>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      onClick={() => startEdit(l)}
-                    >
-                      Edit
-                    </Button>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {limits.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={6} ta="center" py="xl" c="dimmed">
-                    No channel limits configured
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SortableTable
+          data={limits}
+          columns={[
+            {
+              key: "channel_type",
+              label: "Channel",
+              getValue: (l) => l.channel_type,
+              render: (l) => (
+                <Badge
+                  variant="light"
+                  color={channelColor(l.channel_type)}
+                  radius="sm"
+                >
+                  {capitalize(l.channel_type)}
+                </Badge>
+              ),
+            },
+            {
+              key: "currency",
+              label: "Currency",
+              getValue: (l) => l.currency,
+            },
+            {
+              key: "daily_limit",
+              label: "Daily Limit",
+              getValue: (l) => l.daily_limit,
+              render: (l) =>
+                l.daily_limit === 0
+                  ? "Unlimited"
+                  : l.daily_limit.toLocaleString(),
+              ta: "right",
+              ff: "monospace",
+            },
+            {
+              key: "per_txn_limit",
+              label: "Per-Txn Limit",
+              getValue: (l) => l.per_txn_limit,
+              render: (l) =>
+                l.per_txn_limit === 0
+                  ? "Unlimited"
+                  : l.per_txn_limit.toLocaleString(),
+              ta: "right",
+              ff: "monospace",
+            },
+            {
+              key: "updated_at",
+              label: "Updated",
+              getValue: (l) => l.updated_at,
+              render: (l) => formatTimestamp(l.updated_at),
+              c: "dimmed",
+            },
+            {
+              key: "actions",
+              label: "Actions",
+              sortable: false,
+              getValue: () => "",
+              render: (l) => (
+                <Button size="xs" variant="light" onClick={() => startEdit(l)}>
+                  Edit
+                </Button>
+              ),
+            },
+          ] satisfies ColumnDef<ChannelLimit>[]}
+          rowKey={(l) => `${l.channel_type}-${l.currency}`}
+          searchPlaceholder="Search limits..."
+          emptyMessage="No channel limits configured"
+          minWidth={600}
+        />
       </Paper>
     </Stack>
   );
@@ -294,59 +310,87 @@ function ChannelActivityTab() {
       </Group>
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={700}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Channel</Table.Th>
-                <Table.Th>Action</Table.Th>
-                <Table.Th>Endpoint</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Party</Table.Th>
-                <Table.Th>Time</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {entries.map((e) => (
-                <Table.Tr key={e.log_id}>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={channelColor(e.channel ?? "")}
-                      radius="sm"
-                    >
-                      {e.channel ? capitalize(e.channel) : "—"}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{e.action || "—"}</Table.Td>
-                  <Table.Td ff="monospace" style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {e.endpoint || "—"}
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={statusCodeColor(e.status_code)}
-                      radius="sm"
-                    >
-                      {e.status_code}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td ff="monospace" c="dimmed">
-                    {e.party_id ? e.party_id.slice(-8).toUpperCase() : "—"}
-                  </Table.Td>
-                  <Table.Td c="dimmed">{formatTimestamp(e.created_at)}</Table.Td>
-                </Table.Tr>
-              ))}
-              {entries.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={6} ta="center" py="xl" c="dimmed">
-                    No activity recorded
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SortableTable
+          data={entries}
+          columns={[
+            {
+              key: "channel",
+              label: "Channel",
+              getValue: (e) => e.channel ?? "",
+              render: (e) => (
+                <Badge
+                  variant="light"
+                  color={channelColor(e.channel ?? "")}
+                  radius="sm"
+                >
+                  {e.channel ? capitalize(e.channel) : "—"}
+                </Badge>
+              ),
+            },
+            {
+              key: "action",
+              label: "Action",
+              getValue: (e) => e.action ?? "",
+              render: (e) => e.action || "—",
+            },
+            {
+              key: "endpoint",
+              label: "Endpoint",
+              getValue: (e) => e.endpoint ?? "",
+              render: (e) => (
+                <span
+                  style={{
+                    maxWidth: 200,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    display: "block",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {e.endpoint || "—"}
+                </span>
+              ),
+              ff: "monospace",
+            },
+            {
+              key: "status_code",
+              label: "Status",
+              getValue: (e) => e.status_code,
+              render: (e) => (
+                <Badge
+                  variant="light"
+                  color={statusCodeColor(e.status_code)}
+                  radius="sm"
+                >
+                  {e.status_code}
+                </Badge>
+              ),
+            },
+            {
+              key: "party_id",
+              label: "Party",
+              getValue: (e) => e.party_id ?? "",
+              render: (e) =>
+                e.party_id
+                  ? e.party_id.slice(-8).toUpperCase()
+                  : "—",
+              ff: "monospace",
+              c: "dimmed",
+            },
+            {
+              key: "created_at",
+              label: "Time",
+              getValue: (e) => e.created_at,
+              render: (e) => formatTimestamp(e.created_at),
+              c: "dimmed",
+            },
+          ] satisfies ColumnDef<ChannelActivity>[]}
+          rowKey={(e) => e.log_id}
+          searchPlaceholder="Search activity..."
+          emptyMessage="No activity recorded"
+          minWidth={700}
+        />
       </Paper>
     </Stack>
   );

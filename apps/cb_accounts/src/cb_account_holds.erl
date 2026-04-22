@@ -189,7 +189,7 @@ list_holds(AccountId) when is_binary(AccountId) ->
 -spec get_available_balance(uuid()) -> {ok, amount()} | {error, atom()}.
 get_available_balance(AccountId) when is_binary(AccountId) ->
     %% Expire stale holds first
-    expire_holds(AccountId),
+    _ = expire_holds(AccountId),
     F = fun() ->
         case mnesia:read(account, AccountId) of
             [] ->

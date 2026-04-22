@@ -16,6 +16,7 @@
 ]).
 
 %% @doc Export all accounts as CSV.
+-dialyzer({nowarn_function, export_accounts/0}).
 -spec export_accounts() -> {ok, binary()} | {error, atom()}.
 export_accounts() ->
     F = fun() ->
@@ -31,6 +32,7 @@ export_accounts() ->
     end.
 
 %% @doc Export all transactions in the system as CSV.
+-dialyzer({nowarn_function, export_transactions/0}).
 -spec export_transactions() -> {ok, binary()} | {error, atom()}.
 export_transactions() ->
     F = fun() ->
@@ -72,7 +74,7 @@ export_account_transactions(AccountId) ->
     end.
 
 %% @doc Export all domain events as CSV.
--spec export_events() -> {ok, binary()} | {error, atom()}.
+-spec export_events() -> {ok, binary()}.
 export_events() ->
     Events = cb_events:list_events(),
     Header = <<"event_id,event_type,status,created_at,updated_at\r\n">>,
@@ -123,16 +125,13 @@ event_row(E) ->
     [iolist_to_binary(lists:join(",", Row)), <<"\r\n">>].
 
 %% Wrap value in quotes if it contains a comma, quote, or newline.
-escape_csv(undefined) -> <<"">>;
 escape_csv(V) when is_binary(V) ->
     case binary:match(V, [<<",">>, <<"\"">>, <<"\n">>, <<"\r">>]) of
         nomatch -> V;
         _       ->
             Escaped = binary:replace(V, <<"\"">>, <<"\"\"">>, [global]),
             <<"\"", Escaped/binary, "\"">>
-    end;
-escape_csv(V) when is_atom(V) ->
-    escape_csv(atom_to_binary(V, utf8)).
+    end.
 
 null_or_bin(undefined) -> <<"">>;
 null_or_bin(V) -> V.

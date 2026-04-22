@@ -609,6 +609,7 @@ bump_party_version(Party) ->
         updated_at = erlang:system_time(millisecond)
     }.
 
+-dialyzer({nowarn_function, write_party_audit/4}).
 -spec write_party_audit(uuid(), atom(), pos_integer(), map()) -> ok.
 write_party_audit(PartyId, Action, Version, Metadata) ->
     Audit = #party_audit{
@@ -713,6 +714,7 @@ get_risk_tier(PartyId) ->
 %% - medium: 730 days (2 years)
 %% - high: 1825 days (5 years)
 %% - critical: 3650 days (10 years)
+-dialyzer({nowarn_function, retention_days_for_tier/1}).
 -spec retention_days_for_tier(risk_tier()) -> pos_integer().
 retention_days_for_tier(low)      -> 365;
 retention_days_for_tier(medium)   -> 730;

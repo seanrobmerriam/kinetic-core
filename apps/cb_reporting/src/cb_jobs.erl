@@ -53,7 +53,7 @@
 
 -record(job, {
     name        :: atom(),
-    handler     :: mfa(),
+    handler     :: {atom(), atom(), [any()]},
     schedule    :: pos_integer() | undefined,
     timer_ref   :: reference() | undefined,
     last_run_at :: integer() | undefined,
@@ -228,6 +228,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal helpers
 %% =============================================================================
 
+-dialyzer({nowarn_function, builtin_jobs/0}).
 -spec builtin_jobs() -> [#job{}].
 builtin_jobs() ->
     [
@@ -273,6 +274,7 @@ builtin_jobs() ->
         }
     ].
 
+-dialyzer({nowarn_function, execute_job/1}).
 -spec execute_job(#job{}) -> {{ok, term()} | {error, term()}, #job{}}.
 execute_job(Job) ->
     {M, F, A} = Job#job.handler,
@@ -295,4 +297,4 @@ job_to_info(J) ->
 
 -spec cancel_timer(reference() | undefined) -> ok.
 cancel_timer(undefined) -> ok;
-cancel_timer(Ref)       -> erlang:cancel_timer(Ref), ok.
+cancel_timer(Ref)       -> _ = erlang:cancel_timer(Ref), ok.

@@ -71,6 +71,7 @@
     create_account/3,
     get_account/1,
     list_accounts/2,
+    list_accounts_for_party/1,
     list_accounts_for_party/3,
     freeze_account/1,
     unfreeze_account/1,
@@ -257,6 +258,26 @@ list_accounts_for_party(PartyId, Page, PageSize) when Page >= 1, PageSize >= 1, 
     end;
 list_accounts_for_party(_, _, _) ->
     {error, invalid_pagination}.
+
+%% @doc Return all accounts owned by a party without pagination.
+%%
+%% Fetches every account associated with the given party, sorted by creation
+%% time descending. Intended for composite profile endpoints that need the
+%% complete account list for a single customer.
+%%
+%% @param PartyId  UUID of the owning party.
+%% @returns `[#account{}]' — empty list if the party has no accounts.
+%%
+-spec list_accounts_for_party(uuid()) -> [#account{}].
+list_accounts_for_party(PartyId) ->
+    F = fun() ->
+        Accounts = mnesia:index_read(account, PartyId, party_id),
+        lists:sort(fun(A, B) -> A#account.created_at >= B#account.created_at end, Accounts)
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Accounts} -> Accounts;
+        {aborted, _}       -> []
+    end.
 
 %% @doc Freezes an account, temporarily restricting all transactions.
 %%
@@ -504,7 +525,7 @@ available_balance_for_account(AccountId, Balance) ->
 %% @param Currency The ISO 4217 currency code
 %% @returns A binary string formatted for display
 %%
--spec format_balance(amount(), currency()) -> binary().
+-spec format_balance(amount(), 'CHF' | 'EUR' | 'GBP' | 'JPY' | 'USD') -> binary().
 format_balance(Balance, 'JPY') ->
     iolist_to_binary([<<"¥">>, integer_to_binary(Balance)]);
 format_balance(Balance, 'USD') ->

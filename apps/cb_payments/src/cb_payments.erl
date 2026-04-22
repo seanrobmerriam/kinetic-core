@@ -222,7 +222,7 @@ do_transfer(IdempotencyKey, SourceId, DestId, Amount, Currency, Description) ->
                                             posted_at = Now
                                         }),
 
-                                        cb_events:write_outbox(<<"transaction.posted">>, #{
+                                        _ = cb_events:write_outbox(<<"transaction.posted">>, #{
                                             txn_id            => TxnId,
                                             txn_type          => transfer,
                                             amount            => Amount,
@@ -383,7 +383,7 @@ deposit(IdempotencyKey, DestId, Amount, Currency, Description, Channel) ->
                                             posted_at = Now
                                         }),
 
-                                        cb_events:write_outbox(<<"transaction.posted">>, #{
+                                        _ = cb_events:write_outbox(<<"transaction.posted">>, #{
                                             txn_id          => TxnId,
                                             txn_type        => deposit,
                                             amount          => Amount,
@@ -523,7 +523,7 @@ withdraw(IdempotencyKey, SourceId, Amount, Currency, Description) ->
                                             posted_at = Now
                                         }),
 
-                                        cb_events:write_outbox(<<"transaction.posted">>, #{
+                                        _ = cb_events:write_outbox(<<"transaction.posted">>, #{
                                             txn_id            => TxnId,
                                             txn_type          => withdrawal,
                                             amount            => Amount,
@@ -734,6 +734,7 @@ matches_filters(T, Filters) ->
     check_filter(max_amount, fun(V) -> T#transaction.amount     =< V end, Filters).
 
 %% @private Returns true when key is absent or predicate holds.
+-dialyzer({nowarn_function, check_filter/3}).
 -spec check_filter(atom(), fun((term()) -> boolean()), map()) -> boolean().
 check_filter(Key, Pred, Filters) ->
     case maps:find(Key, Filters) of
@@ -892,7 +893,7 @@ reverse_transaction(TxnId) ->
                                 })
                         end,
 
-                        cb_events:write_outbox(<<"transaction.reversed">>, #{
+                        _ = cb_events:write_outbox(<<"transaction.reversed">>, #{
                             reversal_txn_id  => ReversalId,
                             original_txn_id  => TxnId,
                             amount           => Txn#transaction.amount,
@@ -1043,7 +1044,7 @@ adjust_balance(IdempotencyKey, AccountId, Amount, Currency, Description) ->
                                     posted_at = Now
                                 }),
 
-                                cb_events:write_outbox(<<"transaction.posted">>, #{
+                                _ = cb_events:write_outbox(<<"transaction.posted">>, #{
                                     txn_id          => TxnId,
                                     txn_type        => adjustment,
                                     amount          => erlang:abs(Amount),

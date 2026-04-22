@@ -239,7 +239,7 @@ do_create_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMont
             },
             Fun = fun() ->
                 mnesia:write(?TABLE, Product, write),
-                cb_events:write_outbox(<<"loan_product.created">>, #{product_id => ProductId})
+                _ = cb_events:write_outbox(<<"loan_product.created">>, #{product_id => ProductId})
             end,
             case mnesia:transaction(Fun) of
                 {atomic, _} -> {ok, ProductId};
@@ -332,7 +332,7 @@ do_set_product_status(ProductId, DesiredStatus) ->
                             active   -> <<"loan_product.activated">>;
                             inactive -> <<"loan_product.deactivated">>
                         end,
-                        cb_events:write_outbox(EventType, #{product_id => ProductId}),
+                        _ = cb_events:write_outbox(EventType, #{product_id => ProductId}),
                         {ok, Updated}
                 end;
             [] ->

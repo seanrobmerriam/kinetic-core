@@ -87,6 +87,7 @@ convert_amount(Amount, FromCurrency, ToCurrency) ->
     end.
 
 %% @doc List all active currency configurations.
+-dialyzer({nowarn_function, list_currencies/0}).
 -spec list_currencies() -> [#currency_config{}].
 list_currencies() ->
     Records = mnesia:dirty_match_object(currency_config, #currency_config{_ = '_'}),

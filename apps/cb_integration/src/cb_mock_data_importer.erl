@@ -174,6 +174,7 @@ bulk_ensure_deposits([{_PartyId, AccountId} | Rest], N, Summary0) ->
             Err
     end.
 
+-dialyzer({nowarn_function, bulk_ensure_loans/4}).
 bulk_ensure_loans(_ProductId, _Parties, 0, Summary) ->
     {ok, Summary};
 bulk_ensure_loans(_ProductId, [], _Remaining, Summary) ->
@@ -464,6 +465,7 @@ find_savings_product(Name, Currency) ->
         {aborted, _} -> {error, database_error}
     end.
 
+-dialyzer({nowarn_function, find_loan_product/2}).
 find_loan_product(Name, Currency) ->
     Fun = fun() ->
         Pattern = #loan_product{

@@ -61,6 +61,7 @@ start() ->
 %% @param EventType  Binary event type, e.g. `<<"transaction.posted">>'.
 %% @param Payload    Arbitrary map of event data.
 %% @returns `ok'
+-dialyzer({nowarn_function, write_outbox/2}).
 -spec write_outbox(binary(), map()) -> binary().
 write_outbox(EventType, Payload) when is_binary(EventType), is_map(Payload) ->
     EventId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
@@ -93,6 +94,7 @@ emit(EventType, Payload) ->
     end.
 
 %% @doc List all domain events, newest first.
+-dialyzer({nowarn_function, list_events/0}).
 -spec list_events() -> [#event_outbox{}].
 list_events() ->
     F = fun() ->

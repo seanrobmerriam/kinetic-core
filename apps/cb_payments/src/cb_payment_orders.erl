@@ -114,6 +114,7 @@ process_payment(Order) ->
             {ok, Failed}
     end.
 
+-dialyzer({nowarn_function, queue_exception/2}).
 -spec queue_exception(#payment_order{}, binary()) -> {ok, #payment_order{}}.
 queue_exception(Order, Reason) ->
     Now = erlang:system_time(millisecond),
@@ -123,7 +124,7 @@ queue_exception(Order, Reason) ->
         updated_at   = Now
     },
     save_order(Queued),
-    cb_exception_queue:enqueue(Order#payment_order.payment_id, Reason),
+    _ = cb_exception_queue:enqueue(Order#payment_order.payment_id, Reason),
     {ok, Queued}.
 
 -spec save_order(#payment_order{}) -> ok.

@@ -84,7 +84,8 @@ create_tables() ->
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
               approval_decision, event_outbox, webhook_subscription,
-              webhook_delivery, report_statement, report_export],
+              webhook_delivery, report_statement, report_export,
+              api_usage_event],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -106,7 +107,7 @@ create_tables() ->
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export
+    report_export | api_usage_event
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -139,7 +140,7 @@ create_if_not_exists(TableName) ->
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export
+    report_export | api_usage_event
 ) ->
     [{'attributes', [atom(), ...]} |
      {'index', ['account_id' | 'currency' | 'dest_account_id' | 'email' |
@@ -364,4 +365,10 @@ table_spec(report_export) ->
         {attributes, [export_id, export_type, parameters, status,
                       generated_at, created_at]},
         {index, [export_type, status]}
+    ];
+table_spec(api_usage_event) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, [event_id, key_id, method, path, recorded_at]},
+        {index, [key_id, recorded_at]}
     ].

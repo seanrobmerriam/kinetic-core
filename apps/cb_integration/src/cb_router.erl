@@ -140,6 +140,7 @@ dispatch() ->
             %% Webhook subscriptions
             {<<"/api/v1/webhooks">>, cb_webhooks_handler, []},
             {<<"/api/v1/webhooks/:subscription_id">>, cb_webhooks_handler, []},
+            {<<"/api/v1/webhooks/:subscription_id/deliveries">>, cb_webhook_deliveries_handler, []},
 
             %% Statements and CSV exports
             {<<"/api/v1/accounts/:account_id/statement">>, cb_statements_handler, []},
@@ -181,6 +182,13 @@ dispatch() ->
             %% Partner API keys
             {<<"/api/v1/api-keys">>, cb_api_keys_handler, []},
             {<<"/api/v1/api-keys/:key_id">>, cb_api_keys_handler, []},
+            {<<"/api/v1/api-keys/:key_id/usage">>, cb_api_usage_handler, []},
+
+            %% API deprecation notices
+            {<<"/api/v1/deprecations">>, cb_deprecation_handler, []},
+
+            %% GraphQL gateway
+            {<<"/api/graphql">>, cb_graphql_handler, []},
 
             %% ATM baseline interface
             {<<"/api/v1/atm/inquiry">>, cb_atm_handler, []},

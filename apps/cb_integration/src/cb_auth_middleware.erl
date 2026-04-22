@@ -32,6 +32,11 @@ execute(Req, Env) ->
                                     erlang:put(auth_user, key_user(KeyMeta)),
                                     erlang:put(api_key_rate_limit, maps:get(rate_limit_per_min, KeyMeta)),
                                     erlang:put(api_key_id, maps:get(key_id, KeyMeta)),
+                                    cb_api_usage:record_request(
+                                        maps:get(key_id, KeyMeta),
+                                        cowboy_req:method(Req),
+                                        cowboy_req:path(Req)
+                                    ),
                                     Role = maps:get(role, KeyMeta),
                                     Method = cowboy_req:method(Req),
                                     case is_write_method(Method) andalso Role =:= read_only of

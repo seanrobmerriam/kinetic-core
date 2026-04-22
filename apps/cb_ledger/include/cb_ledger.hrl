@@ -435,3 +435,14 @@
     created_at         :: timestamp_ms(),
     updated_at         :: timestamp_ms()
 }).
+
+%% @doc Records a single API request made with an API key.
+%%
+%% Used to build per-key usage reports in the Developer Hub.
+-record(api_usage_event, {
+    event_id    :: uuid(),
+    key_id      :: uuid(),
+    method      :: binary(),
+    path        :: binary(),
+    recorded_at :: timestamp_ms()
+}).

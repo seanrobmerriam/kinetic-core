@@ -16,6 +16,7 @@ import {
   IconBuildingBank,
   IconCash,
   IconChevronRight,
+  IconCode,
   IconLayoutDashboard,
   IconReceipt,
   IconReportMoney,
@@ -55,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: "Loans", icon: IconReportMoney, href: "/loans" },
   { label: "Compliance", icon: IconShieldCheck, href: "/compliance" },
+  { label: "Developer", icon: IconCode, href: "/developer" },
   {
     label: "System",
     icon: IconSettings,

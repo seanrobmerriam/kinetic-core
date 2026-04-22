@@ -6,7 +6,9 @@
 %%
 %% <ul>
 %%   <li><b>GET /api/v1/webhooks</b> - List all webhook subscriptions</li>
+%%   <li><b>GET /api/v1/webhooks/:subscription_id</b> - Get a single subscription</li>
 %%   <li><b>POST /api/v1/webhooks</b> - Create a webhook subscription</li>
+%%   <li><b>PATCH /api/v1/webhooks/:subscription_id</b> - Update a subscription</li>
 %%   <li><b>DELETE /api/v1/webhooks/:subscription_id</b> - Delete a webhook subscription</li>
 %% </ul>
 %%
@@ -21,10 +23,23 @@ init(Req, State) ->
     handle(Method, Req, State).
 
 handle(<<"GET">>, Req, State) ->
-    list_subscriptions(Req, State);
+    case cowboy_req:binding(subscription_id, Req) of
+        undefined ->
+            list_subscriptions(Req, State);
+        SubscriptionId ->
+            get_subscription(SubscriptionId, Req, State)
+    end;
 
 handle(<<"POST">>, Req, State) ->
     create_subscription(Req, State);
+
+handle(<<"PATCH">>, Req, State) ->
+    case cowboy_req:binding(subscription_id, Req) of
+        undefined ->
+            not_found(Req, State);
+        SubscriptionId ->
+            update_subscription(SubscriptionId, Req, State)
+    end;
 
 handle(<<"DELETE">>, Req, State) ->
     case cowboy_req:binding(subscription_id, Req) of
@@ -49,6 +64,16 @@ list_subscriptions(Req, State) ->
     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
     Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
     {ok, Req2, State}.
+
+get_subscription(SubscriptionId, Req, State) ->
+    case cb_webhooks:get_subscription(SubscriptionId) of
+        {ok, Sub} ->
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req2 = cowboy_req:reply(200, Headers, jsone:encode(sub_to_map(Sub)), Req),
+            {ok, Req2, State};
+        {error, not_found} ->
+            not_found(Req, State)
+    end.
 
 create_subscription(Req, State) ->
     {ok, Body, Req2} = cowboy_req:read_body(Req),
@@ -91,6 +116,32 @@ create_subscription(Req, State) ->
             {ok, Req3, State}
     end.
 
+update_subscription(SubscriptionId, Req, State) ->
+    {ok, Body, Req2} = cowboy_req:read_body(Req),
+    case jsone:try_decode(Body) of
+        {ok, Json, _} when is_map(Json) ->
+            case cb_webhooks:update_subscription(SubscriptionId, Json) of
+                {ok, Sub} ->
+                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req3 = cowboy_req:reply(200, Headers, jsone:encode(sub_to_map(Sub)), Req2),
+                    {ok, Req3, State};
+                {error, not_found} ->
+                    not_found(Req2, State);
+                {error, Reason} ->
+                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                    Resp = #{error => ErrorAtom, message => Message},
+                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
+                    {ok, Req3, State}
+            end;
+        _ ->
+            {Status, ErrorAtom, Message} = cb_http_errors:to_response(invalid_json),
+            Resp = #{error => ErrorAtom, message => Message},
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
+            {ok, Req3, State}
+    end.
+
 delete_subscription(SubscriptionId, Req, State) ->
     case cb_webhooks:delete_subscription(SubscriptionId) of
         ok ->
@@ -119,3 +170,4 @@ sub_to_map(Sub) ->
         created_at      => element(6, Sub),
         updated_at      => element(7, Sub)
     }.
+

@@ -261,7 +261,20 @@ bulk_ensure_loans_loop(ProductId, AllParties, [{PartyId, AccountId} | Rest], N, 
     %% Vary the principal per loan so that each {product, party, account,
     %% principal, currency, term} tuple is unique and the find_loan
     %% idempotency guard correctly distinguishes seeded loans on re-runs.
-    Principal = 100000 + (N * 1000),
+    %%
+    %% The Personal Flex Loan product is created with min_amount=50000 and
+    %% max_amount=2000000 (see ensure_loan_product/9 call above). Bulk
+    %% imports request thousands of loans, so the principal must wrap
+    %% within that range to avoid amount_out_of_product_range. Stepping by
+    %% 1000 minor units gives 1951 distinct slots in [50000, 2000000];
+    %% consecutive loans for the same party land 3000 iterations apart,
+    %% which maps to a different slot, preserving the per-party
+    %% idempotency tuple.
+    MinPrincipal = 50000,
+    MaxPrincipal = 2000000,
+    Step = 1000,
+    RangeSlots = (MaxPrincipal - MinPrincipal) div Step + 1,
+    Principal = MinPrincipal + ((N - 1) rem RangeSlots) * Step,
     TermMonths = 12,
     InterestRate = 850,
     case ensure_loan_pending(ProductId, PartyId, AccountId, Principal, 'USD', TermMonths, InterestRate, Summary0) of

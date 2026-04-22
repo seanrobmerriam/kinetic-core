@@ -119,7 +119,7 @@ export default function CustomersPage() {
           <Button
             size="xs"
             variant="subtle"
-            onClick={() => router.push(`/accounts?party=${party.party_id}`)}
+            onClick={() => router.push(`/customers/${party.party_id}`)}
           >
             View
           </Button>

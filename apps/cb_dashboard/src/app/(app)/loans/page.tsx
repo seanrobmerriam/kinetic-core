@@ -217,6 +217,49 @@ export default function LoansPage() {
 
   return (
     <Stack gap="lg">
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Title order={4} mb="md">
+          Current Loan Products
+        </Title>
+        {products.length === 0 ? (
+          <Text c="dimmed">No loan products available</Text>
+        ) : (
+          <Table.ScrollContainer minWidth={700}>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Currency</Table.Th>
+                  <Table.Th>Amount Range</Table.Th>
+                  <Table.Th>Term Range</Table.Th>
+                  <Table.Th>Rate</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {products.map((p) => (
+                  <Table.Tr key={p.product_id}>
+                    <Table.Td>{p.name}</Table.Td>
+                    <Table.Td>{p.currency}</Table.Td>
+                    <Table.Td>
+                      {formatAmount(p.min_amount, p.currency)} –{" "}
+                      {formatAmount(p.max_amount, p.currency)}
+                    </Table.Td>
+                    <Table.Td>
+                      {p.min_term_months}–{p.max_term_months} mo
+                    </Table.Td>
+                    <Table.Td>{p.interest_rate_bps} bps</Table.Td>
+                    <Table.Td>{capitalize(p.interest_type)}</Table.Td>
+                    <Table.Td>{capitalize(p.status)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </Card>
+
       <Group align="flex-end">
         <Select
           id="loan-party-select"

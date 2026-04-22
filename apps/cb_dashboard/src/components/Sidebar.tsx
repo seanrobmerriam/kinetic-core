@@ -11,6 +11,8 @@ import {
   IconReceipt,
   IconReportMoney,
   IconSettings,
+  IconShieldCheck,
+  IconSitemap,
   IconTransfer,
   IconUsers,
   IconWallet,
@@ -23,6 +25,9 @@ const NAV_ITEMS: { id: string; label: string; Icon: Icon }[] = [
   { id: "accounts", label: "Accounts", Icon: IconBuildingBank },
   { id: "transactions", label: "Transactions", Icon: IconReceipt },
   { id: "ledger", label: "Ledger", Icon: IconBook },
+  { id: "payments", label: "Payments", Icon: IconTransfer },
+  { id: "compliance", label: "Compliance", Icon: IconShieldCheck },
+  { id: "channels", label: "Channels", Icon: IconSitemap },
   { id: "products", label: "Products", Icon: IconWallet },
   { id: "loans", label: "Loans", Icon: IconReportMoney },
   { id: "settings", label: "Settings", Icon: IconSettings },
@@ -38,7 +43,7 @@ export function Sidebar() {
 
   const isActive = (id: string) => {
     if (id === "accounts") return pathname.startsWith("/accounts");
-    return pathname === `/${id}`;
+    return pathname === `/${id}` || pathname.startsWith(`/${id}/`);
   };
 
   return (

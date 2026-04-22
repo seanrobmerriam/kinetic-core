@@ -81,6 +81,14 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-029 [DONE]: Extend auth sessions with channel type; implement notification preference management.
 - TASK-030 [DONE]: Implement ATM interface baseline with balance inquiry and withdrawal endpoints.
 
+#### P0-S7: Dashboard Completion
+
+- TASK-031 [DONE]: Add PaymentOrder, ExceptionItem, ChannelLimit, and ChannelActivity TypeScript types to dashboard.
+- TASK-032 [DONE]: Implement Payment Orders dashboard page with initiation form, session order list, cancel, and retry.
+- TASK-033 [DONE]: Implement Compliance dashboard page with Exception Queue tab and KYC Management tab.
+- TASK-034 [DONE]: Implement Channels dashboard page with Channel Limits configuration tab and Activity Log tab.
+- TASK-035 [DONE]: Update dashboard sidebar navigation with Payments, Compliance, and Channels entries.
+
 ### Phase 1 Subphases and Tasks
 
 #### P1-S1: API Surface Expansion

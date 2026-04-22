@@ -1,6 +1,6 @@
 # AGENTS.md
 
-### Current Development Phase: P0-S7
+### Current Development Phase: P1-S1
 
 ## Purpose
 

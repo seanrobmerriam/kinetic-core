@@ -109,6 +109,7 @@ dispatch() ->
             {<<"/api/v1/transactions/:txn_id/reverse">>, cb_transaction_reverse_handler, []},
 
             %% Ledger entries
+            {<<"/api/v1/ledger/entries/latest">>, cb_ledger_latest_handler, []},
             {<<"/api/v1/transactions/:txn_id/entries">>, cb_transaction_entries_handler, []},
             {<<"/api/v1/accounts/:account_id/entries">>, cb_account_entries_handler, []},
 

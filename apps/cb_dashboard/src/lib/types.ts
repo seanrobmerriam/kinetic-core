@@ -145,3 +145,50 @@ export interface ActivityItem {
   amount: number;
   currency: string;
 }
+
+export interface PaymentOrder {
+  payment_id: string;
+  idempotency_key: string;
+  party_id: string;
+  source_account_id: string;
+  dest_account_id: string;
+  amount: number;
+  currency: string;
+  description: string;
+  status: string;
+  stp_decision: string;
+  failure_reason: string;
+  retry_count: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ExceptionItem {
+  item_id: string;
+  payment_id: string;
+  reason: string;
+  status: string;
+  resolution: string;
+  resolved_by: string;
+  resolution_notes: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ChannelLimit {
+  channel_type: string;
+  currency: string;
+  daily_limit: number;
+  per_txn_limit: number;
+  updated_at: number;
+}
+
+export interface ChannelActivity {
+  log_id: string;
+  channel: string;
+  party_id: string | null;
+  action: string;
+  endpoint: string;
+  status_code: number;
+  created_at: number;
+}

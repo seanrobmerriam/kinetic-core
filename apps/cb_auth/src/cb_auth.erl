@@ -1,11 +1,14 @@
 -module(cb_auth).
 
+-include_lib("cb_ledger/include/cb_ledger.hrl").
+
 -export([
     create_user/3,
     get_user/1,
     authenticate/2,
     ensure_bootstrap_users/0,
     create_session/1,
+    create_session/2,
     get_session/1,
     delete_session/1
 ]).
@@ -92,20 +95,25 @@ ensure_bootstrap_users() ->
 
 -spec create_session(binary()) -> {ok, map()} | {error, user_not_found | database_error}.
 create_session(UserId) when is_binary(UserId) ->
+    create_session(UserId, undefined).
+
+-spec create_session(binary(), channel_type() | undefined) -> {ok, map()} | {error, user_not_found | database_error}.
+create_session(UserId, ChannelType) when is_binary(UserId) ->
     F = fun() ->
         case mnesia:read(auth_user, UserId) of
             [{auth_user, Id, Email, _PasswordHash, Role, Status, _CreatedAt, _UpdatedAt}] ->
                 Now = erlang:system_time(millisecond),
                 SessionId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
                 ExpiresAt = Now + ?SESSION_TTL_MS,
-                ok = mnesia:write({auth_session, SessionId, Id, active, ExpiresAt, Now, Now}),
+                ok = mnesia:write({auth_session, SessionId, Id, active, ExpiresAt, Now, Now, ChannelType}),
                 {ok, #{
-                    session_id => SessionId,
-                    user_id => Id,
-                    email => Email,
-                    role => Role,
-                    status => Status,
-                    expires_at => ExpiresAt
+                    session_id   => SessionId,
+                    user_id      => Id,
+                    email        => Email,
+                    role         => Role,
+                    status       => Status,
+                    expires_at   => ExpiresAt,
+                    channel_type => ChannelType
                 }};
             [] ->
                 {error, user_not_found}
@@ -121,7 +129,7 @@ get_session(SessionId) when is_binary(SessionId) ->
     Now = erlang:system_time(millisecond),
     F = fun() ->
         case mnesia:read(auth_session, SessionId) of
-            [{auth_session, Id, UserId, active, ExpiresAt, CreatedAt, UpdatedAt}] when ExpiresAt > Now ->
+            [{auth_session, Id, UserId, active, ExpiresAt, CreatedAt, UpdatedAt, _ChannelType}] when ExpiresAt > Now ->
                 case mnesia:read(auth_user, UserId) of
                     [{auth_user, _, Email, _PasswordHash, Role, Status, _UserCreatedAt, _UserUpdatedAt}] ->
                         {ok, #{
@@ -137,7 +145,7 @@ get_session(SessionId) when is_binary(SessionId) ->
                     [] ->
                         {error, unauthorized}
                 end;
-            [{auth_session, _Id, _UserId, _Status, _ExpiresAt, _CreatedAt, _UpdatedAt}] ->
+            [{auth_session, _Id, _UserId, _Status, _ExpiresAt, _CreatedAt, _UpdatedAt, _ChannelType}] ->
                 {error, unauthorized};
             [] ->
                 {error, unauthorized}
@@ -152,9 +160,9 @@ get_session(SessionId) when is_binary(SessionId) ->
 delete_session(SessionId) when is_binary(SessionId) ->
     F = fun() ->
         case mnesia:read(auth_session, SessionId, write) of
-            [{auth_session, Id, UserId, _Status, ExpiresAt, CreatedAt, _UpdatedAt}] ->
+            [{auth_session, Id, UserId, _Status, ExpiresAt, CreatedAt, _UpdatedAt, ChannelType}] ->
                 Now = erlang:system_time(millisecond),
-                ok = mnesia:write({auth_session, Id, UserId, revoked, ExpiresAt, CreatedAt, Now}),
+                ok = mnesia:write({auth_session, Id, UserId, revoked, ExpiresAt, CreatedAt, Now, ChannelType}),
                 ok;
             [] ->
                 {error, unauthorized}

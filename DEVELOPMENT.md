@@ -67,11 +67,19 @@ This section breaks each phase into smaller execution units that can be schedule
 
 #### P0-S5: Compliance, Currency, and Payments
 
-- TASK-021: Implement currency entity, precision rules, and conversion engine.
-- TASK-022: Implement exchange rate management with historical lookup support.
-- TASK-023: Implement KYC and risk tier state model with retention policy hooks.
-- TASK-024: Implement domestic payment initiation, status, cancel, and retry flows.
-- TASK-025: Implement exception queue and straight-through processing state machine.
+- TASK-021 [DONE 2026-04-21]: Implement currency entity, precision rules, and conversion engine.
+- TASK-022 [DONE 2026-04-21]: Implement exchange rate management with historical lookup support.
+- TASK-023 [DONE 2026-04-21]: Implement KYC and risk tier state model with retention policy hooks.
+- TASK-024 [DONE 2026-04-21]: Implement domestic payment initiation, status, cancel, and retry flows.
+- TASK-025 [DONE 2026-04-21]: Implement exception queue and straight-through processing state machine.
+
+#### P0-S6: Basic Omnichannel API Support
+
+- TASK-026 [DONE]: Implement channel type enumeration and per-channel transaction limits with validation.
+- TASK-027 [DONE]: Implement channel activity logging with party, channel, and action context.
+- TASK-028 [DONE]: Implement unified party profile endpoint returning party, accounts, and recent transactions.
+- TASK-029 [DONE]: Extend auth sessions with channel type; implement notification preference management.
+- TASK-030 [DONE]: Implement ATM interface baseline with balance inquiry and withdrawal endpoints.
 
 ### Phase 1 Subphases and Tasks
 

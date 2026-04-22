@@ -78,6 +78,7 @@ create_tables() ->
     Tables = [party, party_audit, account, transaction, ledger_entry,
               chart_account, balance_snapshot, account_hold,
               currency_config, exchange_rate, payment_order, exception_item,
+              channel_limit, channel_activity, notification_preference,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
@@ -98,6 +99,7 @@ create_tables() ->
     party | party_audit | account | transaction | ledger_entry |
     chart_account | balance_snapshot | account_hold |
     currency_config | exchange_rate | payment_order | exception_item |
+    channel_limit | channel_activity | notification_preference |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -129,6 +131,7 @@ create_if_not_exists(TableName) ->
     party | party_audit | account | transaction | ledger_entry |
     chart_account | balance_snapshot | account_hold |
     currency_config | exchange_rate | payment_order | exception_item |
+    channel_limit | channel_activity | notification_preference |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -220,6 +223,23 @@ table_spec(exception_item) ->
         {attributes, record_info(fields, exception_item)},
         {index, [payment_id, status]}
     ];
+table_spec(channel_limit) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, channel_limit)}
+    ];
+table_spec(channel_activity) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, channel_activity)},
+        {index, [channel, party_id, created_at]}
+    ];
+table_spec(notification_preference) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, notification_preference)},
+        {index, [party_id, channel]}
+    ];
 table_spec(savings_product) ->
     [
         {ram_copies, [node()]},
@@ -276,7 +296,7 @@ table_spec(auth_session) ->
     [
         {ram_copies, [node()]},
         {attributes, [session_id, user_id, status, expires_at,
-                      created_at, updated_at]},
+                      created_at, updated_at, channel_type]},
         {index, [user_id, expires_at]}
     ];
 table_spec(audit_log) ->

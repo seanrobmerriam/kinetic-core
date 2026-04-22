@@ -89,6 +89,16 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-034 [DONE]: Implement Channels dashboard page with Channel Limits configuration tab and Activity Log tab.
 - TASK-035 [DONE]: Update dashboard sidebar navigation with Payments, Compliance, and Channels entries.
 
+#### P0-S8: Startup and Test Suite Green Gate [DONE]
+
+- TASK-036 [DONE]: Fix `cb_webhooks:init/1` to tolerate already-started httpc profile across CT suites.
+- TASK-037 [DONE]: Add `event_outbox` table to `cb_savings_products_SUITE`, `cb_loan_products_SUITE`, and `cb_interest_SUITE`.
+- TASK-038 [DONE]: Add `party_audit` table to `cb_reporting_SUITE`, `cb_jobs_SUITE`, and `cb_interest_SUITE`.
+- TASK-039 [DONE]: Add `event_outbox`, `webhook_subscription`, and `webhook_delivery` tables to `cb_jobs_SUITE`.
+- TASK-040 [DONE]: Fix `cb_jobs_SUITE` `run_noop_job_ok` assertion — `webhook_retry` now returns `ok`, not `{ok, noop}`.
+- TASK-041 [DONE]: Add missing Mnesia indices to `loan_products` (`[currency, status]`), `loan_accounts` (`[party_id, account_id, status]`), and `loan_repayments` (`[loan_id, status]`).
+- TASK-042 [DONE]: Change `cb_auth_integration_SUITE` test port from 18081 (conflicts with OrbStack on dev machines) to 18083.
+
 ### Phase 1 Subphases and Tasks
 
 #### P1-S1: API Surface Expansion

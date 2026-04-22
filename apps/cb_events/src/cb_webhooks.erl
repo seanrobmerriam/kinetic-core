@@ -338,7 +338,10 @@ event_to_map(Event) ->
 
 -spec init([]) -> {ok, #{}}.
 init([]) ->
-    {ok, _} = inets:start(httpc, [{profile, cb_webhooks}]),
+    case inets:start(httpc, [{profile, cb_webhooks}]) of
+        {ok, _}                       -> ok;
+        {error, {already_started, _}} -> ok
+    end,
     erlang:send_after(?DELIVERY_INTERVAL_MS, self(), process_pending),
     {ok, #{}}.
 

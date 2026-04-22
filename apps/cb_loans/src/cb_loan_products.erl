@@ -165,7 +165,8 @@ init([]) ->
         {attributes, record_info(fields, loan_product)},
         {record_name, loan_product},
         {type, set},
-        {ram_copies, [node()]}
+        {ram_copies, [node()]},
+        {index, [currency, status]}
     ]) of
         {atomic, ok} -> ok;
         {aborted, {already_exists, _}} -> ok;

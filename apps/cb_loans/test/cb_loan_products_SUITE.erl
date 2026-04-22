@@ -3,6 +3,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 -include("loan.hrl").
+-include_lib("cb_events/include/cb_events.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1, init_per_testcase/2, end_per_testcase/2]).
 -export([
@@ -32,6 +33,14 @@ all() ->
 
 init_per_suite(Config) ->
     mnesia:start(),
+    case mnesia:create_table(event_outbox, [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, event_outbox)},
+        {index, [status]}
+    ]) of
+        {atomic, ok} -> ok;
+        {aborted, {already_exists, _}} -> ok
+    end,
     {ok, _Started} = application:ensure_all_started(cb_loans),
     Config.
 
@@ -44,6 +53,7 @@ end_per_suite(_Config) ->
 init_per_testcase(_TestCase, Config) ->
     mnesia:clear_table(loan_products),
     mnesia:clear_table(loan_accounts),
+    mnesia:clear_table(event_outbox),
     Config.
 
 end_per_testcase(_TestCase, _Config) ->

@@ -270,7 +270,7 @@ function KycManagement() {
     setSubmitting(true);
     try {
       const updated = await api<KycResponse>(
-        "PUT",
+        "PATCH",
         `/parties/${selected}/kyc`,
         { kyc_status: kycStatus, risk_tier: riskTier },
       );

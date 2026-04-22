@@ -1,0 +1,17 @@
+{application, cb_currency,
+ [
+  {description, "IronLedger Currency Configuration and FX Engine"},
+  {vsn, "0.1.0"},
+  {registered, [cb_currency_sup]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  cb_ledger
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_currency_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

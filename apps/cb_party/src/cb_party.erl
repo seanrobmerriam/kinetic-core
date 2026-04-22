@@ -72,7 +72,10 @@
     add_doc_ref/2,
     update_address/2,
     detect_duplicate_parties/0,
-    merge_parties/3
+    merge_parties/3,
+    set_risk_tier/2,
+    get_risk_tier/1,
+    retention_days_for_tier/1
 ]).
 
 %% @doc
@@ -112,6 +115,7 @@ create_party(FullName, Email) when is_binary(FullName), is_binary(Email) ->
                     onboarding_status = incomplete,
                     review_notes = undefined,
                     doc_refs = [],
+                    risk_tier = low,
                     address = undefined,
                     version = 1,
                     merged_into_party_id = undefined,
@@ -653,3 +657,64 @@ validate_address(Address) ->
         true -> ok;
         false -> {error, invalid_address}
     end.
+
+%% @doc Set the risk tier classification for a party.
+%%
+%% Valid tiers: low | medium | high | critical
+%% Records an audit entry for the tier change.
+-spec set_risk_tier(uuid(), risk_tier()) ->
+    {ok, #party{}} | {error, not_found | invalid_risk_tier}.
+set_risk_tier(PartyId, Tier) when
+        Tier =:= low orelse Tier =:= medium orelse
+        Tier =:= high orelse Tier =:= critical ->
+    Now = erlang:system_time(millisecond),
+    F = fun() ->
+        case mnesia:read(party, PartyId, write) of
+            [] -> {error, not_found};
+            [Party] ->
+                Updated = Party#party{
+                    risk_tier  = Tier,
+                    version    = Party#party.version + 1,
+                    updated_at = Now
+                },
+                ok = mnesia:write(party, Updated, write),
+                AuditId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
+                Audit = #party_audit{
+                    audit_id   = AuditId,
+                    party_id   = PartyId,
+                    action     = risk_tier_changed,
+                    version    = Updated#party.version,
+                    metadata   = #{risk_tier => Tier},
+                    created_at = Now
+                },
+                ok = mnesia:write(party_audit, Audit, write),
+                {ok, Updated}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
+    end;
+set_risk_tier(_PartyId, _InvalidTier) ->
+    {error, invalid_risk_tier}.
+
+%% @doc Get the risk tier for a party.
+-spec get_risk_tier(uuid()) -> {ok, risk_tier()} | {error, not_found}.
+get_risk_tier(PartyId) ->
+    case mnesia:dirty_read(party, PartyId) of
+        [Party] -> {ok, Party#party.risk_tier};
+        [] -> {error, not_found}
+    end.
+
+%% @doc Return the audit log retention period in days for a given risk tier.
+%%
+%% Retention policy:
+%% - low: 365 days (1 year)
+%% - medium: 730 days (2 years)
+%% - high: 1825 days (5 years)
+%% - critical: 3650 days (10 years)
+-spec retention_days_for_tier(risk_tier()) -> pos_integer().
+retention_days_for_tier(low)      -> 365;
+retention_days_for_tier(medium)   -> 730;
+retention_days_for_tier(high)     -> 1825;
+retention_days_for_tier(critical) -> 3650.

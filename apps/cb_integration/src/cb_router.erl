@@ -152,6 +152,17 @@ dispatch() ->
             %% VM metrics
             {<<"/metrics">>, cb_metrics_handler, []},
 
+            %% Payment orders
+            {<<"/api/v1/payment-orders">>, cb_payment_orders_handler, []},
+            {<<"/api/v1/payment-orders/:payment_id">>, cb_payment_orders_handler, []},
+            {<<"/api/v1/payment-orders/:payment_id/cancel">>, cb_payment_orders_handler, []},
+            {<<"/api/v1/payment-orders/:payment_id/retry">>, cb_payment_orders_handler, []},
+
+            %% Exception queue
+            {<<"/api/v1/exceptions">>, cb_exceptions_handler, []},
+            {<<"/api/v1/exceptions/:item_id">>, cb_exceptions_handler, []},
+            {<<"/api/v1/exceptions/:item_id/resolve">>, cb_exceptions_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

@@ -10,7 +10,8 @@
                   uuid,
                   cb_ledger,
                   cb_accounts,
-                  cb_events
+                  cb_events,
+                  cb_currency
                  ]},
   {env, []},
   {modules, []},

@@ -6,7 +6,10 @@
   {applications, [
                   kernel,
                   stdlib,
-                  mnesia
+                  mnesia,
+                  uuid,
+                  cb_ledger,
+                  cb_payments
                  ]},
   {env, []},
   {modules, []},

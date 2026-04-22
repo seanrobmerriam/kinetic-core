@@ -42,7 +42,10 @@
 -type amount() :: non_neg_integer().
 
 %% @doc ISO 4217 currency codes supported by the system.
--type currency() :: 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CHF'.
+-type currency() :: 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CHF' | 'AUD' | 'CAD' | 'SGD' | 'HKD' | 'NZD'.
+
+%% @doc Risk classification tier for a party.
+-type risk_tier() :: low | medium | high | critical.
 
 %% @doc Timestamp in milliseconds since Unix epoch (1970-01-01 00:00:00 UTC).
 %% Uses `erlang:system_time(millisecond)` for generation.
@@ -140,6 +143,7 @@
     onboarding_status   :: onboarding_status(),
     review_notes        :: binary() | undefined,
     doc_refs            :: [binary()],
+    risk_tier           :: risk_tier(),
     address             :: party_address() | undefined,
     version             :: pos_integer(),
     merged_into_party_id :: uuid() | undefined,
@@ -309,4 +313,55 @@
     placed_at   :: timestamp_ms(),
     released_at :: timestamp_ms() | undefined,
     expires_at  :: timestamp_ms() | undefined
+}).
+
+%% @doc Currency configuration with ISO 4217 precision rules.
+-record(currency_config, {
+    currency_code    :: currency(),
+    precision_digits :: non_neg_integer(),
+    description      :: binary(),
+    is_active        :: boolean(),
+    created_at       :: timestamp_ms()
+}).
+
+%% @doc Exchange rate between two currencies, stored as integer millionths.
+%% rate_millionths = 1_000_000 means 1:1 parity.
+%% Example: USD/EUR at 0.92 = 920_000.
+-record(exchange_rate, {
+    rate_id         :: uuid(),
+    from_currency   :: currency(),
+    to_currency     :: currency(),
+    rate_millionths :: pos_integer(),
+    recorded_at     :: timestamp_ms()
+}).
+
+%% @doc Domestic payment order lifecycle record.
+-record(payment_order, {
+    payment_id        :: uuid(),
+    idempotency_key   :: binary(),
+    party_id          :: uuid(),
+    source_account_id :: uuid(),
+    dest_account_id   :: uuid(),
+    amount            :: amount(),
+    currency          :: currency(),
+    description       :: binary(),
+    status            :: initiated | validating | processing | completed | failed | cancelled,
+    stp_decision      :: straight_through | exception_queued | undefined,
+    failure_reason    :: binary() | undefined,
+    retry_count       :: non_neg_integer(),
+    created_at        :: timestamp_ms(),
+    updated_at        :: timestamp_ms()
+}).
+
+%% @doc Exception queue item for manual intervention.
+-record(exception_item, {
+    item_id          :: uuid(),
+    payment_id       :: uuid(),
+    reason           :: binary(),
+    status           :: pending | resolved,
+    resolution       :: approved | rejected | undefined,
+    resolved_by      :: binary() | undefined,
+    resolution_notes :: binary() | undefined,
+    created_at       :: timestamp_ms(),
+    updated_at       :: timestamp_ms()
 }).

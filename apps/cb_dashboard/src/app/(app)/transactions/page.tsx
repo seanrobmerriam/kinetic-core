@@ -7,10 +7,7 @@ import {
   Paper,
   SegmentedControl,
   Stack,
-  Table,
-  TextInput,
 } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -21,6 +18,8 @@ import {
   truncateID,
 } from "@/lib/format";
 import type { Account, Party, Transaction } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -44,7 +43,6 @@ export default function TransactionsPage() {
   const { setError, setSuccess } = useNotify();
   const { tick, bump } = useRefresh();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   useEffect(() => {
@@ -97,16 +95,8 @@ export default function TransactionsPage() {
     let list = transactions;
     if (filterStatus && filterStatus !== "all")
       list = list.filter((t) => t.status === filterStatus);
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (t) =>
-          t.description.toLowerCase().includes(q) ||
-          t.txn_id.toLowerCase().includes(q),
-      );
-    }
     return list;
-  }, [transactions, search, filterStatus]);
+  }, [transactions, filterStatus]);
 
   const reverse = async (id: string) => {
     try {
@@ -118,16 +108,70 @@ export default function TransactionsPage() {
     }
   };
 
+  const txColumns: ColumnDef<Transaction>[] = [
+    {
+      key: "id",
+      label: "ID",
+      getValue: (t) => t.txn_id,
+      render: (t) => truncateID(t.txn_id),
+      ff: "monospace",
+    },
+    {
+      key: "date",
+      label: "Date",
+      getValue: (t) => t.created_at,
+      render: (t) => formatTimestamp(t.created_at),
+    },
+    {
+      key: "type",
+      label: "Type",
+      getValue: (t) => t.txn_type,
+      render: (t) => (
+        <Badge variant="light" color="gray" radius="sm">
+          {capitalize(t.txn_type)}
+        </Badge>
+      ),
+    },
+    { key: "description", label: "Description", getValue: (t) => t.description },
+    {
+      key: "amount",
+      label: "Amount",
+      getValue: (t) => t.amount,
+      render: (t) => formatAmount(t.amount, t.currency),
+      ta: "right",
+      ff: "monospace",
+      fw: 500,
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (t) => t.status,
+      render: (t) => (
+        <Badge variant="light" color={statusColor(t.status)} radius="sm">
+          {capitalize(t.status)}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (t) =>
+        t.status === "posted" ? (
+          <Button
+            size="xs"
+            variant="light"
+            color="yellow"
+            onClick={() => reverse(t.txn_id)}
+          >
+            Reverse
+          </Button>
+        ) : null,
+    },
+  ];
+
   return (
     <Stack gap="lg">
-      <TextInput
-        leftSection={<IconSearch size={16} />}
-        placeholder="Search transactions..."
-        value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
-        maw={400}
-      />
-
       <SegmentedControl
         value={filterStatus}
         onChange={setFilterStatus}
@@ -135,66 +179,14 @@ export default function TransactionsPage() {
       />
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={800}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>ID</Table.Th>
-                <Table.Th>Date</Table.Th>
-                <Table.Th>Type</Table.Th>
-                <Table.Th>Description</Table.Th>
-                <Table.Th ta="right">Amount</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filtered.map((t) => (
-                <Table.Tr key={t.txn_id}>
-                  <Table.Td ff="monospace">{truncateID(t.txn_id)}</Table.Td>
-                  <Table.Td>{formatTimestamp(t.created_at)}</Table.Td>
-                  <Table.Td>
-                    <Badge variant="light" color="gray" radius="sm">
-                      {capitalize(t.txn_type)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{t.description}</Table.Td>
-                  <Table.Td ta="right" ff="monospace" fw={500}>
-                    {formatAmount(t.amount, t.currency)}
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={statusColor(t.status)}
-                      radius="sm"
-                    >
-                      {capitalize(t.status)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    {t.status === "posted" && (
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color="yellow"
-                        onClick={() => reverse(t.txn_id)}
-                      >
-                        Reverse
-                      </Button>
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {filtered.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={7} ta="center" py="xl" c="dimmed">
-                    No transactions found
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SortableTable
+          data={filtered}
+          columns={txColumns}
+          rowKey={(t) => t.txn_id}
+          searchPlaceholder="Search transactions..."
+          emptyMessage="No transactions found"
+          minWidth={800}
+        />
       </Paper>
     </Stack>
   );

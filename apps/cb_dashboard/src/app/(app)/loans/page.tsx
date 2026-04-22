@@ -11,7 +11,6 @@ import {
   Select,
   SimpleGrid,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
@@ -33,6 +32,8 @@ import type {
   LoanRepayment,
   Party,
 } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -215,49 +216,131 @@ export default function LoansPage() {
     }
   };
 
+  const productCols: ColumnDef<LoanProduct>[] = [
+    { key: "name", label: "Name", getValue: (p) => p.name },
+    { key: "currency", label: "Currency", getValue: (p) => p.currency },
+    {
+      key: "amount_range",
+      label: "Amount Range",
+      getValue: (p) => p.min_amount,
+      render: (p) =>
+        `${formatAmount(p.min_amount, p.currency)} \u2013 ${formatAmount(p.max_amount, p.currency)}`,
+    },
+    {
+      key: "term_range",
+      label: "Term Range",
+      getValue: (p) => p.min_term_months,
+      render: (p) => `${p.min_term_months}\u2013${p.max_term_months} mo`,
+    },
+    {
+      key: "rate",
+      label: "Rate",
+      getValue: (p) => p.interest_rate_bps,
+      render: (p) => `${p.interest_rate_bps} bps`,
+    },
+    {
+      key: "type",
+      label: "Type",
+      getValue: (p) => p.interest_type,
+      render: (p) => capitalize(p.interest_type),
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (p) => p.status,
+      render: (p) => capitalize(p.status),
+    },
+  ];
+
+  const loanCols: ColumnDef<Loan>[] = [
+    {
+      key: "id",
+      label: "Loan",
+      getValue: (l) => l.loan_id,
+      render: (l) => truncateID(l.loan_id),
+      ff: "monospace",
+    },
+    {
+      key: "product",
+      label: "Product",
+      getValue: (l) => productName(l.product_id),
+    },
+    {
+      key: "principal",
+      label: "Principal",
+      getValue: (l) => l.principal,
+      render: (l) => formatAmount(l.principal, l.currency),
+    },
+    {
+      key: "outstanding",
+      label: "Outstanding",
+      getValue: (l) => l.outstanding_balance,
+      render: (l) => formatAmount(l.outstanding_balance, l.currency),
+    },
+    {
+      key: "monthly",
+      label: "Monthly",
+      getValue: (l) => l.monthly_payment,
+      render: (l) => formatAmount(l.monthly_payment, l.currency),
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (l) => l.status,
+      render: (l) => (
+        <Badge variant="light" radius="sm">
+          {capitalize(l.status)}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (l) => (
+        <Group gap="xs">
+          <Button size="xs" variant="light" onClick={() => loadLoan(l.loan_id)}>
+            View
+          </Button>
+          {l.status === "pending" && (
+            <Button
+              size="xs"
+              color="teal"
+              variant="light"
+              onClick={() => approve(l.loan_id)}
+            >
+              Approve
+            </Button>
+          )}
+          {l.status === "approved" && (
+            <Button
+              size="xs"
+              color="yellow"
+              variant="light"
+              onClick={() => disburse(l.loan_id)}
+            >
+              Disburse
+            </Button>
+          )}
+        </Group>
+      ),
+    },
+  ];
+
   return (
     <Stack gap="lg">
       <Card withBorder shadow="sm" radius="md" padding="lg">
         <Title order={4} mb="md">
           Current Loan Products
         </Title>
-        {products.length === 0 ? (
-          <Text c="dimmed">No loan products available</Text>
-        ) : (
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Currency</Table.Th>
-                  <Table.Th>Amount Range</Table.Th>
-                  <Table.Th>Term Range</Table.Th>
-                  <Table.Th>Rate</Table.Th>
-                  <Table.Th>Type</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {products.map((p) => (
-                  <Table.Tr key={p.product_id}>
-                    <Table.Td>{p.name}</Table.Td>
-                    <Table.Td>{p.currency}</Table.Td>
-                    <Table.Td>
-                      {formatAmount(p.min_amount, p.currency)} –{" "}
-                      {formatAmount(p.max_amount, p.currency)}
-                    </Table.Td>
-                    <Table.Td>
-                      {p.min_term_months}–{p.max_term_months} mo
-                    </Table.Td>
-                    <Table.Td>{p.interest_rate_bps} bps</Table.Td>
-                    <Table.Td>{capitalize(p.interest_type)}</Table.Td>
-                    <Table.Td>{capitalize(p.status)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+        <SortableTable
+          data={products}
+          columns={productCols}
+          rowKey={(p) => p.product_id}
+          searchPlaceholder="Search loan products..."
+          emptyMessage="No loan products available"
+          minWidth={700}
+        />
       </Card>
 
       <Group align="flex-end">
@@ -336,82 +419,18 @@ export default function LoansPage() {
         <Title order={4} mb="md">
           Loans
         </Title>
-        {loans.length === 0 ? (
-          <Text c="dimmed">
-            {partyId
+        <SortableTable
+          data={loans}
+          columns={loanCols}
+          rowKey={(l) => l.loan_id}
+          searchPlaceholder="Search loans..."
+          emptyMessage={
+            partyId
               ? "No loans for the selected customer"
-              : "Select a customer to view loans"}
-          </Text>
-        ) : (
-          <Table.ScrollContainer minWidth={900}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Loan</Table.Th>
-                  <Table.Th>Product</Table.Th>
-                  <Table.Th>Principal</Table.Th>
-                  <Table.Th>Outstanding</Table.Th>
-                  <Table.Th>Monthly</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {loans.map((l) => (
-                  <Table.Tr key={l.loan_id}>
-                    <Table.Td ff="monospace">{truncateID(l.loan_id)}</Table.Td>
-                    <Table.Td>{productName(l.product_id)}</Table.Td>
-                    <Table.Td>
-                      {formatAmount(l.principal, l.currency)}
-                    </Table.Td>
-                    <Table.Td>
-                      {formatAmount(l.outstanding_balance, l.currency)}
-                    </Table.Td>
-                    <Table.Td>
-                      {formatAmount(l.monthly_payment, l.currency)}
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" radius="sm">
-                        {capitalize(l.status)}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <Button
-                          size="xs"
-                          variant="light"
-                          onClick={() => loadLoan(l.loan_id)}
-                        >
-                          View
-                        </Button>
-                        {l.status === "pending" && (
-                          <Button
-                            size="xs"
-                            color="teal"
-                            variant="light"
-                            onClick={() => approve(l.loan_id)}
-                          >
-                            Approve
-                          </Button>
-                        )}
-                        {l.status === "approved" && (
-                          <Button
-                            size="xs"
-                            color="yellow"
-                            variant="light"
-                            onClick={() => disburse(l.loan_id)}
-                          >
-                            Disburse
-                          </Button>
-                        )}
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+              : "Select a customer to view loans"
+          }
+          minWidth={900}
+        />
       </Card>
 
       {selectedLoan && (
@@ -469,46 +488,51 @@ export default function LoansPage() {
             </Group>
           </Stack>
 
-          {repayments.length === 0 ? (
-            <Text c="dimmed">No repayments recorded yet</Text>
-          ) : (
-            <Table.ScrollContainer minWidth={700}>
-              <Table verticalSpacing="sm" highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Amount</Table.Th>
-                    <Table.Th>Principal</Table.Th>
-                    <Table.Th>Interest</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Paid At</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {repayments.map((r) => (
-                    <Table.Tr key={r.repayment_id}>
-                      <Table.Td>
-                        {formatAmount(r.amount, selectedLoan.currency)}
-                      </Table.Td>
-                      <Table.Td>
-                        {formatAmount(
-                          r.principal_portion,
-                          selectedLoan.currency,
-                        )}
-                      </Table.Td>
-                      <Table.Td>
-                        {formatAmount(
-                          r.interest_portion,
-                          selectedLoan.currency,
-                        )}
-                      </Table.Td>
-                      <Table.Td>{capitalize(r.status)}</Table.Td>
-                      <Table.Td>{formatTimestamp(r.paid_at)}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Table.ScrollContainer>
-          )}
+          {(() => {
+            const currency = selectedLoan.currency;
+            const repayCols: ColumnDef<LoanRepayment>[] = [
+              {
+                key: "amount",
+                label: "Amount",
+                getValue: (r) => r.amount,
+                render: (r) => formatAmount(r.amount, currency),
+              },
+              {
+                key: "principal",
+                label: "Principal",
+                getValue: (r) => r.principal_portion,
+                render: (r) => formatAmount(r.principal_portion, currency),
+              },
+              {
+                key: "interest",
+                label: "Interest",
+                getValue: (r) => r.interest_portion,
+                render: (r) => formatAmount(r.interest_portion, currency),
+              },
+              {
+                key: "status",
+                label: "Status",
+                getValue: (r) => r.status,
+                render: (r) => capitalize(r.status),
+              },
+              {
+                key: "paid_at",
+                label: "Paid At",
+                getValue: (r) => r.paid_at,
+                render: (r) => formatTimestamp(r.paid_at),
+              },
+            ];
+            return (
+              <SortableTable
+                data={repayments}
+                columns={repayCols}
+                rowKey={(r) => r.repayment_id}
+                searchPlaceholder="Search repayments..."
+                emptyMessage="No repayments recorded yet"
+                minWidth={700}
+              />
+            );
+          })()}
         </Card>
       )}
     </Stack>

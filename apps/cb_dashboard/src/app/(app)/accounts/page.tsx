@@ -13,16 +13,16 @@ import {
   Select,
   SimpleGrid,
   Stack,
-  Table,
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatAmount, truncateID } from "@/lib/format";
 import type { Account, Party } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -48,7 +48,6 @@ export default function AccountsPage() {
   const { tick, bump } = useRefresh();
   const [parties, setParties] = useState<Party[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   // Checking account form
   const [checkingPartyId, setCheckingPartyId] = useState<string>(
@@ -97,16 +96,8 @@ export default function AccountsPage() {
     let list = accounts;
     if (filterStatus && filterStatus !== "all")
       list = list.filter((a) => a.status === filterStatus);
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.account_id.toLowerCase().includes(q),
-      );
-    }
     return list;
-  }, [accounts, search, filterStatus]);
+  }, [accounts, filterStatus]);
 
   const createChecking = async () => {
     if (!checkingPartyId) {
@@ -154,16 +145,54 @@ export default function AccountsPage() {
     }
   };
 
+  const acctColumns: ColumnDef<Account>[] = [
+    {
+      key: "id",
+      label: "Account ID",
+      getValue: (a) => a.account_id,
+      render: (a) => truncateID(a.account_id),
+      ff: "monospace",
+    },
+    { key: "name", label: "Name", getValue: (a) => a.name, fw: 500 },
+    { key: "currency", label: "Currency", getValue: (a) => a.currency },
+    {
+      key: "balance",
+      label: "Balance",
+      getValue: (a) => a.balance,
+      render: (a) => formatAmount(a.balance, a.currency),
+      ta: "right",
+      ff: "monospace",
+      fw: 500,
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (a) => a.status,
+      render: (a) => (
+        <Badge variant="light" color={statusColor(a.status)} radius="sm">
+          {capitalize(a.status)}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (a) => (
+        <Button
+          component={Link}
+          href={`/accounts/${a.account_id}`}
+          size="xs"
+          variant="light"
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <Stack gap="lg">
-      <TextInput
-        leftSection={<IconSearch size={16} />}
-        placeholder="Search accounts..."
-        value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
-        maw={400}
-      />
-
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
         <Card
           withBorder
@@ -263,58 +292,14 @@ export default function AccountsPage() {
       />
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={700}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Account ID</Table.Th>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Currency</Table.Th>
-                <Table.Th ta="right">Balance</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filtered.map((a) => (
-                <Table.Tr key={a.account_id}>
-                  <Table.Td ff="monospace">{truncateID(a.account_id)}</Table.Td>
-                  <Table.Td fw={500}>{a.name}</Table.Td>
-                  <Table.Td>{a.currency}</Table.Td>
-                  <Table.Td ta="right" ff="monospace" fw={500}>
-                    {formatAmount(a.balance, a.currency)}
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={statusColor(a.status)}
-                      radius="sm"
-                    >
-                      {capitalize(a.status)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Button
-                      component={Link}
-                      href={`/accounts/${a.account_id}`}
-                      size="xs"
-                      variant="light"
-                    >
-                      View
-                    </Button>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {filtered.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={6} ta="center" py="xl" c="dimmed">
-                    No accounts found
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SortableTable
+          data={filtered}
+          columns={acctColumns}
+          rowKey={(a) => a.account_id}
+          searchPlaceholder="Search accounts..."
+          emptyMessage="No accounts found"
+          minWidth={700}
+        />
       </Paper>
     </Stack>
   );

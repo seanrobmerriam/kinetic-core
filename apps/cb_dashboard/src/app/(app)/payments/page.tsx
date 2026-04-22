@@ -9,7 +9,6 @@ import {
   Paper,
   Select,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
@@ -19,6 +18,8 @@ import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { formatAmount, formatTimestamp, truncateID } from "@/lib/format";
 import type { Account, Party, PaymentOrder } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -246,71 +247,95 @@ function OrderTable({
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
 }) {
+  const cols: ColumnDef<PaymentOrder>[] = [
+    {
+      key: "id",
+      label: "ID",
+      getValue: (o) => o.payment_id,
+      render: (o) => truncateID(o.payment_id),
+      ff: "monospace",
+    },
+    {
+      key: "amount",
+      label: "Amount",
+      getValue: (o) => o.amount,
+      render: (o) => formatAmount(o.amount, o.currency),
+      ta: "right",
+      ff: "monospace",
+      fw: 500,
+    },
+    {
+      key: "stp",
+      label: "STP",
+      getValue: (o) => o.stp_decision ?? "",
+      render: (o) => (
+        <Badge variant="light" color="gray" radius="sm">
+          {o.stp_decision || "—"}
+        </Badge>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (o) => o.status,
+      render: (o) => (
+        <Badge variant="light" color={statusColor(o.status)} radius="sm">
+          {o.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "retries",
+      label: "Retries",
+      getValue: (o) => o.retry_count ?? 0,
+    },
+    {
+      key: "created",
+      label: "Created",
+      getValue: (o) => o.created_at,
+      render: (o) => formatTimestamp(o.created_at),
+      c: "dimmed",
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      getValue: () => "",
+      render: (o) => (
+        <Group gap="xs">
+          {(o.status === "pending" || o.status === "processing") && (
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              onClick={() => onCancel(o.payment_id)}
+            >
+              Cancel
+            </Button>
+          )}
+          {o.status === "failed" && (
+            <Button
+              size="xs"
+              variant="light"
+              color="yellow"
+              onClick={() => onRetry(o.payment_id)}
+            >
+              Retry
+            </Button>
+          )}
+        </Group>
+      ),
+    },
+  ];
+
   return (
-    <Table.ScrollContainer minWidth={800}>
-      <Table verticalSpacing="sm" highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th ta="right">Amount</Table.Th>
-            <Table.Th>STP</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th>Retries</Table.Th>
-            <Table.Th>Created</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {orders.map((o) => (
-            <Table.Tr key={o.payment_id}>
-              <Table.Td ff="monospace">{truncateID(o.payment_id)}</Table.Td>
-              <Table.Td ta="right" ff="monospace" fw={500}>
-                {formatAmount(o.amount, o.currency)}
-              </Table.Td>
-              <Table.Td>
-                <Badge variant="light" color="gray" radius="sm">
-                  {o.stp_decision || "—"}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Badge
-                  variant="light"
-                  color={statusColor(o.status)}
-                  radius="sm"
-                >
-                  {o.status}
-                </Badge>
-              </Table.Td>
-              <Table.Td>{o.retry_count ?? 0}</Table.Td>
-              <Table.Td c="dimmed">{formatTimestamp(o.created_at)}</Table.Td>
-              <Table.Td>
-                <Group gap="xs">
-                  {(o.status === "pending" || o.status === "processing") && (
-                    <Button
-                      size="xs"
-                      variant="light"
-                      color="red"
-                      onClick={() => onCancel(o.payment_id)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                  {o.status === "failed" && (
-                    <Button
-                      size="xs"
-                      variant="light"
-                      color="yellow"
-                      onClick={() => onRetry(o.payment_id)}
-                    >
-                      Retry
-                    </Button>
-                  )}
-                </Group>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <SortableTable
+      data={orders}
+      columns={cols}
+      rowKey={(o) => o.payment_id}
+      searchPlaceholder="Search orders..."
+      emptyMessage="No orders"
+      minWidth={800}
+    />
   );
 }

@@ -10,7 +10,6 @@ import {
   SegmentedControl,
   Select,
   Stack,
-  Table,
   Text,
   Textarea,
   Title,
@@ -20,6 +19,8 @@ import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatTimestamp, truncateID } from "@/lib/format";
 import type { ExceptionItem, Party } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 type Tab = "exceptions" | "kyc";
 
@@ -130,65 +131,80 @@ function ExceptionQueue() {
       )}
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={700}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Item ID</Table.Th>
-                <Table.Th>Payment ID</Table.Th>
-                <Table.Th>Reason</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Resolution</Table.Th>
-                <Table.Th>Created</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {items.map((item) => (
-                <Table.Tr key={item.item_id}>
-                  <Table.Td ff="monospace">{truncateID(item.item_id)}</Table.Td>
-                  <Table.Td ff="monospace">
-                    {item.payment_id ? truncateID(item.payment_id) : "—"}
-                  </Table.Td>
-                  <Table.Td>{item.reason || "—"}</Table.Td>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={exceptionStatusColor(item.status)}
-                      radius="sm"
-                    >
-                      {capitalize(item.status)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    {item.resolution ? capitalize(item.resolution) : "—"}
-                  </Table.Td>
-                  <Table.Td c="dimmed">
-                    {formatTimestamp(item.created_at)}
-                  </Table.Td>
-                  <Table.Td>
-                    {item.status === "pending" && (
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => openResolve(item.item_id)}
-                      >
-                        Resolve
-                      </Button>
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {items.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={7} ta="center" py="xl" c="dimmed">
-                    No exception items found
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SortableTable
+          data={items}
+          columns={[
+            {
+              key: "item_id",
+              label: "Item ID",
+              getValue: (item) => item.item_id,
+              render: (item) => truncateID(item.item_id),
+              ff: "monospace",
+            },
+            {
+              key: "payment_id",
+              label: "Payment ID",
+              getValue: (item) => item.payment_id ?? "",
+              render: (item) =>
+                item.payment_id ? truncateID(item.payment_id) : "—",
+              ff: "monospace",
+            },
+            {
+              key: "reason",
+              label: "Reason",
+              getValue: (item) => item.reason ?? "",
+              render: (item) => item.reason || "—",
+            },
+            {
+              key: "status",
+              label: "Status",
+              getValue: (item) => item.status,
+              render: (item) => (
+                <Badge
+                  variant="light"
+                  color={exceptionStatusColor(item.status)}
+                  radius="sm"
+                >
+                  {capitalize(item.status)}
+                </Badge>
+              ),
+            },
+            {
+              key: "resolution",
+              label: "Resolution",
+              getValue: (item) => item.resolution ?? "",
+              render: (item) =>
+                item.resolution ? capitalize(item.resolution) : "—",
+            },
+            {
+              key: "created_at",
+              label: "Created",
+              getValue: (item) => item.created_at,
+              render: (item) => formatTimestamp(item.created_at),
+              c: "dimmed",
+            },
+            {
+              key: "actions",
+              label: "Actions",
+              sortable: false,
+              getValue: () => "",
+              render: (item) =>
+                item.status === "pending" ? (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => openResolve(item.item_id)}
+                  >
+                    Resolve
+                  </Button>
+                ) : null,
+            },
+          ] satisfies ColumnDef<ExceptionItem>[]}
+          rowKey={(item) => item.item_id}
+          searchPlaceholder="Search exceptions..."
+          emptyMessage="No exception items found"
+          minWidth={700}
+        />
       </Paper>
     </Stack>
   );
@@ -326,76 +342,84 @@ function KycManagement() {
       )}
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={600}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Customer</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>KYC Status</Table.Th>
-                <Table.Th>Risk Tier</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {parties.map((p) => {
+        {(() => {
+          const kycCols: ColumnDef<Party>[] = [
+            {
+              key: "full_name",
+              label: "Customer",
+              getValue: (p) => p.full_name,
+              fw: 500,
+            },
+            {
+              key: "email",
+              label: "Email",
+              getValue: (p) => p.email,
+            },
+            {
+              key: "kyc_status",
+              label: "KYC Status",
+              getValue: (p) => kyc[p.party_id]?.kyc_status ?? "",
+              render: (p) => {
                 const k = kyc[p.party_id];
-                return (
-                  <Table.Tr key={p.party_id}>
-                    <Table.Td fw={500}>{p.full_name}</Table.Td>
-                    <Table.Td>{p.email}</Table.Td>
-                    <Table.Td>
-                      {k ? (
-                        <Badge
-                          variant="light"
-                          color={kycColor(k.kyc_status)}
-                          radius="sm"
-                        >
-                          {capitalize(k.kyc_status)}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">
-                          —
-                        </Text>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      {k ? (
-                        <Badge
-                          variant="light"
-                          color={tierColor(k.risk_tier)}
-                          radius="sm"
-                        >
-                          {capitalize(k.risk_tier)}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">
-                          —
-                        </Text>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => selectParty(p.party_id)}
-                      >
-                        Update KYC
-                      </Button>
-                    </Table.Td>
-                  </Table.Tr>
+                return k ? (
+                  <Badge
+                    variant="light"
+                    color={kycColor(k.kyc_status)}
+                    radius="sm"
+                  >
+                    {capitalize(k.kyc_status)}
+                  </Badge>
+                ) : (
+                  <Text size="sm" c="dimmed">—</Text>
                 );
-              })}
-              {parties.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
-                    No customers found
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+              },
+            },
+            {
+              key: "risk_tier",
+              label: "Risk Tier",
+              getValue: (p) => kyc[p.party_id]?.risk_tier ?? "",
+              render: (p) => {
+                const k = kyc[p.party_id];
+                return k ? (
+                  <Badge
+                    variant="light"
+                    color={tierColor(k.risk_tier)}
+                    radius="sm"
+                  >
+                    {capitalize(k.risk_tier)}
+                  </Badge>
+                ) : (
+                  <Text size="sm" c="dimmed">—</Text>
+                );
+              },
+            },
+            {
+              key: "actions",
+              label: "Actions",
+              sortable: false,
+              getValue: () => "",
+              render: (p) => (
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => selectParty(p.party_id)}
+                >
+                  Update KYC
+                </Button>
+              ),
+            },
+          ];
+          return (
+            <SortableTable
+              data={parties}
+              columns={kycCols}
+              rowKey={(p) => p.party_id}
+              searchPlaceholder="Search customers..."
+              emptyMessage="No customers found"
+              minWidth={600}
+            />
+          );
+        })()}
       </Paper>
     </Stack>
   );

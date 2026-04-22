@@ -8,7 +8,6 @@ import {
   Group,
   Paper,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
@@ -22,6 +21,8 @@ import {
   truncateID,
 } from "@/lib/format";
 import type { LedgerEntry } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -75,46 +76,70 @@ export default function LedgerPage() {
         </Card>
       ) : (
         <Paper withBorder radius="md" shadow="sm">
-          <Table.ScrollContainer minWidth={900}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Entry ID</Table.Th>
-                  <Table.Th>Transaction ID</Table.Th>
-                  <Table.Th>Account ID</Table.Th>
-                  <Table.Th>Type</Table.Th>
-                  <Table.Th ta="right">Amount</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th>Posted At</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {entries.map((e) => (
-                  <Table.Tr key={e.entry_id}>
-                    <Table.Td ff="monospace">{truncateID(e.entry_id)}</Table.Td>
-                    <Table.Td ff="monospace">{truncateID(e.txn_id)}</Table.Td>
-                    <Table.Td ff="monospace">
-                      {truncateID(e.account_id)}
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge
-                        variant="light"
-                        color={e.entry_type === "debit" ? "red" : "teal"}
-                        radius="sm"
-                      >
-                        {capitalize(e.entry_type)}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td ta="right" ff="monospace" fw={500}>
-                      {formatAmount(e.amount, e.currency)}
-                    </Table.Td>
-                    <Table.Td>{e.description}</Table.Td>
-                    <Table.Td>{formatTimestamp(e.posted_at)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
+          <SortableTable
+            data={entries}
+            columns={[
+              {
+                key: "entry_id",
+                label: "Entry ID",
+                getValue: (e) => e.entry_id,
+                render: (e) => truncateID(e.entry_id),
+                ff: "monospace",
+              },
+              {
+                key: "txn_id",
+                label: "Transaction ID",
+                getValue: (e) => e.txn_id,
+                render: (e) => truncateID(e.txn_id),
+                ff: "monospace",
+              },
+              {
+                key: "account_id",
+                label: "Account ID",
+                getValue: (e) => e.account_id,
+                render: (e) => truncateID(e.account_id),
+                ff: "monospace",
+              },
+              {
+                key: "type",
+                label: "Type",
+                getValue: (e) => e.entry_type,
+                render: (e) => (
+                  <Badge
+                    variant="light"
+                    color={e.entry_type === "debit" ? "red" : "teal"}
+                    radius="sm"
+                  >
+                    {capitalize(e.entry_type)}
+                  </Badge>
+                ),
+              },
+              {
+                key: "amount",
+                label: "Amount",
+                getValue: (e) => e.amount,
+                render: (e) => formatAmount(e.amount, e.currency),
+                ta: "right",
+                ff: "monospace",
+                fw: 500,
+              },
+              {
+                key: "description",
+                label: "Description",
+                getValue: (e) => e.description,
+              },
+              {
+                key: "posted_at",
+                label: "Posted At",
+                getValue: (e) => e.posted_at,
+                render: (e) => formatTimestamp(e.posted_at),
+              },
+            ] satisfies ColumnDef<LedgerEntry>[]}
+            rowKey={(e) => e.entry_id}
+            searchPlaceholder="Search entries..."
+            emptyMessage="No ledger entries found"
+            minWidth={900}
+          />
         </Paper>
       )}
     </Stack>

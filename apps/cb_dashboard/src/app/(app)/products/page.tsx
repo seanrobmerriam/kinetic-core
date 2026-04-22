@@ -10,7 +10,6 @@ import {
   Select,
   SimpleGrid,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
@@ -20,6 +19,8 @@ import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatAmount, parseAmount } from "@/lib/format";
 import type { LoanProduct, SavingsProduct } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -154,6 +155,97 @@ export default function ProductsPage() {
     }
   };
 
+  const savingsColumns: ColumnDef<SavingsProduct>[] = [
+    { key: "name", label: "Name", getValue: (p) => p.name },
+    { key: "currency", label: "Currency", getValue: (p) => p.currency },
+    {
+      key: "rate",
+      label: "Rate",
+      getValue: (p) => p.interest_rate_bps,
+      render: (p) => `${p.interest_rate_bps} bps`,
+    },
+    {
+      key: "type",
+      label: "Type",
+      getValue: (p) => p.interest_type,
+      render: (p) =>
+        `${capitalize(p.interest_type)} / ${capitalize(p.compounding_period)}`,
+    },
+    {
+      key: "min_balance",
+      label: "Minimum Balance",
+      getValue: (p) => p.minimum_balance,
+      render: (p) => formatAmount(p.minimum_balance, p.currency),
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (p) => p.status,
+      render: (p) => capitalize(p.status),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (p) => (
+        <Button
+          size="xs"
+          variant="light"
+          onClick={() => setViewSavings(p)}
+          aria-label={`View savings product ${p.name}`}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
+  const loanColumns: ColumnDef<LoanProduct>[] = [
+    { key: "name", label: "Name", getValue: (p) => p.name },
+    { key: "currency", label: "Currency", getValue: (p) => p.currency },
+    {
+      key: "amount_range",
+      label: "Amount Range",
+      getValue: (p) => p.min_amount,
+      render: (p) =>
+        `${formatAmount(p.min_amount, p.currency)} \u2013 ${formatAmount(p.max_amount, p.currency)}`,
+    },
+    {
+      key: "term_range",
+      label: "Term Range",
+      getValue: (p) => p.min_term_months,
+      render: (p) => `${p.min_term_months}\u2013${p.max_term_months} mo`,
+    },
+    {
+      key: "rate",
+      label: "Rate",
+      getValue: (p) => p.interest_rate_bps,
+      render: (p) =>
+        `${p.interest_rate_bps} bps ${capitalize(p.interest_type)}`,
+    },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (p) => p.status,
+      render: (p) => capitalize(p.status),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (p) => (
+        <Button
+          size="xs"
+          variant="light"
+          onClick={() => setViewLoan(p)}
+          aria-label={`View loan product ${p.name}`}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <Stack gap="lg">
       <Group justify="space-between">
@@ -168,52 +260,14 @@ export default function ProductsPage() {
         <Title order={4} mb="md">
           Savings Products
         </Title>
-        {savings.length === 0 ? (
-          <Text c="dimmed">No savings products yet</Text>
-        ) : (
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Currency</Table.Th>
-                  <Table.Th>Rate</Table.Th>
-                  <Table.Th>Type</Table.Th>
-                  <Table.Th>Minimum Balance</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {savings.map((p) => (
-                  <Table.Tr key={p.product_id}>
-                    <Table.Td>{p.name}</Table.Td>
-                    <Table.Td>{p.currency}</Table.Td>
-                    <Table.Td>{p.interest_rate_bps} bps</Table.Td>
-                    <Table.Td>
-                      {capitalize(p.interest_type)} /{" "}
-                      {capitalize(p.compounding_period)}
-                    </Table.Td>
-                    <Table.Td>
-                      {formatAmount(p.minimum_balance, p.currency)}
-                    </Table.Td>
-                    <Table.Td>{capitalize(p.status)}</Table.Td>
-                    <Table.Td>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => setViewSavings(p)}
-                        aria-label={`View savings product ${p.name}`}
-                      >
-                        View
-                      </Button>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+        <SortableTable
+          data={savings}
+          columns={savingsColumns}
+          rowKey={(p) => p.product_id}
+          searchPlaceholder="Search savings products..."
+          emptyMessage="No savings products yet"
+          minWidth={700}
+        />
       </Card>
 
       {/* Create Savings Product form */}
@@ -283,54 +337,14 @@ export default function ProductsPage() {
         <Title order={4} mb="md">
           Loan Products
         </Title>
-        {loans.length === 0 ? (
-          <Text c="dimmed">No loan products yet</Text>
-        ) : (
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Currency</Table.Th>
-                  <Table.Th>Amount Range</Table.Th>
-                  <Table.Th>Term Range</Table.Th>
-                  <Table.Th>Rate</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {loans.map((p) => (
-                  <Table.Tr key={p.product_id}>
-                    <Table.Td>{p.name}</Table.Td>
-                    <Table.Td>{p.currency}</Table.Td>
-                    <Table.Td>
-                      {formatAmount(p.min_amount, p.currency)} -{" "}
-                      {formatAmount(p.max_amount, p.currency)}
-                    </Table.Td>
-                    <Table.Td>
-                      {p.min_term_months}-{p.max_term_months} mo
-                    </Table.Td>
-                    <Table.Td>
-                      {p.interest_rate_bps} bps {capitalize(p.interest_type)}
-                    </Table.Td>
-                    <Table.Td>{capitalize(p.status)}</Table.Td>
-                    <Table.Td>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => setViewLoan(p)}
-                        aria-label={`View loan product ${p.name}`}
-                      >
-                        View
-                      </Button>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+        <SortableTable
+          data={loans}
+          columns={loanColumns}
+          rowKey={(p) => p.product_id}
+          searchPlaceholder="Search loan products..."
+          emptyMessage="No loan products yet"
+          minWidth={700}
+        />
       </Card>
 
       {/* Create Loan Product form */}

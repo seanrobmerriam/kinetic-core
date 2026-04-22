@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Badge,
@@ -9,16 +9,16 @@ import {
   Group,
   Paper,
   Stack,
-  Table,
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatDate } from "@/lib/format";
 import type { Party } from "@/lib/types";
+import { SortableTable } from "@/components/SortableTable";
+import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
@@ -36,7 +36,6 @@ export default function CustomersPage() {
   const { setError, setSuccess } = useNotify();
   const { tick, bump } = useRefresh();
   const [parties, setParties] = useState<Party[]>([]);
-  const [search, setSearch] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -55,16 +54,6 @@ export default function CustomersPage() {
       cancelled = true;
     };
   }, [tick, setError]);
-
-  const filtered = useMemo(() => {
-    if (!search) return parties;
-    const q = search.toLowerCase();
-    return parties.filter(
-      (p) =>
-        p.full_name.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q),
-    );
-  }, [parties, search]);
 
   const create = async () => {
     if (!name || !email || submitting) return;
@@ -102,16 +91,63 @@ export default function CustomersPage() {
     }
   };
 
+  const columns: ColumnDef<Party>[] = [
+    { key: "name", label: "Name", getValue: (p) => p.full_name, fw: 500 },
+    { key: "email", label: "Email", getValue: (p) => p.email },
+    {
+      key: "status",
+      label: "Status",
+      getValue: (p) => p.status,
+      render: (p) => (
+        <Badge variant="light" color={statusColor(p.status)} radius="sm">
+          {capitalize(p.status)}
+        </Badge>
+      ),
+    },
+    {
+      key: "created",
+      label: "Created",
+      getValue: (p) => p.created_at,
+      render: (p) => formatDate(p.created_at),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (party) => (
+        <Group gap="xs">
+          <Button
+            size="xs"
+            variant="subtle"
+            onClick={() => router.push(`/accounts?party=${party.party_id}`)}
+          >
+            View
+          </Button>
+          {party.status === "active" && (
+            <Button
+              size="xs"
+              variant="light"
+              color="yellow"
+              onClick={() => suspend(party.party_id)}
+            >
+              Suspend
+            </Button>
+          )}
+          <Button
+            size="xs"
+            variant="light"
+            color="red"
+            onClick={() => close(party.party_id)}
+          >
+            Close
+          </Button>
+        </Group>
+      ),
+    },
+  ];
+
   return (
     <Stack gap="lg">
-      <TextInput
-        leftSection={<IconSearch size={16} />}
-        placeholder="Search customers..."
-        value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
-        maw={400}
-      />
-
       <Card withBorder shadow="sm" radius="md" padding="lg">
         <Title order={4} mb="md">
           New Customer
@@ -148,75 +184,14 @@ export default function CustomersPage() {
       </Card>
 
       <Paper withBorder radius="md" shadow="sm">
-        <Table.ScrollContainer minWidth={700}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Created</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filtered.map((party) => (
-                <Table.Tr key={party.party_id}>
-                  <Table.Td fw={500}>{party.full_name}</Table.Td>
-                  <Table.Td>{party.email}</Table.Td>
-                  <Table.Td>
-                    <Badge
-                      variant="light"
-                      color={statusColor(party.status)}
-                      radius="sm"
-                    >
-                      {capitalize(party.status)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{formatDate(party.created_at)}</Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        onClick={() =>
-                          router.push(`/accounts?party=${party.party_id}`)
-                        }
-                      >
-                        View
-                      </Button>
-                      {party.status === "active" && (
-                        <Button
-                          size="xs"
-                          variant="light"
-                          color="yellow"
-                          onClick={() => suspend(party.party_id)}
-                        >
-                          Suspend
-                        </Button>
-                      )}
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color="red"
-                        onClick={() => close(party.party_id)}
-                      >
-                        Close
-                      </Button>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {filtered.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={5} ta="center" py="xl" c="dimmed">
-                    No customers found
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <SortableTable
+          data={parties}
+          columns={columns}
+          rowKey={(p) => p.party_id}
+          searchPlaceholder="Search customers..."
+          emptyMessage="No customers found"
+          minWidth={700}
+        />
       </Paper>
     </Stack>
   );

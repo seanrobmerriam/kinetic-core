@@ -126,10 +126,10 @@ This section breaks each phase into smaller execution units that can be schedule
 
 #### P1-S2: Query and Developer Experience
 
-- TASK-030: Implement GraphQL gateway for high-value read scenarios.
-- TASK-031: Implement webhook subscription lifecycle management APIs.
-- TASK-032: Add API usage analytics and developer-facing usage reports.
-- TASK-033: Add API deprecation lifecycle and migration warnings.
+- TASK-030 [DONE]: Implement GraphQL gateway for high-value read scenarios.
+- TASK-031 [DONE]: Implement webhook subscription lifecycle management APIs.
+- TASK-032 [DONE]: Add API usage analytics and developer-facing usage reports.
+- TASK-033 [DONE]: Add API deprecation lifecycle and migration warnings.
 
 #### P1-S3: Internationalization and FX Maturity
 

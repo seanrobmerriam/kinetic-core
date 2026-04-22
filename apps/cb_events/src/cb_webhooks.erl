@@ -31,8 +31,10 @@
 
 %% Public API
 -export([start_link/0, start/0]).
--export([create_subscription/2, list_subscriptions/0, get_subscription/1, delete_subscription/1]).
--export([list_deliveries/0, list_deliveries_for_event/1]).
+-export([create_subscription/2, list_subscriptions/0, get_subscription/1,
+         update_subscription/2, delete_subscription/1]).
+-export([list_deliveries/0, list_deliveries_for_event/1,
+         list_deliveries_for_subscription/1]).
 -export([process_pending/0, retry_failed_deliveries/0]).
 
 %% gen_server callbacks
@@ -96,6 +98,57 @@ get_subscription(SubId) ->
         {atomic, [Sub]} -> {ok, Sub};
         {atomic, []}    -> {error, not_found};
         {aborted, _}    -> {error, not_found}
+    end.
+
+%% @doc Update a webhook subscription's mutable fields.
+%%
+%% Accepts a map with optional `<<"status">>' and/or `<<"callback_url">>' keys.
+%% Unknown keys are ignored.
+%%
+%% @param SubId   The subscription ID to update.
+%% @param Updates A map of fields to change.
+%% @returns `{ok, UpdatedSub}' or `{error, not_found | database_error}'.
+-spec update_subscription(binary(), map()) ->
+    {ok, #webhook_subscription{}} | {error, not_found | database_error}.
+update_subscription(SubId, Updates) when is_binary(SubId), is_map(Updates) ->
+    F = fun() ->
+        case mnesia:read(webhook_subscription, SubId) of
+            [] -> {error, not_found};
+            [Sub] ->
+                Now    = erlang:system_time(millisecond),
+                Sub1   = case maps:get(<<"status">>, Updates, undefined) of
+                    <<"active">>   -> Sub#webhook_subscription{status = active};
+                    <<"inactive">> -> Sub#webhook_subscription{status = inactive};
+                    _              -> Sub
+                end,
+                Sub2   = case maps:get(<<"callback_url">>, Updates, undefined) of
+                    undefined -> Sub1;
+                    URL when is_binary(URL) -> Sub1#webhook_subscription{callback_url = URL}
+                end,
+                Final  = Sub2#webhook_subscription{updated_at = Now},
+                mnesia:write(Final),
+                {ok, Final}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _}     -> {error, database_error}
+    end.
+
+%% @doc List all delivery records for a given subscription, newest first.
+-spec list_deliveries_for_subscription(binary()) -> [#webhook_delivery{}].
+list_deliveries_for_subscription(SubId) ->
+    F = fun() ->
+        mnesia:index_read(webhook_delivery, SubId, subscription_id)
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Deliveries} ->
+            lists:sort(
+                fun(A, B) -> A#webhook_delivery.created_at >= B#webhook_delivery.created_at end,
+                Deliveries
+            );
+        {aborted, _} ->
+            []
     end.
 
 %% @doc Delete a webhook subscription by ID.

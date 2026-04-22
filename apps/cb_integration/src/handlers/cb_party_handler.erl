@@ -72,6 +72,18 @@ party_to_json(Party) ->
         onboarding_status => Party#party.onboarding_status,
         review_notes => Party#party.review_notes,
         doc_refs => Party#party.doc_refs,
+        address => address_to_json(Party#party.address),
         created_at => Party#party.created_at,
         updated_at => Party#party.updated_at
+    }.
+
+address_to_json(undefined) -> null;
+address_to_json(Addr) ->
+    #{
+        line1       => maps:get(line1,       Addr, null),
+        line2       => maps:get(line2,       Addr, null),
+        city        => maps:get(city,        Addr, null),
+        state       => maps:get(state,       Addr, null),
+        postal_code => maps:get(postal_code, Addr, null),
+        country     => maps:get(country,     Addr, null)
     }.

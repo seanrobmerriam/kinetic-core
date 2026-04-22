@@ -5,11 +5,26 @@ export interface AuthUser {
   status: string;
 }
 
+export interface PartyAddress {
+  line1: string | null;
+  line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+}
+
 export interface Party {
   party_id: string;
   full_name: string;
   email: string;
   status: string;
+  kyc_status?: string;
+  onboarding_status?: string;
+  address?: PartyAddress | null;
+  phone?: string | null;
+  date_of_birth?: string | null;
+  ssn_last4?: string | null;
   created_at: number;
   updated_at: number;
 }

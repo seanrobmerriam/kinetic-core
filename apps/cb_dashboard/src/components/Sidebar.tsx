@@ -1,12 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { AppShell, Box, NavLink, Stack, Text, ThemeIcon } from "@mantine/core";
+import {
+  AppShell,
+  Avatar,
+  Box,
+  Divider,
+  Group,
+  ScrollArea,
+  Text,
+  UnstyledButton,
+} from "@mantine/core";
 import {
   IconBook,
   IconBuildingBank,
   IconCash,
+  IconChevronRight,
   IconLayoutDashboard,
   IconReceipt,
   IconReportMoney,
@@ -18,39 +27,75 @@ import {
   IconWallet,
   type Icon,
 } from "@tabler/icons-react";
+import { useAuth } from "@/lib/auth";
+import { NavLinksGroup } from "./NavLinksGroup";
 
-const NAV_ITEMS: { id: string; label: string; Icon: Icon }[] = [
-  { id: "dashboard", label: "Dashboard", Icon: IconLayoutDashboard },
-  { id: "customers", label: "Customers", Icon: IconUsers },
-  { id: "accounts", label: "Accounts", Icon: IconBuildingBank },
-  { id: "transactions", label: "Transactions", Icon: IconReceipt },
-  { id: "ledger", label: "Ledger", Icon: IconBook },
-  { id: "payments", label: "Payments", Icon: IconTransfer },
-  { id: "compliance", label: "Compliance", Icon: IconShieldCheck },
-  { id: "channels", label: "Channels", Icon: IconSitemap },
-  { id: "products", label: "Products", Icon: IconWallet },
-  { id: "loans", label: "Loans", Icon: IconReportMoney },
-  { id: "settings", label: "Settings", Icon: IconSettings },
-];
+interface NavItem {
+  label: string;
+  icon: Icon;
+  href?: string;
+  initiallyOpened?: boolean;
+  links?: { label: string; href: string }[];
+}
 
-const QUICK_ACTIONS: { id: string; label: string; Icon: Icon }[] = [
-  { id: "transfer", label: "Transfer Funds", Icon: IconTransfer },
-  { id: "deposit", label: "Deposit / Withdraw", Icon: IconCash },
+const NAV_ITEMS: NavItem[] = [
+  { label: "Dashboard", icon: IconLayoutDashboard, href: "/dashboard" },
+  { label: "Customers", icon: IconUsers, href: "/customers" },
+  { label: "Accounts", icon: IconBuildingBank, href: "/accounts" },
+  { label: "Transactions", icon: IconReceipt, href: "/transactions" },
+  { label: "Ledger", icon: IconBook, href: "/ledger" },
+  {
+    label: "Payments & Funds",
+    icon: IconTransfer,
+    links: [
+      { label: "Payments", href: "/payments" },
+      { label: "Transfer Funds", href: "/transfer" },
+      { label: "Deposit / Withdraw", href: "/deposit" },
+    ],
+  },
+  { label: "Loans", icon: IconReportMoney, href: "/loans" },
+  { label: "Compliance", icon: IconShieldCheck, href: "/compliance" },
+  {
+    label: "System",
+    icon: IconSettings,
+    links: [
+      { label: "Channels", href: "/channels" },
+      { label: "Products", href: "/products" },
+      { label: "Settings", href: "/settings" },
+    ],
+  },
 ];
 
 export function Sidebar() {
-  const pathname = usePathname() ?? "";
+  const { state } = useAuth();
+  const email =
+    state.status === "authenticated" && state.user ? state.user.email : "";
+  const initial = email ? email.charAt(0).toUpperCase() : "?";
+  const role =
+    state.status === "authenticated" && state.user ? state.user.role : "";
 
-  const isActive = (id: string) => {
-    if (id === "accounts") return pathname.startsWith("/accounts");
-    return pathname === `/${id}` || pathname.startsWith(`/${id}/`);
-  };
+  const links = NAV_ITEMS.map((item) => (
+    <NavLinksGroup {...item} key={item.label} />
+  ));
 
   return (
-    <AppShell.Navbar p="md">
-      <Stack gap="xs" mb="md">
-        <Box style={{ display: "flex", alignItems: "center", gap: 12 }}>
-
+    <AppShell.Navbar
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
+      {/* Header */}
+      <Box
+        p="md"
+        style={{
+          borderBottom:
+            "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))",
+        }}
+      >
+        <Group justify="space-between" wrap="nowrap">
           <Box>
             <Text fw={700} size="md" lh={1.1}>
               Kinetic Core
@@ -59,44 +104,49 @@ export function Sidebar() {
               Banking Solution
             </Text>
           </Box>
-        </Box>
-      </Stack>
+        </Group>
+      </Box>
 
-      <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={6} mt="sm">
-        Menu
-      </Text>
-      <Stack gap={4}>
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.id}
-            component={Link}
-            href={`/${item.id}`}
-            data-testid={`nav-${item.id}`}
-            label={item.label}
-            leftSection={<item.Icon size={18} stroke={1.7} />}
-            active={isActive(item.id)}
-            variant="filled"
-          />
-        ))}
-      </Stack>
+      {/* Scrollable nav links */}
+      <ScrollArea style={{ flex: 1 }} px="md" py="xs">
+        <Box py={4}>{links}</Box>
+      </ScrollArea>
 
-      <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={6} mt="lg">
-        Quick Actions
-      </Text>
-      <Stack gap={4}>
-        {QUICK_ACTIONS.map((a) => (
-          <NavLink
-            key={a.id}
-            component={Link}
-            href={`/${a.id}`}
-            data-testid={`quick-${a.id}`}
-            label={a.label}
-            leftSection={<a.Icon size={18} stroke={1.7} />}
-            active={pathname === `/${a.id}`}
-            variant="light"
-          />
-        ))}
-      </Stack>
+      {/* Footer: user button */}
+      <Divider />
+      <Box p="md">
+        <UnstyledButton
+          component={Link}
+          href="/settings"
+          style={{
+            display: "block",
+            width: "100%",
+            padding: "var(--mantine-spacing-xs)",
+            borderRadius: "var(--mantine-radius-sm)",
+          }}
+        >
+          <Group gap="md" align="center" wrap="nowrap">
+            <Avatar
+              color="indigo"
+              radius="xl"
+              size="md"
+              variant="gradient"
+              gradient={{ from: "indigo", to: "violet" }}
+            >
+              {initial}
+            </Avatar>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text size="sm" fw={500} truncate>
+                {email || "User"}
+              </Text>
+              <Text size="xs" c="dimmed" tt="capitalize">
+                {role || "Staff"}
+              </Text>
+            </Box>
+            <IconChevronRight size={14} stroke={1.5} />
+          </Group>
+        </UnstyledButton>
+      </Box>
     </AppShell.Navbar>
   );
 }

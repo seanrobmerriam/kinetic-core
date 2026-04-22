@@ -15,8 +15,15 @@ import {
   Text,
   TextInput,
   Title,
+  Spoiler,
+  Divider,
 } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconKey,
+  IconFiles,
+  IconMessageCircle,
+} from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -26,7 +33,7 @@ import {
   formatDate,
   formatTimestamp,
 } from "@/lib/format";
-import type { Account, AccountHold, Transaction } from "@/lib/types";
+import type { Account, AccountHold, Party, Transaction } from "@/lib/types";
 import { SortableTable } from "@/components/SortableTable";
 import type { ColumnDef } from "@/components/SortableTable";
 
@@ -42,6 +49,36 @@ function statusColor(s: string) {
   return "gray";
 }
 
+function InfoField({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={2}>
+        {label}
+      </Text>
+      <Text size="sm">{value ?? "—"}</Text>
+    </div>
+  );
+}
+
+function formatAddress(party: Party): string | null {
+  const a = party.address;
+  if (!a) return null;
+  const parts = [
+    a.line1,
+    a.line2,
+    a.city,
+    [a.state, a.postal_code].filter(Boolean).join(" "),
+    a.country,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
 export default function AccountDetailPage({
   params,
 }: {
@@ -51,6 +88,7 @@ export default function AccountDetailPage({
   const { setError, setSuccess } = useNotify();
   const { tick, bump } = useRefresh();
   const [account, setAccount] = useState<Account | null>(null);
+  const [party, setParty] = useState<Party | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [holds, setHolds] = useState<AccountHold[]>([]);
   const [holdAmount, setHoldAmount] = useState<string | number>("");
@@ -60,12 +98,10 @@ export default function AccountDetailPage({
     let cancelled = false;
     (async () => {
       try {
-        const partyResp = await api<ListResponse<{ party_id: string }>>(
-          "GET",
-          "/parties",
-        );
+        const partyResp = await api<ListResponse<Party>>("GET", "/parties");
         const parties = partyResp.items ?? [];
         let found: Account | null = null;
+        let foundParty: Party | null = null;
         for (const p of parties) {
           try {
             const accResp = await api<ListResponse<Account>>(
@@ -77,6 +113,7 @@ export default function AccountDetailPage({
             );
             if (match) {
               found = match;
+              foundParty = p;
               break;
             }
           } catch {
@@ -84,6 +121,19 @@ export default function AccountDetailPage({
           }
         }
         if (!cancelled) setAccount(found);
+
+        if (foundParty) {
+          try {
+            const fullParty = await api<Party>(
+              "GET",
+              `/parties/${foundParty.party_id}`,
+            );
+            if (!cancelled) setParty(fullParty);
+          } catch {
+            if (!cancelled) setParty(foundParty);
+          }
+        }
+
         try {
           const txResp = await api<ListResponse<Transaction>>(
             "GET",
@@ -193,6 +243,65 @@ export default function AccountDetailPage({
         </Group>
       </Card>
 
+      {party && (
+        <Card withBorder shadow="sm" radius="md" padding="lg">
+          <Title order={5} mb="md">
+            Customer Information
+          </Title>
+          <Divider mb="md" />
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+            <InfoField label="Full Name" value={party.full_name} />
+            <InfoField label="Email" value={party.email} />
+            <InfoField
+              label="Phone"
+              value={party.phone ?? "Not on file"}
+            />
+            <InfoField
+              label="Date of Birth"
+              value={party.date_of_birth ?? "Not on file"}
+            />
+            <InfoField
+              label="SSN (Last 4)"
+              value={
+                party.ssn_last4 ? (
+                  <Spoiler
+                    maxHeight={0}
+                    showLabel="Reveal"
+                    hideLabel="Hide"
+                    styles={{
+                      root: { display: "inline-flex", alignItems: "center", gap: 6 },
+                      control: { fontSize: "var(--mantine-font-size-xs)" },
+                    }}
+                  >
+                    <Text component="span" size="sm" ff="monospace">
+                      ••••{party.ssn_last4}
+                    </Text>
+                  </Spoiler>
+                ) : (
+                  "Not on file"
+                )
+              }
+            />
+            <InfoField
+              label="Address"
+              value={formatAddress(party) ?? "Not on file"}
+            />
+            {party.address?.city && (
+              <InfoField label="City" value={party.address.city} />
+            )}
+            {party.address?.state && (
+              <InfoField label="State" value={party.address.state} />
+            )}
+            {party.address?.postal_code && (
+              <InfoField label="Postal Code" value={party.address.postal_code} />
+            )}
+            {party.address?.country && (
+              <InfoField label="Country" value={party.address.country} />
+            )}
+          </SimpleGrid>
+        </Card>
+      )}
+
       <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
         <Card withBorder shadow="sm" radius="md" padding="lg">
           <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
@@ -251,6 +360,27 @@ export default function AccountDetailPage({
           }
         >
           Close Account
+        </Button>
+        <Button
+          variant="light"
+          leftSection={<IconKey size={16} />}
+          onClick={() => setSuccess("Change Login Credentials — coming soon")}
+        >
+          Change Login Credentials
+        </Button>
+        <Button
+          variant="light"
+          leftSection={<IconFiles size={16} />}
+          onClick={() => setSuccess("User Documents — coming soon")}
+        >
+          User Documents
+        </Button>
+        <Button
+          variant="light"
+          leftSection={<IconMessageCircle size={16} />}
+          onClick={() => setSuccess("Send Secure Message — coming soon")}
+        >
+          Send Secure Message
         </Button>
       </Group>
 

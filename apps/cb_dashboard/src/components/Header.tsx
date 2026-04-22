@@ -6,13 +6,13 @@ import {
   ActionIcon,
   AppShell,
   Avatar,
-  Badge,
   Group,
   Text,
   Title,
   Tooltip,
 } from "@mantine/core";
 import {
+  IconAt,
   IconLogout,
   IconMoon,
   IconRefresh,
@@ -136,27 +136,38 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
         <Group gap="xs" wrap="nowrap">
           {state.status === "authenticated" && state.user && (
             <Group
-              gap="xs"
+              gap="md"
               data-testid="current-user"
               wrap="nowrap"
               visibleFrom="sm"
+              style={{
+                borderLeft:
+                  "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))",
+                paddingLeft: "var(--mantine-spacing-md)",
+              }}
             >
               <Avatar
                 color="indigo"
-                radius="xl"
-                size="sm"
+                radius="md"
+                size={42}
                 variant="gradient"
                 gradient={{ from: "indigo", to: "violet" }}
               >
                 {userInitial}
               </Avatar>
               <div>
-                <Text size="xs" fw={600} lh={1.1}>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} lh={1}>
+                  {capitalize(state.user.role)}
+                </Text>
+                <Text size="sm" fw={500} lh={1.3} mt={2}>
                   {state.user.email}
                 </Text>
-                <Badge size="xs" variant="light" color="gray">
-                  {capitalize(state.user.role)}
-                </Badge>
+                <Group gap={6} align="center" wrap="nowrap" mt={3}>
+                  <IconAt size={14} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)" }} />
+                  <Text size="xs" c="dimmed">
+                    {state.user.email}
+                  </Text>
+                </Group>
               </div>
             </Group>
           )}

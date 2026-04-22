@@ -77,6 +77,7 @@ validate_amount(Channel, Currency, Amount) ->
     end.
 
 %% @doc List all configured channel limits.
+-dialyzer({nowarn_function, list_all/0}).
 -spec list_all() -> [#channel_limit{}].
 list_all() ->
     mnesia:dirty_match_object(#channel_limit{_ = '_'}).

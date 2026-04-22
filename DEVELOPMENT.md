@@ -99,6 +99,22 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-041 [DONE]: Add missing Mnesia indices to `loan_products` (`[currency, status]`), `loan_accounts` (`[party_id, account_id, status]`), and `loan_repayments` (`[loan_id, status]`).
 - TASK-042 [DONE]: Change `cb_auth_integration_SUITE` test port from 18081 (conflicts with OrbStack on dev machines) to 18083.
 
+#### P0-S9: Dialyzer Green Gate [DONE]
+
+- TASK-043 [DONE]: Fix `cb_events_handler` replay pattern — `ok ->` changed to `{ok, _} ->` (real bug).
+- TASK-044 [DONE]: Add missing `cb_accounts:list_accounts_for_party/1` export and implementation (real bug).
+- TASK-045 [DONE]: Fix `cb_jobs` record field `handler :: mfa()` to `handler :: {atom(), atom(), [any()]}` — mfa() arity is integer not list.
+- TASK-046 [DONE]: Add `_ =` prefix to all unmatched `cb_events:write_outbox/2` return values across `cb_payments`, `cb_loans`, `cb_savings_products`, `cb_loan_accounts`, `cb_loan_products`.
+- TASK-047 [DONE]: Fix unmatched `expire_holds/1` return in `cb_account_holds`.
+- TASK-048 [DONE]: Fix unmatched `ets:new/2` return in `cb_rate_limiter`.
+- TASK-049 [DONE]: Fix unmatched `persist_delivery/1` return in `cb_webhooks`.
+- TASK-050 [DONE]: Fix unmatched `cb_exception_queue:enqueue/2` return in `cb_payment_orders`.
+- TASK-051 [DONE]: Remove dead `escape_csv/1` clauses (`is_atom` guard, `undefined` pattern) in `cb_exports`.
+- TASK-052 [DONE]: Tighten `export_events/0` spec — remove dead `{error, atom()}` return branch.
+- TASK-053 [DONE]: Add `-dialyzer({nowarn_function, ...})` directives for Mnesia wildcard pattern false positives in `cb_channel_activity`, `cb_channel_limits`, `cb_currency`, `cb_fx_rates`, `cb_events`, `cb_webhooks`, `cb_exports`, `cb_mock_data_importer`.
+- TASK-054 [DONE]: Tighten spec supertypes — `map()` → `#{}` for gen_server init callbacks; narrow `format_balance/2` currency arg; add `nowarn_function` for intentionally broad public API specs.
+- TASK-055 [DONE]: Update DEVELOPMENT.md with P0-S9 task list; AGENTS.md current phase confirmed.
+
 ### Phase 1 Subphases and Tasks
 
 #### P1-S1: API Surface Expansion

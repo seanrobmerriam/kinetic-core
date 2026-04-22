@@ -290,7 +290,7 @@ do_create_loan(ProductId, PartyId, AccountId, Amount, Currency, TermMonths, Inte
                     },
                     Fun = fun() ->
                     mnesia:write(?TABLE, Loan, write),
-                    cb_events:write_outbox(<<"loan.created">>, #{
+                    _ = cb_events:write_outbox(<<"loan.created">>, #{
                         loan_id   => LoanId,
                         party_id  => PartyId,
                         principal => Amount,
@@ -319,7 +319,7 @@ do_approve_loan(LoanId) ->
                             updated_at = erlang:system_time(millisecond)
                         },
                         mnesia:write(?TABLE, UpdatedLoan, write),
-                        cb_events:write_outbox(<<"loan.approved">>, #{loan_id => LoanId}),
+                        _ = cb_events:write_outbox(<<"loan.approved">>, #{loan_id => LoanId}),
                         {ok, UpdatedLoan};
                     _Status ->
                         {error, invalid_status}
@@ -344,7 +344,7 @@ do_reject_loan(LoanId) ->
                             updated_at = erlang:system_time(millisecond)
                         },
                         mnesia:write(?TABLE, UpdatedLoan, write),
-                        cb_events:write_outbox(<<"loan.rejected">>, #{loan_id => LoanId}),
+                        _ = cb_events:write_outbox(<<"loan.rejected">>, #{loan_id => LoanId}),
                         {ok, UpdatedLoan};
                     _Status ->
                         {error, invalid_status}
@@ -371,7 +371,7 @@ do_disburse_loan(LoanId) ->
                             updated_at = Now
                         },
                         mnesia:write(?TABLE, UpdatedLoan, write),
-                        cb_events:write_outbox(<<"loan.disbursed">>, #{loan_id => LoanId}),
+                        _ = cb_events:write_outbox(<<"loan.disbursed">>, #{loan_id => LoanId}),
                         {ok, UpdatedLoan};
                     _Status ->
                         {error, invalid_status}

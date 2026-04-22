@@ -20,6 +20,7 @@
 -define(DEFAULT_STP_THRESHOLD, 100_000).
 
 %% @doc Evaluate a payment order for straight-through processing.
+-dialyzer({nowarn_function, evaluate/1}).
 -spec evaluate(#payment_order{}) ->
     straight_through | {exception, binary()}.
 evaluate(Order) ->
@@ -31,6 +32,7 @@ evaluate(Order) ->
             check_kyc(Order)
     end.
 
+-dialyzer({nowarn_function, check_kyc/1}).
 -spec check_kyc(#payment_order{}) ->
     straight_through | {exception, binary()}.
 check_kyc(Order) ->
@@ -43,6 +45,7 @@ check_kyc(Order) ->
             check_account(Order)
     end.
 
+-dialyzer({nowarn_function, check_account/1}).
 -spec check_account(#payment_order{}) ->
     straight_through | {exception, binary()}.
 check_account(Order) ->

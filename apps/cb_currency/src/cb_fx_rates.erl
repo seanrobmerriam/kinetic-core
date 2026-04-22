@@ -77,6 +77,7 @@ get_rate_at(FromCurrency, ToCurrency, At) ->
     end.
 
 %% @doc List all exchange rate records.
+-dialyzer({nowarn_function, list_rates/0}).
 -spec list_rates() -> [#exchange_rate{}].
 list_rates() ->
     mnesia:dirty_match_object(exchange_rate, #exchange_rate{_ = '_'}).

@@ -8,7 +8,7 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec init([]) -> {ok, map()}.
+-spec init([]) -> {ok, #{}}.
 init([]) ->
     {ok, #{}}.
 

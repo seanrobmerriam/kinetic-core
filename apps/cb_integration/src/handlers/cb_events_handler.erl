@@ -74,7 +74,7 @@ get_event(EventId, Req, State) ->
 
 replay_event(EventId, Req, State) ->
     case cb_events:replay_event(EventId) of
-        ok ->
+        {ok, _} ->
             Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
             Req2 = cowboy_req:reply(200, Headers, <<"{\"status\": \"replayed\"}">>, Req),
             {ok, Req2, State};

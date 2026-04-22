@@ -77,6 +77,7 @@ create_subscription(_, _) ->
     {error, invalid_parameters}.
 
 %% @doc List all webhook subscriptions.
+-dialyzer({nowarn_function, list_subscriptions/0}).
 -spec list_subscriptions() -> [#webhook_subscription{}].
 list_subscriptions() ->
     F = fun() ->
@@ -114,6 +115,7 @@ delete_subscription(SubId) ->
     end.
 
 %% @doc List all webhook delivery records, newest first.
+-dialyzer({nowarn_function, list_deliveries/0}).
 -spec list_deliveries() -> [#webhook_delivery{}].
 list_deliveries() ->
     F = fun() ->
@@ -249,7 +251,7 @@ deliver_if_needed(Event, Sub) ->
                 created_at      = Now,
                 updated_at      = Now
             },
-            persist_delivery(Del),
+            _ = persist_delivery(Del),
             attempt_delivery(Event, Del)
     end.
 
@@ -359,7 +361,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason, _State) ->
-    inets:stop(httpc, cb_webhooks),
+    _ = inets:stop(httpc, cb_webhooks),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

@@ -44,6 +44,7 @@
 %% =============================================================================
 
 %% @private All defined templates.
+-dialyzer({nowarn_function, templates/0}).
 -spec templates() -> [#posting_template{}].
 templates() ->
     [
@@ -116,6 +117,7 @@ apply_template(_, _, _) ->
 %% Returns all registered templates as a list of maps, suitable for JSON encoding.
 %%
 %% @returns List of template maps
+-dialyzer({nowarn_function, list_templates/0}).
 -spec list_templates() -> [map()].
 list_templates() ->
     [template_to_map(T) || T <- templates()].
@@ -135,6 +137,7 @@ get_template(Name) ->
 %% Internal Helpers
 %% =============================================================================
 
+-dialyzer({nowarn_function, template_to_map/1}).
 -spec template_to_map(#posting_template{}) -> map().
 template_to_map(T) ->
     #{

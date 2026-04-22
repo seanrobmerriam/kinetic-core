@@ -54,7 +54,7 @@ get_limit() ->
 %%% ============================================================
 
 init([]) ->
-    ets:new(?TABLE, [named_table, public, set, {read_concurrency, true}]),
+    _ = ets:new(?TABLE, [named_table, public, set, {read_concurrency, true}]),
     %% Periodically sweep expired entries.
     erlang:send_after(?WINDOW_MS, self(), sweep),
     {ok, #{}}.

@@ -53,6 +53,7 @@ list_for_channel(Channel) ->
     mnesia:dirty_index_read(channel_activity, Channel, channel).
 
 %% @doc Retrieve the N most recent activity entries (descending by time).
+-dialyzer({nowarn_function, list_recent/1}).
 -spec list_recent(pos_integer()) -> [#channel_activity{}].
 list_recent(Limit) when is_integer(Limit), Limit > 0 ->
     All = mnesia:dirty_match_object(#channel_activity{_ = '_'}),

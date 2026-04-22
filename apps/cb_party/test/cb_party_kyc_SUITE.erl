@@ -14,7 +14,12 @@
     onboarding_update_complete/1,
     onboarding_update_incomplete/1,
     add_doc_ref/1,
-    add_multiple_doc_refs/1
+    add_multiple_doc_refs/1,
+    risk_tier_default_low/1,
+    risk_tier_set_low/1,
+    risk_tier_set_high/1,
+    risk_tier_invalid/1,
+    retention_days_for_tiers/1
 ]).
 
 all() ->
@@ -27,7 +32,12 @@ all() ->
         onboarding_update_complete,
         onboarding_update_incomplete,
         add_doc_ref,
-        add_multiple_doc_refs
+        add_multiple_doc_refs,
+        risk_tier_default_low,
+        risk_tier_set_low,
+        risk_tier_set_high,
+        risk_tier_invalid,
+        retention_days_for_tiers
     ].
 
 init_per_suite(Config) ->
@@ -120,4 +130,38 @@ add_multiple_doc_refs(_Config) ->
     {ok, P2} = cb_party:add_doc_ref(Party#party.party_id, <<"s3://docs/passport.jpg">>),
     {ok, P3} = cb_party:add_doc_ref(P2#party.party_id, <<"s3://docs/utility-bill.pdf">>),
     ?assertEqual(2, length(P3#party.doc_refs)),
+    ok.
+
+%% New parties default to low risk tier
+risk_tier_default_low(_Config) ->
+    {ok, Party} = cb_party:create_party(<<"RT Default">>, <<"rt_default@example.com">>),
+    ?assertEqual(low, Party#party.risk_tier),
+    ok.
+
+%% Can set risk tier to low
+risk_tier_set_low(_Config) ->
+    {ok, Party} = cb_party:create_party(<<"RT Low">>, <<"rt_low@example.com">>),
+    {ok, Updated} = cb_party:set_risk_tier(Party#party.party_id, low),
+    ?assertEqual(low, Updated#party.risk_tier),
+    ok.
+
+%% Can set risk tier to high
+risk_tier_set_high(_Config) ->
+    {ok, Party} = cb_party:create_party(<<"RT High">>, <<"rt_high@example.com">>),
+    {ok, Updated} = cb_party:set_risk_tier(Party#party.party_id, high),
+    ?assertEqual(high, Updated#party.risk_tier),
+    ok.
+
+%% Invalid tier atom returns error
+risk_tier_invalid(_Config) ->
+    {ok, Party} = cb_party:create_party(<<"RT Invalid">>, <<"rt_invalid@example.com">>),
+    {error, invalid_risk_tier} = cb_party:set_risk_tier(Party#party.party_id, extreme),
+    ok.
+
+%% Retention days are correct for all tiers
+retention_days_for_tiers(_Config) ->
+    ?assertEqual(365,  cb_party:retention_days_for_tier(low)),
+    ?assertEqual(730,  cb_party:retention_days_for_tier(medium)),
+    ?assertEqual(1825, cb_party:retention_days_for_tier(high)),
+    ?assertEqual(3650, cb_party:retention_days_for_tier(critical)),
     ok.

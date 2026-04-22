@@ -77,6 +77,7 @@
 create_tables() ->
     Tables = [party, party_audit, account, transaction, ledger_entry,
               chart_account, balance_snapshot, account_hold,
+              currency_config, exchange_rate, payment_order, exception_item,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
@@ -95,7 +96,8 @@ create_tables() ->
 %% @returns `ok' on success
 -spec create_if_not_exists(
     party | party_audit | account | transaction | ledger_entry |
-    chart_account | balance_snapshot |
+    chart_account | balance_snapshot | account_hold |
+    currency_config | exchange_rate | payment_order | exception_item |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -125,7 +127,8 @@ create_if_not_exists(TableName) ->
 %% @returns Mnesia table specification proplist
 -spec table_spec(
     party | party_audit | account | transaction | ledger_entry |
-    chart_account | balance_snapshot |
+    chart_account | balance_snapshot | account_hold |
+    currency_config | exchange_rate | payment_order | exception_item |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -140,8 +143,9 @@ create_if_not_exists(TableName) ->
                 'role' | 'source_account_id' | 'status' | 'subscription_id' |
                 'txn_id' | 'user_id' | 'actor_user_id' | 'approved_by' |
                 'action' | 'version' | 'account_type' | 'parent_code' |
-                'snapshot_at' |
-                'attempt_status', ...]} |
+                'snapshot_at' | 'attempt_status' |
+                'is_active' | 'from_currency' | 'to_currency' | 'recorded_at' |
+                'payment_id', ...]} |
      {'record_name', 'loan_account' | 'loan_product' | 'loan_repayment'} |
      {'ram_copies', [atom(), ...]}, ...].
 table_spec(party) ->
@@ -191,6 +195,30 @@ table_spec(account_hold) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, account_hold)},
         {index, [account_id, status]}
+    ];
+table_spec(currency_config) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, currency_config)},
+        {index, [is_active]}
+    ];
+table_spec(exchange_rate) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, exchange_rate)},
+        {index, [from_currency, to_currency, recorded_at]}
+    ];
+table_spec(payment_order) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, payment_order)},
+        {index, [idempotency_key, party_id, source_account_id, status]}
+    ];
+table_spec(exception_item) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, exception_item)},
+        {index, [payment_id, status]}
     ];
 table_spec(savings_product) ->
     [

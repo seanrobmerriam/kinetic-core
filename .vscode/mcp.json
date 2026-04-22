@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "monday-api-mcp": {
+      "type": "http",
+      "url": "https://mcp.monday.com/mcp"
+    }
+  }
+}

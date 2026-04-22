@@ -177,6 +177,10 @@ dispatch() ->
             %% Omnichannel — notification preferences
             {<<"/api/v1/parties/:party_id/notification-preferences">>, cb_notification_prefs_handler, []},
 
+            %% Partner API keys
+            {<<"/api/v1/api-keys">>, cb_api_keys_handler, []},
+            {<<"/api/v1/api-keys/:key_id">>, cb_api_keys_handler, []},
+
             %% ATM baseline interface
             {<<"/api/v1/atm/inquiry">>, cb_atm_handler, []},
             {<<"/api/v1/atm/withdraw">>, cb_atm_handler, []},

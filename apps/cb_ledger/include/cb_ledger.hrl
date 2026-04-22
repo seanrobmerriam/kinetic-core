@@ -412,3 +412,24 @@
     enabled     :: boolean(),
     updated_at  :: timestamp_ms()
 }).
+
+%% @doc API key status type.
+-type api_key_status() :: active | revoked.
+
+%% @doc Partner API key for programmatic access.
+%%
+%% API keys are used as an alternative to session tokens for partner/system integrations.
+%% The key_secret is never stored — only the SHA-256 hash is persisted.
+%% Callers present the full key as a Bearer token; the middleware hashes it for lookup.
+-record(api_key, {
+    key_id             :: uuid(),
+    key_hash           :: binary(),
+    label              :: binary(),
+    partner_id         :: binary(),
+    role               :: admin | operations | read_only,
+    status             :: api_key_status(),
+    rate_limit_per_min :: pos_integer(),
+    expires_at         :: timestamp_ms() | never,
+    created_at         :: timestamp_ms(),
+    updated_at         :: timestamp_ms()
+}).

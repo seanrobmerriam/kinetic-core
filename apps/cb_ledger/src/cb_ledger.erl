@@ -75,6 +75,7 @@
     post_entries/2,
     get_entries_for_transaction/1,
     get_entries_for_account/3,
+    get_latest_entries/1,
     create_chart_account/4,
     get_trial_balance/1,
     create_balance_snapshot/1,
@@ -242,6 +243,24 @@ get_entries_for_account(AccountId, Page, PageSize) when Page >= 1, PageSize >= 1
     end;
 get_entries_for_account(_, _, _) ->
     {error, invalid_pagination}.
+
+%% @doc Returns the N most recently posted ledger entries across all accounts.
+-spec get_latest_entries(pos_integer()) -> {ok, [#ledger_entry{}]} | {error, atom()}.
+get_latest_entries(Limit) when is_integer(Limit), Limit >= 1, Limit =< 500 ->
+    F = fun() ->
+        All = mnesia:foldl(fun(Entry, Acc) -> [Entry | Acc] end, [], ledger_entry),
+        Sorted = lists:sort(
+            fun(A, B) -> A#ledger_entry.posted_at >= B#ledger_entry.posted_at end,
+            All
+        ),
+        lists:sublist(Sorted, Limit)
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> {ok, Result};
+        {aborted, Reason} -> {error, Reason}
+    end;
+get_latest_entries(_) ->
+    {error, invalid_limit}.
 
 %% @doc Creates a chart-of-accounts node.
 -spec create_chart_account(binary(), binary(), gl_account_type(), binary() | undefined) ->

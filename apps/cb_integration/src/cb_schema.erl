@@ -79,6 +79,7 @@ create_tables() ->
               chart_account, balance_snapshot, account_hold,
               currency_config, exchange_rate, payment_order, exception_item,
               channel_limit, channel_activity, notification_preference,
+              api_keys,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
@@ -100,6 +101,7 @@ create_tables() ->
     chart_account | balance_snapshot | account_hold |
     currency_config | exchange_rate | payment_order | exception_item |
     channel_limit | channel_activity | notification_preference |
+    api_keys |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -132,6 +134,7 @@ create_if_not_exists(TableName) ->
     chart_account | balance_snapshot | account_hold |
     currency_config | exchange_rate | payment_order | exception_item |
     channel_limit | channel_activity | notification_preference |
+    api_keys |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -239,6 +242,13 @@ table_spec(notification_preference) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, notification_preference)},
         {index, [party_id, channel]}
+    ];
+table_spec(api_keys) ->
+    [
+        {ram_copies, [node()]},
+        {record_name, api_key},
+        {attributes, record_info(fields, api_key)},
+        {index, [key_hash, partner_id, status]}
     ];
 table_spec(savings_product) ->
     [

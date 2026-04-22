@@ -102,6 +102,207 @@ schemas() ->
                 <<"created_at">>        => #{<<"type">> => <<"integer">>},
                 <<"posted_at">>         => #{<<"type">> => <<"integer">>}
             }
+        },
+        <<"LedgerEntry">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"entry_id">>   => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"txn_id">>     => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"account_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"entry_type">> => #{<<"type">> => <<"string">>, <<"enum">> => [<<"debit">>, <<"credit">>]},
+                <<"amount">>     => #{<<"type">> => <<"integer">>},
+                <<"currency">>   => #{<<"type">> => <<"string">>},
+                <<"description">> => #{<<"type">> => <<"string">>},
+                <<"posted_at">>  => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"AccountHold">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"hold_id">>     => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"account_id">>  => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"amount">>      => #{<<"type">> => <<"integer">>},
+                <<"reason">>      => #{<<"type">> => <<"string">>},
+                <<"status">>      => #{<<"type">> => <<"string">>, <<"enum">> => [<<"active">>, <<"released">>, <<"expired">>]},
+                <<"placed_at">>   => #{<<"type">> => <<"integer">>},
+                <<"released_at">> => #{<<"type">> => <<"integer">>},
+                <<"expires_at">>  => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"SavingsProduct">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"product_id">>         => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"name">>               => #{<<"type">> => <<"string">>},
+                <<"description">>        => #{<<"type">> => <<"string">>},
+                <<"currency">>           => #{<<"type">> => <<"string">>},
+                <<"interest_rate">>      => #{<<"type">> => <<"integer">>},
+                <<"interest_type">>      => #{<<"type">> => <<"string">>},
+                <<"compounding_period">> => #{<<"type">> => <<"string">>},
+                <<"minimum_balance">>    => #{<<"type">> => <<"integer">>},
+                <<"status">>             => #{<<"type">> => <<"string">>},
+                <<"created_at">>         => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>         => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"LoanProduct">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"product_id">>       => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"name">>             => #{<<"type">> => <<"string">>},
+                <<"description">>      => #{<<"type">> => <<"string">>},
+                <<"currency">>         => #{<<"type">> => <<"string">>},
+                <<"min_amount">>       => #{<<"type">> => <<"integer">>},
+                <<"max_amount">>       => #{<<"type">> => <<"integer">>},
+                <<"min_term_months">>  => #{<<"type">> => <<"integer">>},
+                <<"max_term_months">>  => #{<<"type">> => <<"integer">>},
+                <<"interest_rate">>    => #{<<"type">> => <<"integer">>},
+                <<"interest_type">>    => #{<<"type">> => <<"string">>},
+                <<"status">>           => #{<<"type">> => <<"string">>},
+                <<"created_at">>       => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>       => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"Loan">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"loan_id">>             => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"product_id">>          => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"party_id">>            => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"account_id">>          => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"principal">>           => #{<<"type">> => <<"integer">>},
+                <<"currency">>            => #{<<"type">> => <<"string">>},
+                <<"interest_rate">>       => #{<<"type">> => <<"integer">>},
+                <<"term_months">>         => #{<<"type">> => <<"integer">>},
+                <<"monthly_payment">>     => #{<<"type">> => <<"integer">>},
+                <<"outstanding_balance">> => #{<<"type">> => <<"integer">>},
+                <<"status">>              => #{<<"type">> => <<"string">>},
+                <<"disbursed_at">>        => #{<<"type">> => <<"integer">>},
+                <<"created_at">>          => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>          => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"LoanRepayment">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"repayment_id">>       => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"loan_id">>            => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"amount">>             => #{<<"type">> => <<"integer">>},
+                <<"principal_portion">>  => #{<<"type">> => <<"integer">>},
+                <<"interest_portion">>   => #{<<"type">> => <<"integer">>},
+                <<"penalty">>            => #{<<"type">> => <<"integer">>},
+                <<"due_date">>           => #{<<"type">> => <<"integer">>},
+                <<"paid_at">>            => #{<<"type">> => <<"integer">>},
+                <<"status">>             => #{<<"type">> => <<"string">>},
+                <<"created_at">>         => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"PaymentOrder">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"payment_id">>        => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"idempotency_key">>   => #{<<"type">> => <<"string">>},
+                <<"party_id">>          => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"source_account_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"dest_account_id">>   => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"amount">>            => #{<<"type">> => <<"integer">>},
+                <<"currency">>          => #{<<"type">> => <<"string">>},
+                <<"description">>       => #{<<"type">> => <<"string">>},
+                <<"status">>            => #{<<"type">> => <<"string">>},
+                <<"stp_decision">>      => #{<<"type">> => <<"string">>},
+                <<"failure_reason">>    => #{<<"type">> => <<"string">>},
+                <<"retry_count">>       => #{<<"type">> => <<"integer">>},
+                <<"created_at">>        => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>        => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ExceptionItem">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"item_id">>          => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"payment_id">>       => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"reason">>           => #{<<"type">> => <<"string">>},
+                <<"status">>           => #{<<"type">> => <<"string">>},
+                <<"resolution">>       => #{<<"type">> => <<"string">>},
+                <<"resolved_by">>      => #{<<"type">> => <<"string">>},
+                <<"resolution_notes">> => #{<<"type">> => <<"string">>},
+                <<"created_at">>       => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>       => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ChannelLimit">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"limit_key">> => #{
+                    <<"type">> => <<"object">>,
+                    <<"properties">> => #{
+                        <<"channel">>  => #{<<"type">> => <<"string">>},
+                        <<"currency">> => #{<<"type">> => <<"string">>}
+                    }
+                },
+                <<"daily_limit">>   => #{<<"type">> => <<"integer">>},
+                <<"per_txn_limit">> => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>    => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ChannelActivity">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"log_id">>      => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"channel">>     => #{<<"type">> => <<"string">>},
+                <<"party_id">>    => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"action">>      => #{<<"type">> => <<"string">>},
+                <<"endpoint">>    => #{<<"type">> => <<"string">>},
+                <<"status_code">> => #{<<"type">> => <<"integer">>},
+                <<"created_at">>  => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"NotificationPreference">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"pref_id">>     => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"party_id">>    => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"channel">>     => #{<<"type">> => <<"string">>},
+                <<"event_types">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"string">>}},
+                <<"enabled">>     => #{<<"type">> => <<"boolean">>},
+                <<"updated_at">>  => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"DomainEvent">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"event_id">>   => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"event_type">> => #{<<"type">> => <<"string">>},
+                <<"payload">>    => #{<<"type">> => <<"object">>},
+                <<"status">>     => #{<<"type">> => <<"string">>},
+                <<"created_at">> => #{<<"type">> => <<"integer">>},
+                <<"updated_at">> => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"WebhookSubscription">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"subscription_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"event_type">>      => #{<<"type">> => <<"string">>},
+                <<"callback_url">>    => #{<<"type">> => <<"string">>, <<"format">> => <<"uri">>},
+                <<"status">>          => #{<<"type">> => <<"string">>},
+                <<"created_at">>      => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>      => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ApiKey">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"key_id">>             => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"label">>              => #{<<"type">> => <<"string">>},
+                <<"partner_id">>         => #{<<"type">> => <<"string">>},
+                <<"role">>               => #{<<"type">> => <<"string">>, <<"enum">> => [<<"admin">>, <<"operations">>, <<"read_only">>]},
+                <<"status">>             => #{<<"type">> => <<"string">>, <<"enum">> => [<<"active">>, <<"revoked">>]},
+                <<"rate_limit_per_min">> => #{<<"type">> => <<"integer">>},
+                <<"expires_at">>         => #{<<"type">> => <<"integer">>},
+                <<"created_at">>         => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>         => #{<<"type">> => <<"integer">>}
+            }
         }
     }.
 
@@ -186,10 +387,114 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/parties/{party_id}/suspend">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Suspend a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Party suspended">>,
+                                  <<"content">> => json_ref(<<"Party">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/parties/{party_id}/reactivate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Reactivate a suspended party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Party reactivated">>,
+                                  <<"content">> => json_ref(<<"Party">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/parties/{party_id}/close">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Close a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Party closed">>,
+                                  <<"content">> => json_ref(<<"Party">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/parties/{party_id}/kyc">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get KYC status for a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"KYC record">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update KYC status for a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"KYC updated">>,
+                                  <<"content">> => json_ref(<<"Party">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/parties/{party_id}/accounts">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List accounts for a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Party accounts">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/parties/{party_id}/profile">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get composite party profile">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Party profile with accounts and recent transactions">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/parties/{party_id}/notification-preferences">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get notification preferences for a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Notification preferences">>}
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update notification preferences for a party">>,
+                <<"parameters">> => [path_param(<<"party_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Preferences updated">>,
+                                  <<"content">> => json_ref(<<"NotificationPreference">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/accounts">> => #{
             <<"get">> => #{
                 <<"summary">> => <<"List accounts">>,
                 <<"responses">> => #{<<"200">> => #{<<"description">> => <<"List of accounts">>}}
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create an account">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Account created">>,
+                                  <<"content">> => json_ref(<<"Account">>)},
+                    <<"422">> => error_response()
+                }
             }
         },
         <<"/api/v1/accounts/{account_id}">> => #{
@@ -201,6 +506,16 @@ paths() ->
                                   <<"content">> => json_ref(<<"Account">>)},
                     <<"404">> => error_response()
                 }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account updated">>,
+                                  <<"content">> => json_ref(<<"Account">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
             }
         },
         <<"/api/v1/accounts/{account_id}/balance">> => #{
@@ -209,6 +524,113 @@ paths() ->
                 <<"parameters">> => [path_param(<<"account_id">>)],
                 <<"responses">> => #{
                     <<"200">> => #{<<"description">> => <<"Balance information">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/transactions">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List transactions for an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account transactions">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/holds">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List holds on an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account holds">>},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Place a hold on an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Hold placed">>,
+                                  <<"content">> => json_ref(<<"AccountHold">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/holds/{hold_id}">> => #{
+            <<"delete">> => #{
+                <<"summary">> => <<"Release a hold">>,
+                <<"parameters">> => [path_param(<<"account_id">>), path_param(<<"hold_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Hold released">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/freeze">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Freeze an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account frozen">>,
+                                  <<"content">> => json_ref(<<"Account">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/unfreeze">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Unfreeze an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account unfrozen">>,
+                                  <<"content">> => json_ref(<<"Account">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/close">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Close an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account closed">>,
+                                  <<"content">> => json_ref(<<"Account">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/entries">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List ledger entries for an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Ledger entries">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/statement">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get account statement">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account statement">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/summary">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get composite account summary">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Account summary with recent transactions and active holds">>,
+                                  <<"content">> => json_content(<<"object">>)},
                     <<"404">> => error_response()
                 }
             }
@@ -293,6 +715,16 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/transactions/adjustment">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Post a manual adjustment transaction">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Adjustment posted">>,
+                                  <<"content">> => json_ref(<<"Transaction">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/transactions/{txn_id}">> => #{
             <<"get">> => #{
                 <<"summary">> => <<"Get a transaction by ID">>,
@@ -312,6 +744,507 @@ paths() ->
                     <<"201">> => #{<<"description">> => <<"Reversal posted">>},
                     <<"404">> => error_response(),
                     <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/transactions/{txn_id}/entries">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List ledger entries for a transaction">>,
+                <<"parameters">> => [path_param(<<"txn_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Ledger entries for transaction">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/stats">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get platform statistics">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Platform stats">>,
+                                  <<"content">> => json_content(<<"object">>)}
+                }
+            }
+        },
+        <<"/api/v1/savings-products">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List savings products">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of savings products">>}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a savings product">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Savings product created">>,
+                                  <<"content">> => json_ref(<<"SavingsProduct">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/savings-products/{product_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get a savings product by ID">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Savings product">>,
+                                  <<"content">> => json_ref(<<"SavingsProduct">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update a savings product">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Savings product updated">>,
+                                  <<"content">> => json_ref(<<"SavingsProduct">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/savings-products/{product_id}/activate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Activate a savings product">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Product activated">>,
+                                  <<"content">> => json_ref(<<"SavingsProduct">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/savings-products/{product_id}/deactivate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Deactivate a savings product">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Product deactivated">>,
+                                  <<"content">> => json_ref(<<"SavingsProduct">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loan-products">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List loan products">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of loan products">>}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a loan product">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Loan product created">>,
+                                  <<"content">> => json_ref(<<"LoanProduct">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loan-products/{product_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get a loan product by ID">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan product">>,
+                                  <<"content">> => json_ref(<<"LoanProduct">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update a loan product">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan product updated">>,
+                                  <<"content">> => json_ref(<<"LoanProduct">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loan-products/{product_id}/activate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Activate a loan product">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan product activated">>,
+                                  <<"content">> => json_ref(<<"LoanProduct">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loan-products/{product_id}/deactivate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Deactivate a loan product">>,
+                <<"parameters">> => [path_param(<<"product_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan product deactivated">>,
+                                  <<"content">> => json_ref(<<"LoanProduct">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loans">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List loans">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of loans">>}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a loan">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Loan created">>,
+                                  <<"content">> => json_ref(<<"Loan">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loans/{loan_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get a loan by ID">>,
+                <<"parameters">> => [path_param(<<"loan_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan record">>,
+                                  <<"content">> => json_ref(<<"Loan">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loans/{loan_id}/approve">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Approve a loan">>,
+                <<"parameters">> => [path_param(<<"loan_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan approved">>,
+                                  <<"content">> => json_ref(<<"Loan">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loans/{loan_id}/disburse">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Disburse a loan">>,
+                <<"parameters">> => [path_param(<<"loan_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan disbursed">>,
+                                  <<"content">> => json_ref(<<"Loan">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/loans/{loan_id}/repayments">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List repayments for a loan">>,
+                <<"parameters">> => [path_param(<<"loan_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Loan repayments">>},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Record a loan repayment">>,
+                <<"parameters">> => [path_param(<<"loan_id">>)],
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Repayment recorded">>,
+                                  <<"content">> => json_ref(<<"LoanRepayment">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/events">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List domain events">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of events">>}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Publish a domain event">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Event published">>,
+                                  <<"content">> => json_ref(<<"DomainEvent">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/events/{event_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get a domain event by ID">>,
+                <<"parameters">> => [path_param(<<"event_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Domain event">>,
+                                  <<"content">> => json_ref(<<"DomainEvent">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/events/{event_id}/replay">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Replay a domain event">>,
+                <<"parameters">> => [path_param(<<"event_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Event replayed">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/webhooks">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List webhook subscriptions">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of webhook subscriptions">>}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a webhook subscription">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Subscription created">>,
+                                  <<"content">> => json_ref(<<"WebhookSubscription">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/webhooks/{subscription_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get a webhook subscription">>,
+                <<"parameters">> => [path_param(<<"subscription_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Webhook subscription">>,
+                                  <<"content">> => json_ref(<<"WebhookSubscription">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update a webhook subscription">>,
+                <<"parameters">> => [path_param(<<"subscription_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Subscription updated">>,
+                                  <<"content">> => json_ref(<<"WebhookSubscription">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            },
+            <<"delete">> => #{
+                <<"summary">> => <<"Delete a webhook subscription">>,
+                <<"parameters">> => [path_param(<<"subscription_id">>)],
+                <<"responses">> => #{
+                    <<"204">> => #{<<"description">> => <<"Subscription deleted">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/export/{resource}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Export a resource as CSV">>,
+                <<"parameters">> => [path_param(<<"resource">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"CSV export">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/payment-orders">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List payment orders">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of payment orders">>}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a payment order">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Payment order created">>,
+                                  <<"content">> => json_ref(<<"PaymentOrder">>)},
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/payment-orders/{payment_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get a payment order by ID">>,
+                <<"parameters">> => [path_param(<<"payment_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Payment order">>,
+                                  <<"content">> => json_ref(<<"PaymentOrder">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/payment-orders/{payment_id}/cancel">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Cancel a payment order">>,
+                <<"parameters">> => [path_param(<<"payment_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Payment order cancelled">>,
+                                  <<"content">> => json_ref(<<"PaymentOrder">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/payment-orders/{payment_id}/retry">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Retry a failed payment order">>,
+                <<"parameters">> => [path_param(<<"payment_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Payment order retried">>,
+                                  <<"content">> => json_ref(<<"PaymentOrder">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/exceptions">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List exception items">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of exception items">>}
+                }
+            }
+        },
+        <<"/api/v1/exceptions/{item_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get an exception item by ID">>,
+                <<"parameters">> => [path_param(<<"item_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Exception item">>,
+                                  <<"content">> => json_ref(<<"ExceptionItem">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/exceptions/{item_id}/resolve">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Resolve an exception item">>,
+                <<"parameters">> => [path_param(<<"item_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Exception item resolved">>,
+                                  <<"content">> => json_ref(<<"ExceptionItem">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/channel-limits">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List channel limits">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of channel limits">>}
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Set channel limit">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Channel limit updated">>,
+                                  <<"content">> => json_ref(<<"ChannelLimit">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/channel-limits/{channel}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get limits for a specific channel">>,
+                <<"parameters">> => [path_param(<<"channel">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Channel limits">>,
+                                  <<"content">> => json_ref(<<"ChannelLimit">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Update limits for a specific channel">>,
+                <<"parameters">> => [path_param(<<"channel">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Channel limits updated">>,
+                                  <<"content">> => json_ref(<<"ChannelLimit">>)},
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/channel-activity">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List channel activity log entries">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Channel activity log">>}
+                }
+            }
+        },
+        <<"/api/v1/atm/inquiry">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"ATM balance inquiry">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Balance inquiry result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/atm/withdraw">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"ATM cash withdrawal">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"ATM withdrawal posted">>,
+                                  <<"content">> => json_ref(<<"Transaction">>)},
+                    <<"402">> => error_response(),
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/dev/mock-import">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Import mock data (development only)">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Mock data imported">>}
+                }
+            }
+        },
+        <<"/api/v1/api-keys">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List API keys (admin only)">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of API keys">>},
+                    <<"403">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create an API key (admin only)">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"API key created — secret returned once">>,
+                                  <<"content">> => json_ref(<<"ApiKey">>)},
+                    <<"403">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/api-keys/{key_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get an API key by ID (admin only)">>,
+                <<"parameters">> => [path_param(<<"key_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"API key">>,
+                                  <<"content">> => json_ref(<<"ApiKey">>)},
+                    <<"403">> => error_response(),
+                    <<"404">> => error_response()
+                }
+            },
+            <<"delete">> => #{
+                <<"summary">> => <<"Revoke an API key (admin only)">>,
+                <<"parameters">> => [path_param(<<"key_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"API key revoked">>},
+                    <<"403">> => error_response(),
+                    <<"404">> => error_response()
                 }
             }
         },

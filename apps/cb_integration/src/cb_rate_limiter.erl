@@ -15,7 +15,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, check_and_increment/1, reset/1, get_limit/0]).
+-export([start_link/0, check_and_increment/1, check_and_increment_with_limit/2, reset/1, get_limit/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -37,6 +37,13 @@ start_link() ->
 -spec check_and_increment(binary()) -> allow | deny.
 check_and_increment(Key) ->
     gen_server:call(?MODULE, {check_and_increment, Key}).
+
+%% @doc Check whether `Key` is within `Limit` requests for the current window.
+%%      If allowed the counter is atomically incremented.
+%%      Returns `allow` or `deny`.
+-spec check_and_increment_with_limit(binary(), pos_integer()) -> allow | deny.
+check_and_increment_with_limit(Key, Limit) ->
+    gen_server:call(?MODULE, {check_and_increment_with_limit, Key, Limit}).
 
 %% @doc Reset (delete) the counter for `Key`.  Used in tests and to
 %%      simulate a window expiry without waiting 60 s.
@@ -71,6 +78,27 @@ handle_call({check_and_increment, Key}, _From, State) ->
             if
                 Age > ?WINDOW_MS ->
                     %% Window expired – start a fresh one.
+                    ets:insert(?TABLE, {Key, 1, Now}),
+                    allow;
+                Count < Limit ->
+                    ets:insert(?TABLE, {Key, Count + 1, WindowStart}),
+                    allow;
+                true ->
+                    deny
+            end
+    end,
+    {reply, Result, State};
+
+handle_call({check_and_increment_with_limit, Key, Limit}, _From, State) ->
+    Now = erlang:monotonic_time(millisecond),
+    Result = case ets:lookup(?TABLE, Key) of
+        [] ->
+            ets:insert(?TABLE, {Key, 1, Now}),
+            allow;
+        [{Key, Count, WindowStart}] ->
+            Age = Now - WindowStart,
+            if
+                Age > ?WINDOW_MS ->
                     ets:insert(?TABLE, {Key, 1, Now}),
                     allow;
                 Count < Limit ->

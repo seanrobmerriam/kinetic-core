@@ -21,7 +21,26 @@ execute(Req, Env) ->
             Key = client_key(Req),
             case cb_rate_limiter:check_and_increment(Key) of
                 allow ->
-                    {ok, Req, Env};
+                    case {erlang:get(api_key_rate_limit), erlang:get(api_key_id)} of
+                        {undefined, _} ->
+                            {ok, Req, Env};
+                        {_, undefined} ->
+                            {ok, Req, Env};
+                        {KeyLimit, KeyId} ->
+                            PerKeyKey = <<"api_key:", KeyId/binary>>,
+                            case cb_rate_limiter:check_and_increment_with_limit(PerKeyKey, KeyLimit) of
+                                allow -> {ok, Req, Env};
+                                deny  ->
+                                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(rate_limit_exceeded),
+                                    Resp = #{error => ErrorAtom, message => Message},
+                                    Headers = maps:merge(
+                                        #{<<"content-type">>  => <<"application/json">>,
+                                          <<"retry-after">>   => <<"60">>},
+                                        cb_cors:headers()
+                                    ),
+                                    {stop, cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req)}
+                            end
+                    end;
                 deny ->
                     {Status, ErrorAtom, Message} = cb_http_errors:to_response(rate_limit_exceeded),
                     Resp = #{error => ErrorAtom, message => Message},

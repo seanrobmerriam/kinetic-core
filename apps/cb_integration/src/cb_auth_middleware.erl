@@ -14,8 +14,8 @@ execute(Req, Env) ->
             case authorization_token(Req) of
                 undefined ->
                     unauthorized(Req);
-                SessionId ->
-                    case cb_auth:get_session(SessionId) of
+                Token ->
+                    case try_session(Token) of
                         {ok, Session} ->
                             erlang:put(auth_session, Session),
                             erlang:put(auth_user, session_user(Session)),
@@ -25,8 +25,22 @@ execute(Req, Env) ->
                                 true  -> forbidden(Req);
                                 false -> {ok, Req, Env}
                             end;
-                        {error, _Reason} ->
-                            unauthorized(Req)
+                        {error, _} ->
+                            case cb_api_keys:authenticate_key(Token) of
+                                {ok, KeyMeta} ->
+                                    erlang:put(auth_session, KeyMeta),
+                                    erlang:put(auth_user, key_user(KeyMeta)),
+                                    erlang:put(api_key_rate_limit, maps:get(rate_limit_per_min, KeyMeta)),
+                                    erlang:put(api_key_id, maps:get(key_id, KeyMeta)),
+                                    Role = maps:get(role, KeyMeta),
+                                    Method = cowboy_req:method(Req),
+                                    case is_write_method(Method) andalso Role =:= read_only of
+                                        true  -> forbidden(Req);
+                                        false -> {ok, Req, Env}
+                                    end;
+                                {error, _} ->
+                                    unauthorized(Req)
+                            end
                     end
             end
     end.
@@ -59,6 +73,20 @@ session_user(Session) ->
         email => maps:get(email, Session),
         role => maps:get(role, Session),
         status => maps:get(status, Session)
+    }.
+
+try_session(Token) ->
+    case cb_auth:get_session(Token) of
+        {ok, Session} -> {ok, Session};
+        {error, _}    -> {error, unauthorized}
+    end.
+
+key_user(KeyMeta) ->
+    #{
+        user_id => maps:get(key_id, KeyMeta),
+        email   => maps:get(partner_id, KeyMeta),
+        role    => maps:get(role, KeyMeta),
+        status  => active
     }.
 
 unauthorized(Req) ->

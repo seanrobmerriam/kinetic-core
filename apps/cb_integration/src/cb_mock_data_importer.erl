@@ -113,8 +113,8 @@ do_import(Summary0) ->
     %% records to exercise pagination, search, and reporting flows. All
     %% generators are deterministic and idempotent so re-running the importer
     %% does not produce duplicates.
-    BulkPartyCount = 200,
-    BulkLoanCount = 299,
+    BulkPartyCount = 3000,
+    BulkLoanCount = 4485,
     case bulk_ensure_parties(BulkPartyCount, Summary15) of
         {ok, BulkParties, Summary16} ->
             case bulk_ensure_deposits(BulkParties, Summary16) of
@@ -132,26 +132,97 @@ do_import(Summary0) ->
 %% --- Bulk demo dataset helpers -------------------------------------------
 
 bulk_ensure_parties(Count, Summary0) ->
-    bulk_ensure_parties(1, Count, [], Summary0).
+    Names = load_names(),
+    bulk_ensure_parties(1, Count, Names, [], Summary0).
 
-bulk_ensure_parties(N, Count, Acc, Summary) when N > Count ->
+bulk_ensure_parties(N, Count, _Names, Acc, Summary) when N > Count ->
     {ok, lists:reverse(Acc), Summary};
-bulk_ensure_parties(N, Count, Acc, Summary0) ->
-    Idx = pad3(N),
-    FullName = <<"Mock Customer ", Idx/binary>>,
-    Email = <<"mock-customer-", Idx/binary, "@ironledger.dev">>,
+bulk_ensure_parties(N, Count, Names, Acc, Summary0) ->
+    NLen = length(Names),
+    FirstName = lists:nth(((N - 1) rem NLen) + 1, Names),
+    LastIdx = ((N * 97) rem NLen) + 1,
+    LastName = lists:nth(LastIdx, Names),
+    FullName = <<FirstName/binary, " ", LastName/binary>>,
+    Idx = integer_to_binary(N),
+    Email = <<"mock-", Idx/binary, "@ironledger.dev">>,
     AccountName = <<"Main Checking">>,
     case ensure_party_account(FullName, Email, AccountName, 'USD', Summary0) of
         {ok, AccountId, Summary1} ->
             case find_party_id_by_email(Email) of
                 {ok, PartyId} ->
-                    bulk_ensure_parties(N + 1, Count, [{PartyId, AccountId} | Acc], Summary1);
+                    Age = 18 + ((N * 7) rem 83),
+                    SsnInt = 100000000 + ((N * 97331) rem 900000000),
+                    Ssn = integer_to_binary(SsnInt),
+                    Address = mock_address(N),
+                    _ = cb_party:update_age(PartyId, Age),
+                    _ = cb_party:update_ssn(PartyId, Ssn),
+                    _ = cb_party:update_address(PartyId, Address),
+                    bulk_ensure_parties(N + 1, Count, Names, [{PartyId, AccountId} | Acc], Summary1);
                 {error, _} = Err ->
                     Err
             end;
         {error, _} = Err ->
             Err
     end.
+
+load_names() ->
+    PrivDir = code:priv_dir(cb_integration),
+    FilePath = filename:join(PrivDir, "btn_givennames.txt"),
+    {ok, Bin} = file:read_file(FilePath),
+    Lines = binary:split(Bin, <<"\n">>, [global]),
+    lists:filtermap(
+        fun(Line) ->
+            Trimmed = string:trim(Line),
+            case Trimmed of
+                <<"#", _/binary>> -> false;
+                <<>> -> false;
+                _ ->
+                    Parts = binary:split(Trimmed, <<"\t">>),
+                    case Parts of
+                        [Name | _] when byte_size(Name) > 0 ->
+                            Capitalized = capitalize(Name),
+                            {true, Capitalized};
+                        _ -> false
+                    end
+            end
+        end,
+        Lines
+    ).
+
+capitalize(<<First, Rest/binary>>) ->
+    Upper = string:to_upper([First]),
+    Lower = string:to_lower(binary_to_list(Rest)),
+    list_to_binary(Upper ++ Lower);
+capitalize(<<>>) ->
+    <<>>.
+
+mock_address(N) ->
+    Streets = [<<"Main St">>, <<"Oak Ave">>, <<"Elm St">>, <<"Park Blvd">>,
+               <<"Maple Dr">>, <<"Cedar Ln">>, <<"Pine Rd">>, <<"River Rd">>,
+               <<"Lake Dr">>, <<"Hill St">>, <<"Valley Way">>, <<"Forest Ave">>,
+               <<"Sunset Blvd">>, <<"Spring St">>, <<"Church Rd">>, <<"Mill Rd">>,
+               <<"Highland Ave">>, <<"Orchard Ln">>, <<"Washington St">>, <<"Lincoln Ave">>],
+    Cities = [<<"Springfield">>, <<"Franklin">>, <<"Clinton">>, <<"Georgetown">>,
+              <<"Madison">>, <<"Salem">>, <<"Fairview">>, <<"Riverside">>,
+              <<"Greenville">>, <<"Centerville">>, <<"Lakewood">>, <<"Hillside">>,
+              <<"Oakdale">>, <<"Maplewood">>, <<"Chester">>, <<"Burlington">>,
+              <<"Ashland">>, <<"Millbrook">>, <<"Ridgeway">>, <<"Westfield">>],
+    States = [<<"CA">>, <<"TX">>, <<"NY">>, <<"FL">>, <<"IL">>,
+              <<"PA">>, <<"OH">>, <<"GA">>, <<"NC">>, <<"MI">>],
+    Len = 20,
+    StateLen = 10,
+    StreetNum = integer_to_binary(100 + ((N * 13) rem 9900)),
+    Street = lists:nth((N rem Len) + 1, Streets),
+    City = lists:nth(((N * 3) rem Len) + 1, Cities),
+    State = lists:nth((N rem StateLen) + 1, States),
+    Zip = integer_to_binary(10000 + ((N * 31) rem 90000)),
+    #{
+        line1 => <<StreetNum/binary, " ", Street/binary>>,
+        city => City,
+        state => State,
+        postal_code => Zip,
+        country => <<"US">>
+    }.
 
 bulk_ensure_deposits(Parties, Summary0) ->
     bulk_ensure_deposits(Parties, 1, Summary0).

@@ -152,6 +152,8 @@
     doc_refs            :: [binary()],
     risk_tier           :: risk_tier(),
     address             :: party_address() | undefined,
+    age                 :: non_neg_integer() | undefined,
+    ssn                 :: binary() | undefined,
     version             :: pos_integer(),
     merged_into_party_id :: uuid() | undefined,
     created_at          :: timestamp_ms(),

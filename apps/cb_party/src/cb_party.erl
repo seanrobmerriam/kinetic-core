@@ -71,6 +71,8 @@
     update_onboarding_status/2,
     add_doc_ref/2,
     update_address/2,
+    update_age/2,
+    update_ssn/2,
     detect_duplicate_parties/0,
     merge_parties/3,
     set_risk_tier/2,
@@ -117,6 +119,8 @@ create_party(FullName, Email) when is_binary(FullName), is_binary(Email) ->
                     doc_refs = [],
                     risk_tier = low,
                     address = undefined,
+                    age = undefined,
+                    ssn = undefined,
                     version = 1,
                     merged_into_party_id = undefined,
                     created_at = Now,
@@ -508,6 +512,52 @@ update_address(PartyId, Address) when is_map(Address) ->
     end;
 update_address(_, _) ->
     {error, invalid_address}.
+
+%% @doc
+%% Updates the age of a party.
+%%
+%% @spec update_age(uuid(), non_neg_integer()) -> {ok, #party{}} | {error, atom()}.
+update_age(PartyId, Age) when is_integer(Age), Age >= 0 ->
+    F = fun() ->
+        case mnesia:read(party, PartyId) of
+            [Party] ->
+                Updated = bump_party_version(Party#party{age = Age}),
+                mnesia:write(Updated),
+                write_party_audit(PartyId, update_age, Updated#party.version, #{age => Age}),
+                {ok, Updated};
+            [] ->
+                {error, party_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end;
+update_age(_, _) ->
+    {error, invalid_age}.
+
+%% @doc
+%% Updates the SSN of a party.
+%%
+%% @spec update_ssn(uuid(), binary()) -> {ok, #party{}} | {error, atom()}.
+update_ssn(PartyId, Ssn) when is_binary(Ssn) ->
+    F = fun() ->
+        case mnesia:read(party, PartyId) of
+            [Party] ->
+                Updated = bump_party_version(Party#party{ssn = Ssn}),
+                mnesia:write(Updated),
+                write_party_audit(PartyId, update_ssn, Updated#party.version, #{}),
+                {ok, Updated};
+            [] ->
+                {error, party_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end;
+update_ssn(_, _) ->
+    {error, invalid_ssn}.
 
 %% @doc
 %% Detects likely duplicate parties by normalized full name.

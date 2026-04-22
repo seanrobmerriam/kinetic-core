@@ -1,0 +1,95 @@
+method,path,handler,resource_group,coverage,dashboard_components
+GET,/health,cb_health_handler,Health,MISSING,
+POST,/api/v1/auth/login,cb_login_handler,Auth,COVERED,login/page.tsx
+POST,/api/v1/auth/logout,cb_logout_handler,Auth,COVERED,lib/auth.tsx
+GET,/api/v1/auth/me,cb_me_handler,Auth,COVERED,lib/auth.tsx
+GET,/api/v1/parties,cb_parties_handler,Parties,COVERED,customers; dashboard; transactions; loans; accounts; payments; compliance
+POST,/api/v1/parties,cb_parties_handler,Parties,COVERED,customers/page.tsx
+GET,/api/v1/parties/:party_id,cb_party_handler,Parties,COVERED,customers/[partyId]/page.tsx; accounts/[accountId]/page.tsx
+POST,/api/v1/parties/:party_id/suspend,cb_party_suspend_handler,Parties,COVERED,customers; customers/[partyId]
+POST,/api/v1/parties/:party_id/reactivate,cb_party_reactivate_handler,Parties,MISSING,
+POST,/api/v1/parties/:party_id/close,cb_party_close_handler,Parties,COVERED,customers; customers/[partyId]
+GET,/api/v1/parties/:party_id/kyc,cb_party_kyc_handler,Parties,COVERED,compliance/page.tsx
+PATCH,/api/v1/parties/:party_id/kyc,cb_party_kyc_handler,Parties,STALE,compliance/page.tsx (sends PUT)
+POST,/api/v1/parties/:party_id/kyc,cb_party_kyc_handler,Parties,MISSING,
+GET,/api/v1/parties/:party_id/accounts,cb_party_accounts_handler,Parties,COVERED,multiple
+GET,/api/v1/parties/:party_id/profile,cb_party_profile_handler,Parties,MISSING,
+GET,/api/v1/parties/:party_id/notification-preferences,cb_notification_prefs_handler,Parties,MISSING,
+PUT,/api/v1/parties/:party_id/notification-preferences,cb_notification_prefs_handler,Parties,MISSING,
+GET,/api/v1/accounts,cb_accounts_list_handler,Accounts,MISSING,
+POST,/api/v1/accounts,cb_accounts_list_handler,Accounts,COVERED,accounts/page.tsx
+GET,/api/v1/stats,cb_stats_handler,Accounts,MISSING,
+GET,/api/v1/accounts/:account_id,cb_account_handler,Accounts,PARTIAL,accounts/[accountId]/page.tsx (resolves via /parties scan instead of GET /accounts/:id directly)
+GET,/api/v1/accounts/:account_id/transactions,cb_account_transactions_handler,Accounts,COVERED,accounts/[accountId]; transactions; dashboard
+GET,/api/v1/accounts/:account_id/balance,cb_account_balance_handler,Accounts,MISSING,
+GET,/api/v1/accounts/:account_id/summary,cb_account_summary_handler,Accounts,MISSING,
+GET,/api/v1/accounts/:account_id/holds,cb_account_holds_handler,Accounts,COVERED,accounts/[accountId]/page.tsx
+POST,/api/v1/accounts/:account_id/holds,cb_account_holds_handler,Accounts,COVERED,accounts/[accountId]/page.tsx
+DELETE,/api/v1/accounts/:account_id/holds/:hold_id,cb_account_holds_handler,Accounts,COVERED,accounts/[accountId]/page.tsx
+POST,/api/v1/accounts/:account_id/freeze,cb_account_freeze_handler,Accounts,COVERED,accounts/[accountId]/page.tsx
+POST,/api/v1/accounts/:account_id/unfreeze,cb_account_unfreeze_handler,Accounts,COVERED,accounts/[accountId]/page.tsx
+POST,/api/v1/accounts/:account_id/close,cb_account_close_handler,Accounts,COVERED,accounts/[accountId]/page.tsx
+GET,/api/v1/accounts/:account_id/entries,cb_account_entries_handler,Accounts,COVERED,ledger/page.tsx; dashboard/page.tsx
+GET,/api/v1/accounts/:account_id/statement,cb_statements_handler,Accounts,MISSING,
+POST,/api/v1/transactions/transfer,cb_transaction_transfer_handler,Transactions,COVERED,transfer/page.tsx
+POST,/api/v1/transactions/deposit,cb_transaction_deposit_handler,Transactions,COVERED,deposit/page.tsx
+POST,/api/v1/transactions/withdraw,cb_transaction_withdraw_handler,Transactions,COVERED,deposit/page.tsx
+POST,/api/v1/transactions/adjustment,cb_transaction_adjustment_handler,Transactions,MISSING,
+GET,/api/v1/transactions/:txn_id,cb_transaction_handler,Transactions,MISSING,
+POST,/api/v1/transactions/:txn_id/reverse,cb_transaction_reverse_handler,Transactions,COVERED,transactions/page.tsx
+GET,/api/v1/transactions/:txn_id/entries,cb_transaction_entries_handler,Transactions,MISSING,
+GET,/api/v1/ledger/entries/latest,cb_ledger_latest_handler,Ledger,COVERED,ledger/page.tsx
+GET,/api/v1/savings-products,cb_savings_products_handler,SavingsProducts,COVERED,products/page.tsx
+POST,/api/v1/savings-products,cb_savings_products_handler,SavingsProducts,COVERED,products/page.tsx
+GET,/api/v1/savings-products/:product_id,cb_savings_products_handler,SavingsProducts,MISSING,
+POST,/api/v1/savings-products/:product_id/activate,cb_savings_products_handler,SavingsProducts,MISSING,
+POST,/api/v1/savings-products/:product_id/deactivate,cb_savings_products_handler,SavingsProducts,MISSING,
+GET,/api/v1/loan-products,cb_loan_products_handler,LoanProducts,COVERED,products/page.tsx; loans/page.tsx
+POST,/api/v1/loan-products,cb_loan_products_handler,LoanProducts,COVERED,products/page.tsx
+GET,/api/v1/loan-products/:product_id,cb_loan_products_handler,LoanProducts,MISSING,
+POST,/api/v1/loan-products/:product_id/activate,cb_loan_products_handler,LoanProducts,MISSING,
+POST,/api/v1/loan-products/:product_id/deactivate,cb_loan_products_handler,LoanProducts,MISSING,
+GET,/api/v1/loans,cb_loans_handler,Loans,COVERED,loans/page.tsx
+POST,/api/v1/loans,cb_loans_handler,Loans,COVERED,loans/page.tsx
+GET,/api/v1/loans/:loan_id,cb_loans_handler,Loans,COVERED,loans/page.tsx
+POST,/api/v1/loans/:loan_id/approve,cb_loans_handler,Loans,COVERED,loans/page.tsx
+POST,/api/v1/loans/:loan_id/disburse,cb_loans_handler,Loans,COVERED,loans/page.tsx
+GET,/api/v1/loans/:loan_id/repayments,cb_loan_repayments_handler,Loans,COVERED,loans/page.tsx
+POST,/api/v1/loans/:loan_id/repayments,cb_loan_repayments_handler,Loans,COVERED,loans/page.tsx
+GET,/api/v1/events,cb_events_handler,Events,MISSING,
+POST,/api/v1/events,cb_events_handler,Events,MISSING,
+GET,/api/v1/events/:event_id,cb_events_handler,Events,MISSING,
+POST,/api/v1/events/:event_id/replay,cb_events_handler,Events,MISSING,
+GET,/api/v1/webhooks,cb_webhooks_handler,Webhooks,COVERED,developer/page.tsx
+POST,/api/v1/webhooks,cb_webhooks_handler,Webhooks,MISSING,
+PATCH,/api/v1/webhooks/:subscription_id,cb_webhooks_handler,Webhooks,MISSING,
+DELETE,/api/v1/webhooks/:subscription_id,cb_webhooks_handler,Webhooks,MISSING,
+GET,/api/v1/webhooks/:subscription_id/deliveries,cb_webhook_deliveries_handler,Webhooks,MISSING,
+GET,/api/v1/export/:resource,cb_exports_handler,Export,MISSING,
+GET,/api/v1/dev/mock-import,cb_dev_mock_import_handler,Dev,COVERED,components/Header.tsx
+POST,/api/v1/dev/mock-import,cb_dev_mock_import_handler,Dev,COVERED,components/Header.tsx
+GET,/api/v1/openapi.json,cb_openapi_handler,Meta,MISSING,
+GET,/metrics,cb_metrics_handler,Meta,MISSING,
+GET,/api/graphql,cb_graphql_handler,Meta,MISSING,
+POST,/api/graphql,cb_graphql_handler,Meta,MISSING,
+GET,/api/v1/payment-orders,cb_payment_orders_handler,Payments,MISSING,
+POST,/api/v1/payment-orders,cb_payment_orders_handler,Payments,COVERED,payments/page.tsx
+GET,/api/v1/payment-orders/:payment_id,cb_payment_orders_handler,Payments,MISSING,
+POST,/api/v1/payment-orders/:payment_id/cancel,cb_payment_orders_handler,Payments,COVERED,payments/page.tsx
+POST,/api/v1/payment-orders/:payment_id/retry,cb_payment_orders_handler,Payments,COVERED,payments/page.tsx
+GET,/api/v1/exceptions,cb_exceptions_handler,Exceptions,COVERED,compliance/page.tsx
+POST,/api/v1/exceptions,cb_exceptions_handler,Exceptions,MISSING,
+GET,/api/v1/exceptions/:item_id,cb_exceptions_handler,Exceptions,MISSING,
+POST,/api/v1/exceptions/:item_id/resolve,cb_exceptions_handler,Exceptions,COVERED,compliance/page.tsx
+GET,/api/v1/channel-limits,cb_channel_limits_handler,Channels,COVERED,channels/page.tsx
+GET,/api/v1/channel-limits/:channel,cb_channel_limits_handler,Channels,MISSING,
+PUT,/api/v1/channel-limits/:channel,cb_channel_limits_handler,Channels,COVERED,channels/page.tsx
+GET,/api/v1/channel-activity,cb_channel_activity_handler,Channels,COVERED,channels/page.tsx
+GET,/api/v1/api-keys,cb_api_keys_handler,ApiKeys,COVERED,developer/page.tsx
+POST,/api/v1/api-keys,cb_api_keys_handler,ApiKeys,MISSING,
+GET,/api/v1/api-keys/:key_id,cb_api_keys_handler,ApiKeys,MISSING,
+DELETE,/api/v1/api-keys/:key_id,cb_api_keys_handler,ApiKeys,MISSING,
+GET,/api/v1/api-keys/:key_id/usage,cb_api_usage_handler,ApiKeys,COVERED,developer/page.tsx
+GET,/api/v1/deprecations,cb_deprecation_handler,Meta,COVERED,developer/page.tsx
+POST,/api/v1/atm/inquiry,cb_atm_handler,ATM,MISSING,
+POST,/api/v1/atm/withdraw,cb_atm_handler,ATM,MISSING,

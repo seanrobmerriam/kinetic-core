@@ -92,6 +92,7 @@ dispatch() ->
             {<<"/api/v1/accounts/:account_id">>, cb_account_handler, []},
             {<<"/api/v1/accounts/:account_id/transactions">>, cb_account_transactions_handler, []},
             {<<"/api/v1/accounts/:account_id/balance">>, cb_account_balance_handler, []},
+            {<<"/api/v1/accounts/:account_id/summary">>, cb_account_summary_handler, []},
             {<<"/api/v1/accounts/:account_id/holds">>, cb_account_holds_handler, []},
             {<<"/api/v1/accounts/:account_id/holds/:hold_id">>, cb_account_holds_handler, []},
             {<<"/api/v1/accounts/:account_id/freeze">>, cb_account_freeze_handler, []},

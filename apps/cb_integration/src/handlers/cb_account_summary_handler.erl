@@ -37,8 +37,10 @@ handle(<<"GET">>, AccountId, Req, State) ->
             json_reply(Status, #{error => ErrorAtom, message => Message}, Req, State);
         {ok, Account} ->
             RecentTxns = recent_transactions(AccountId, ?RECENT_TXN_LIMIT),
-            AllHolds   = cb_account_holds:list_holds(AccountId),
-            ActiveHolds = [H || H <- AllHolds, H#account_hold.status =:= active],
+            ActiveHolds = case cb_account_holds:list_holds(AccountId) of
+                {ok, Holds} -> [H || H <- Holds, H#account_hold.status =:= active];
+                {error, _}  -> []
+            end,
             Resp = #{
                 account             => account_to_json(Account),
                 recent_transactions => [txn_to_json(T) || T <- RecentTxns],

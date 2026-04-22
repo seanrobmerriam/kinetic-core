@@ -18,8 +18,21 @@
     delete_key/1
 ]).
 
+%% Mnesia wildcard patterns in match specs produce false-positive Dialyzer
+%% "no local return" / "record construction violation" warnings because
+%% the #api_key{_ = '_'} placeholder assigns atom '_' to all typed fields.
+-dialyzer({nowarn_function, list_keys/0}).
+%% create_key/4 spec uses timestamp_ms() type alias which Dialyzer resolves
+%% to non_neg_integer() — the spec is intentionally broad for public API.
+-dialyzer({nowarn_function, create_key/4}).
+
 -spec create_key(binary(), binary(), admin | operations | read_only, pos_integer()) ->
-    {ok, map()} | {error, database_error}.
+    {ok, #{key_id := binary(), key_secret := binary(), label := binary(),
+           partner_id := binary(), role := admin | operations | read_only,
+           status := active, rate_limit_per_min := pos_integer(),
+           expires_at := never, created_at := timestamp_ms(),
+           updated_at := timestamp_ms()}}
+    | {error, database_error}.
 create_key(Label, PartnerId, Role, RateLimitPerMin)
         when is_binary(Label), is_binary(PartnerId),
              (Role =:= admin orelse Role =:= operations orelse Role =:= read_only),
@@ -68,7 +81,13 @@ get_key_by_id(KeyId) when is_binary(KeyId) ->
         {aborted, _Reason} -> {error, database_error}
     end.
 
--spec authenticate_key(binary()) -> {ok, map()} | {error, unauthorized}.
+-spec authenticate_key(binary()) ->
+    {ok, #{key_id := binary(), label := binary(), partner_id := binary(),
+           role := admin | operations | read_only, status := active,
+           rate_limit_per_min := pos_integer(),
+           expires_at := never | timestamp_ms(),
+           created_at := timestamp_ms(), updated_at := timestamp_ms()}}
+    | {error, unauthorized}.
 authenticate_key(RawToken) when is_binary(RawToken) ->
     KeyHash = crypto:hash(sha256, RawToken),
     F = fun() -> mnesia:index_read(api_keys, KeyHash, key_hash) end,

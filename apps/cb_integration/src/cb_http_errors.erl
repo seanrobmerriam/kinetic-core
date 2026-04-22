@@ -128,6 +128,12 @@ to_response(amount_overflow) ->
     {422, <<"amount_overflow">>, <<"Amount exceeds maximum allowed value">>};
 to_response(same_account_transfer) ->
     {422, <<"same_account_transfer">>, <<"Source and destination accounts are the same">>};
+to_response(withdrawal_limit_exceeded) ->
+    {422, <<"withdrawal_limit_exceeded">>, <<"Amount exceeds the per-transaction withdrawal limit">>};
+to_response(forbidden) ->
+    {403, <<"forbidden">>, <<"Insufficient permissions for this operation">>};
+to_response(rate_limit_exceeded) ->
+    {429, <<"rate_limit_exceeded">>, <<"Too many requests. Please slow down.">>};
 
 %% Ledger errors
 to_response(ledger_entry_not_found) ->

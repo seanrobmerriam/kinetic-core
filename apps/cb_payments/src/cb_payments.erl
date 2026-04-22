@@ -70,10 +70,12 @@
 -export([
     transfer/6,
     deposit/5,
+    deposit/6,
     withdraw/5,
     adjust_balance/5,
     get_transaction/1,
     list_transactions_for_account/3,
+    query_transactions/1,
     reverse_transaction/1
 ]).
 
@@ -327,6 +329,11 @@ validate_accounts_for_transfer(Source, Dest, Currency, Amount) ->
 -spec deposit(binary(), uuid(), amount(), currency(), binary()) ->
     {ok, #transaction{}} | {error, atom()}.
 deposit(IdempotencyKey, DestId, Amount, Currency, Description) ->
+    deposit(IdempotencyKey, DestId, Amount, Currency, Description, undefined).
+
+-spec deposit(binary(), uuid(), amount(), currency(), binary(), binary() | undefined) ->
+    {ok, #transaction{}} | {error, atom()}.
+deposit(IdempotencyKey, DestId, Amount, Currency, Description, Channel) ->
     case validate_amount(Amount) of
         ok ->
             F = fun() ->
@@ -358,6 +365,7 @@ deposit(IdempotencyKey, DestId, Amount, Currency, Description) ->
                                             source_account_id = undefined,
                                             dest_account_id = DestId,
                                             description = Description,
+                                            channel = Channel,
                                             created_at = Now,
                                             posted_at = Now
                                         },
@@ -565,8 +573,13 @@ validate_account_for_withdrawal(Account, Currency, Amount) ->
                 false -> {error, currency_mismatch};
                 true ->
                     case Account#account.balance >= Amount of
-                        true -> ok;
-                        false -> {error, insufficient_funds}
+                        false -> {error, insufficient_funds};
+                        true ->
+                            case Account#account.withdrawal_limit of
+                                undefined -> ok;
+                                Limit when Amount > Limit -> {error, withdrawal_limit_exceeded};
+                                _ -> ok
+                            end
                     end
             end
     end.
@@ -657,7 +670,78 @@ list_transactions_for_account(_, _, _) ->
     {error, invalid_pagination}.
 
 %%
-%% @doc Reverse a posted transaction
+%% @doc Query transactions with optional filters
+%%
+%% Accepts a filter map with any combination of:
+%%   account_id  - restrict to transactions involving this account
+%%   from_ts     - minimum created_at (milliseconds)
+%%   to_ts       - maximum created_at (milliseconds)
+%%   txn_type    - atom matching txn_type()
+%%   min_amount  - inclusive lower bound on amount
+%%   max_amount  - inclusive upper bound on amount
+%%   status      - atom matching txn_status()
+%%   page        - 1-indexed page (default 1)
+%%   page_size   - items per page, 1-100 (default 20)
+%%
+%% Returns {ok, #{items, total, page, page_size}} or {error, invalid_pagination}.
+
+-spec query_transactions(map()) ->
+    {ok, #{items => [#transaction{}], total => non_neg_integer(),
+           page => pos_integer(), page_size => pos_integer()}} |
+    {error, atom()}.
+query_transactions(Filters) ->
+    Page     = maps:get(page,      Filters, 1),
+    PageSize = maps:get(page_size, Filters, 20),
+    case (Page >= 1) andalso (PageSize >= 1) andalso (PageSize =< 100) of
+        false ->
+            {error, invalid_pagination};
+        true ->
+            F = fun() ->
+                AccountId = maps:get(account_id, Filters, undefined),
+                Candidates = case AccountId of
+                    undefined ->
+                        mnesia:foldl(fun(T, Acc) -> [T | Acc] end, [], transaction);
+                    _ ->
+                        SrcTxns  = mnesia:index_read(transaction, AccountId, source_account_id),
+                        DestTxns = mnesia:index_read(transaction, AccountId, dest_account_id),
+                        All = SrcTxns ++ DestTxns,
+                        lists:ukeysort(#transaction.txn_id, All)
+                end,
+                Filtered = lists:filter(fun(T) -> matches_filters(T, Filters) end, Candidates),
+                Sorted = lists:sort(
+                    fun(A, B) -> A#transaction.created_at >= B#transaction.created_at end,
+                    Filtered
+                ),
+                Total  = length(Sorted),
+                Offset = (Page - 1) * PageSize,
+                Items  = lists:sublist(Sorted, Offset + 1, PageSize),
+                #{items => Items, total => Total, page => Page, page_size => PageSize}
+            end,
+            case mnesia:transaction(F) of
+                {atomic, Result} -> {ok, Result};
+                {aborted, _Reason} -> {error, database_error}
+            end
+    end.
+
+%% @private Apply filter criteria to a single transaction record.
+-spec matches_filters(#transaction{}, map()) -> boolean().
+matches_filters(T, Filters) ->
+    check_filter(from_ts,    fun(V) -> T#transaction.created_at >= V end, Filters) andalso
+    check_filter(to_ts,      fun(V) -> T#transaction.created_at =< V end, Filters) andalso
+    check_filter(txn_type,   fun(V) -> T#transaction.txn_type   =:= V end, Filters) andalso
+    check_filter(status,     fun(V) -> T#transaction.status     =:= V end, Filters) andalso
+    check_filter(min_amount, fun(V) -> T#transaction.amount     >= V end, Filters) andalso
+    check_filter(max_amount, fun(V) -> T#transaction.amount     =< V end, Filters).
+
+%% @private Returns true when key is absent or predicate holds.
+-spec check_filter(atom(), fun((term()) -> boolean()), map()) -> boolean().
+check_filter(Key, Pred, Filters) ->
+    case maps:find(Key, Filters) of
+        error      -> true;
+        {ok, Val}  -> Pred(Val)
+    end.
+
+
 %%
 %% Creates a reversal (also known as a "reversal transaction" or "void") for a
 %% previously posted transaction. This is used when:

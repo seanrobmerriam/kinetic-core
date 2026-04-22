@@ -18,9 +18,10 @@ handle(<<"POST">>, Req, State) ->
             <<"amount">> := Amount,
             <<"currency">> := CurrencyBin,
             <<"description">> := Description
-        }, _} ->
+        } = Json, _} ->
             Currency = binary_to_existing_atom(CurrencyBin, utf8),
-            case cb_payments:deposit(IdempotencyKey, DestId, Amount, Currency, Description) of
+            Channel  = maps:get(<<"channel">>, Json, undefined),
+            case cb_payments:deposit(IdempotencyKey, DestId, Amount, Currency, Description, Channel) of
                 {ok, Txn} ->
                     Resp = transaction_to_json(Txn),
                     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
@@ -33,8 +34,14 @@ handle(<<"POST">>, Req, State) ->
                     Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
                     {ok, Req3, State}
             end;
-        _ ->
+        {ok, _, _} ->
             {Status, ErrorAtom, Message} = cb_http_errors:to_response(missing_required_field),
+            Resp = #{error => ErrorAtom, message => Message},
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
+            {ok, Req3, State};
+        _ ->
+            {Status, ErrorAtom, Message} = cb_http_errors:to_response(invalid_json),
             Resp = #{error => ErrorAtom, message => Message},
             Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
             Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
@@ -61,6 +68,7 @@ transaction_to_json(Txn) ->
         source_account_id => Txn#transaction.source_account_id,
         dest_account_id => Txn#transaction.dest_account_id,
         description => Txn#transaction.description,
+        channel => Txn#transaction.channel,
         created_at => Txn#transaction.created_at,
         posted_at => Txn#transaction.posted_at
     }.

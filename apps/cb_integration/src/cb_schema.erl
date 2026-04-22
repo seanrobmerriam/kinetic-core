@@ -75,7 +75,8 @@
 %% @returns `ok' on success (always succeeds if Mnesia is running)
 -spec create_tables() -> ok.
 create_tables() ->
-    Tables = [party, account, transaction, ledger_entry, account_hold,
+    Tables = [party, party_audit, account, transaction, ledger_entry,
+              chart_account, balance_snapshot, account_hold,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
@@ -93,7 +94,8 @@ create_tables() ->
 %% @param TableName The name of the table to create
 %% @returns `ok' on success
 -spec create_if_not_exists(
-    party | account | transaction | ledger_entry |
+    party | party_audit | account | transaction | ledger_entry |
+    chart_account | balance_snapshot |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -122,7 +124,8 @@ create_if_not_exists(TableName) ->
 %% @param TableName The table to get spec for
 %% @returns Mnesia table specification proplist
 -spec table_spec(
-    party | account | transaction | ledger_entry |
+    party | party_audit | account | transaction | ledger_entry |
+    chart_account | balance_snapshot |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -136,6 +139,8 @@ create_if_not_exists(TableName) ->
                 'party_id' | 'request_id' | 'resource_id' | 'resource_type' |
                 'role' | 'source_account_id' | 'status' | 'subscription_id' |
                 'txn_id' | 'user_id' | 'actor_user_id' | 'approved_by' |
+                'action' | 'version' | 'account_type' | 'parent_code' |
+                'snapshot_at' |
                 'attempt_status', ...]} |
      {'record_name', 'loan_account' | 'loan_product' | 'loan_repayment'} |
      {'ram_copies', [atom(), ...]}, ...].
@@ -144,6 +149,12 @@ table_spec(party) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, party)},
         {index, [email, status, kyc_status]}
+    ];
+table_spec(party_audit) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, party_audit)},
+        {index, [party_id, action, version]}
     ];
 table_spec(account) ->
     [
@@ -161,7 +172,19 @@ table_spec(ledger_entry) ->
     [
         {ram_copies, [node()]},
         {attributes, record_info(fields, ledger_entry)},
-        {index, [txn_id, account_id]}
+        {index, [txn_id, account_id, currency]}
+    ];
+table_spec(chart_account) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, chart_account)},
+        {index, [account_type, parent_code, status]}
+    ];
+table_spec(balance_snapshot) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, balance_snapshot)},
+        {index, [account_id, snapshot_at]}
     ];
 table_spec(account_hold) ->
     [

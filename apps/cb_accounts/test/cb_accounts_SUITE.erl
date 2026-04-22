@@ -50,7 +50,7 @@ end_per_suite(_Config) ->
 
 init_per_testcase(_TestCase, Config) ->
     lists:foreach(fun(T) -> mnesia:clear_table(T) end,
-                  [party, account, transaction, ledger_entry]),
+                  [party, party_audit, account, transaction, ledger_entry]),
     Config.
 
 end_per_testcase(_TestCase, _Config) ->

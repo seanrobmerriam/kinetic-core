@@ -146,6 +146,12 @@ dispatch() ->
             %% Development tools
             {<<"/api/v1/dev/mock-import">>, cb_dev_mock_import_handler, []},
 
+            %% API specification
+            {<<"/api/v1/openapi.json">>, cb_openapi_handler, []},
+
+            %% VM metrics
+            {<<"/metrics">>, cb_metrics_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

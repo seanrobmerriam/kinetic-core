@@ -72,6 +72,17 @@
 %% - complete: Onboarding steps are finished
 -type onboarding_status() :: incomplete | complete.
 
+%% @doc Structured postal address for a party.
+-type party_address() :: #
+{
+    line1 := binary(),
+    line2 => binary(),
+    city := binary(),
+    state => binary(),
+    postal_code => binary(),
+    country := binary()
+}.
+
 %% @doc Status of a financial transaction.
 %% - pending: Transaction created but not yet processed
 %% - posted: Transaction successfully recorded in the ledger
@@ -95,6 +106,9 @@
 %% - Credits increase Liabilities, Equity, and Revenue
 -type entry_type() :: debit | credit.
 
+%% @doc High-level chart of account categories.
+-type gl_account_type() :: asset | liability | equity | revenue | expense.
+
 %% =============================================================================
 %% Record Definitions
 %% =============================================================================
@@ -112,6 +126,9 @@
 %% - onboarding_status: Onboarding completion state (incomplete | complete)
 %% - review_notes: Optional notes from the most recent KYC review
 %% - doc_refs: List of document reference identifiers provided for KYC
+%% - address: Optional structured postal address
+%% - version: Monotonic version for party updates
+%% - merged_into_party_id: Target party ID if this record was merged
 %% - created_at: Timestamp when the party record was created
 %% - updated_at: Timestamp of last modification to the party record
 -record(party, {
@@ -123,8 +140,23 @@
     onboarding_status   :: onboarding_status(),
     review_notes        :: binary() | undefined,
     doc_refs            :: [binary()],
+    address             :: party_address() | undefined,
+    version             :: pos_integer(),
+    merged_into_party_id :: uuid() | undefined,
     created_at          :: timestamp_ms(),
     updated_at          :: timestamp_ms()
+}).
+
+%% @doc Immutable audit event for party changes.
+%%
+%% Each write operation on party data emits an append-only audit entry.
+-record(party_audit, {
+    audit_id    :: uuid(),
+    party_id    :: uuid(),
+    action      :: atom(),
+    version     :: pos_integer(),
+    metadata    :: map(),
+    created_at  :: timestamp_ms()
 }).
 
 %% @doc Represents a financial account within the banking system.
@@ -145,14 +177,35 @@
 %% The balance is calculated as: Sum(Credits) - Sum(Debits)
 %% For asset accounts, a positive balance means the account holder has funds.
 -record(account, {
-    account_id  :: uuid(),
-    party_id    :: uuid(),
+    account_id        :: uuid(),
+    party_id          :: uuid(),
+    name              :: binary(),
+    currency          :: currency(),
+    balance           :: amount(),
+    status            :: account_status(),
+    withdrawal_limit  :: amount() | undefined,
+    created_at        :: timestamp_ms(),
+    updated_at        :: timestamp_ms()
+}).
+
+%% @doc Chart of accounts node used for ledger reporting and GL hierarchy.
+-record(chart_account, {
+    code        :: binary(),
     name        :: binary(),
-    currency    :: currency(),
-    balance     :: amount(),
-    status      :: account_status(),
+    account_type :: gl_account_type(),
+    parent_code :: binary() | undefined,
+    status      :: active | inactive,
     created_at  :: timestamp_ms(),
     updated_at  :: timestamp_ms()
+}).
+
+%% @doc Historical point-in-time account balance snapshot.
+-record(balance_snapshot, {
+    snapshot_id :: uuid(),
+    account_id  :: uuid(),
+    balance     :: amount(),
+    currency    :: currency(),
+    snapshot_at :: timestamp_ms()
 }).
 
 %% @doc Represents a financial transaction in the system.
@@ -186,6 +239,7 @@
     source_account_id :: uuid() | undefined,
     dest_account_id   :: uuid() | undefined,
     description       :: binary(),
+    channel           :: binary() | undefined,
     created_at        :: timestamp_ms(),
     posted_at         :: timestamp_ms() | undefined
 }).

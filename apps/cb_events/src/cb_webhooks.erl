@@ -334,9 +334,12 @@ event_to_map(Event) ->
 %% gen_server callbacks
 %%--------------------------------------------------------------------
 
+-define(DELIVERY_INTERVAL_MS, 30_000).
+
 -spec init([]) -> {ok, #{}}.
 init([]) ->
     {ok, _} = inets:start(httpc, [{profile, cb_webhooks}]),
+    erlang:send_after(?DELIVERY_INTERVAL_MS, self(), process_pending),
     {ok, #{}}.
 
 handle_call(_Request, _From, State) ->
@@ -345,6 +348,10 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+handle_info(process_pending, State) ->
+    process_pending(),
+    erlang:send_after(?DELIVERY_INTERVAL_MS, self(), process_pending),
+    {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 

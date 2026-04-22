@@ -63,12 +63,16 @@
     create_party/2,
     get_party/1,
     list_parties/2,
+    list_parties_filtered/3,
     suspend_party/1,
     reactivate_party/1,
     close_party/1,
     update_kyc_status/3,
     update_onboarding_status/2,
-    add_doc_ref/2
+    add_doc_ref/2,
+    update_address/2,
+    detect_duplicate_parties/0,
+    merge_parties/3
 ]).
 
 %% @doc
@@ -108,10 +112,14 @@ create_party(FullName, Email) when is_binary(FullName), is_binary(Email) ->
                     onboarding_status = incomplete,
                     review_notes = undefined,
                     doc_refs = [],
+                    address = undefined,
+                    version = 1,
+                    merged_into_party_id = undefined,
                     created_at = Now,
                     updated_at = Now
                 },
                 mnesia:write(Party),
+                write_party_audit(PartyId, create, 1, #{email => Email}),
                 {ok, Party};
             [_Existing] ->
                 {error, email_already_exists}
@@ -190,6 +198,36 @@ list_parties(_, _) ->
     {error, invalid_pagination}.
 
 %% @doc
+%% Lists parties with optional filters and pagination.
+%%
+%% Supported filters map keys:
+%% - status => active | suspended | closed
+%% - email_contains => binary()
+%%
+%% @spec list_parties_filtered(pos_integer(), pos_integer(), map()) ->
+%%     {ok, map()} | {error, atom()}.
+list_parties_filtered(Page, PageSize, Filters)
+        when Page >= 1, PageSize >= 1, PageSize =< 100, is_map(Filters) ->
+    F = fun() ->
+        AllParties = mnesia:select(party, [{'_', [], ['$_']}]),
+        Matched = lists:filter(fun(P) -> matches_party_filters(P, Filters) end, AllParties),
+        Sorted = lists:sort(
+            fun(A, B) -> A#party.created_at >= B#party.created_at end,
+            Matched
+        ),
+        Total = length(Sorted),
+        Offset = (Page - 1) * PageSize,
+        Items = lists:sublist(Sorted, Offset + 1, PageSize),
+        #{items => Items, total => Total, page => Page, page_size => PageSize}
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> {ok, Result};
+        {aborted, _Reason} -> {error, database_error}
+    end;
+list_parties_filtered(_, _, _) ->
+    {error, invalid_pagination}.
+
+%% @doc
 %% Suspends a party, temporarily halting their banking relationship.
 %%
 %% Suspending a party prevents them from opening new accounts and conducting new
@@ -224,9 +262,9 @@ suspend_party(PartyId) ->
             [Party] ->
                 case Party#party.status of
                     active ->
-                        Now = erlang:system_time(millisecond),
-                        Updated = Party#party{status = suspended, updated_at = Now},
+                        Updated = bump_party_version(Party#party{status = suspended}),
                         mnesia:write(Updated),
+                        write_party_audit(PartyId, suspend, Updated#party.version, #{}),
                         {ok, Updated};
                     suspended ->
                         {error, party_already_suspended};
@@ -270,9 +308,9 @@ reactivate_party(PartyId) ->
             [Party] ->
                 case Party#party.status of
                     suspended ->
-                        Now = erlang:system_time(millisecond),
-                        Updated = Party#party{status = active, updated_at = Now},
+                        Updated = bump_party_version(Party#party{status = active}),
                         mnesia:write(Updated),
+                        write_party_audit(PartyId, reactivate, Updated#party.version, #{}),
                         {ok, Updated};
                     active ->
                         {error, party_not_suspended};
@@ -338,9 +376,9 @@ close_party(PartyId) ->
                             true ->
                                 {error, party_has_active_accounts};
                             false ->
-                                Now = erlang:system_time(millisecond),
-                                Updated = Party#party{status = closed, updated_at = Now},
+                                Updated = bump_party_version(Party#party{status = closed}),
                                 mnesia:write(Updated),
+                                write_party_audit(PartyId, close, Updated#party.version, #{}),
                                 {ok, Updated}
                         end
                 end;
@@ -366,13 +404,12 @@ update_kyc_status(PartyId, KycStatus, Notes)
     F = fun() ->
         case mnesia:read(party, PartyId) of
             [Party] ->
-                Now = erlang:system_time(millisecond),
-                Updated = Party#party{
+                Updated = bump_party_version(Party#party{
                     kyc_status = KycStatus,
-                    review_notes = Notes,
-                    updated_at = Now
-                },
+                    review_notes = Notes
+                }),
                 mnesia:write(Updated),
+                write_party_audit(PartyId, update_kyc_status, Updated#party.version, #{status => KycStatus}),
                 {ok, Updated};
             [] ->
                 {error, party_not_found}
@@ -396,12 +433,11 @@ update_onboarding_status(PartyId, OnboardingStatus)
     F = fun() ->
         case mnesia:read(party, PartyId) of
             [Party] ->
-                Now = erlang:system_time(millisecond),
-                Updated = Party#party{
-                    onboarding_status = OnboardingStatus,
-                    updated_at = Now
-                },
+                Updated = bump_party_version(Party#party{
+                    onboarding_status = OnboardingStatus
+                }),
                 mnesia:write(Updated),
+                write_party_audit(PartyId, update_onboarding_status, Updated#party.version, #{status => OnboardingStatus}),
                 {ok, Updated};
             [] ->
                 {error, party_not_found}
@@ -424,13 +460,13 @@ add_doc_ref(PartyId, DocRef) when is_binary(DocRef) ->
     F = fun() ->
         case mnesia:read(party, PartyId) of
             [Party] ->
-                Now = erlang:system_time(millisecond),
                 Existing = Party#party.doc_refs,
-                Updated = Party#party{
+                Updated = bump_party_version(Party#party{
                     doc_refs = [DocRef | Existing],
-                    updated_at = Now
-                },
+                    updated_at = Party#party.updated_at
+                }),
                 mnesia:write(Updated),
+                write_party_audit(PartyId, add_doc_ref, Updated#party.version, #{doc_ref => DocRef}),
                 {ok, Updated};
             [] ->
                 {error, party_not_found}
@@ -439,4 +475,181 @@ add_doc_ref(PartyId, DocRef) when is_binary(DocRef) ->
     case mnesia:transaction(F) of
         {atomic, Result} -> Result;
         {aborted, _Reason} -> {error, database_error}
+    end.
+
+%% @doc
+%% Updates the postal address associated with a party.
+%%
+%% @spec update_address(uuid(), party_address()) -> {ok, #party{}} | {error, atom()}.
+update_address(PartyId, Address) when is_map(Address) ->
+    case validate_address(Address) of
+        ok ->
+            F = fun() ->
+                case mnesia:read(party, PartyId) of
+                    [Party] ->
+                        Updated = bump_party_version(Party#party{address = Address}),
+                        mnesia:write(Updated),
+                        write_party_audit(PartyId, update_address, Updated#party.version, #{}),
+                        {ok, Updated};
+                    [] ->
+                        {error, party_not_found}
+                end
+            end,
+            case mnesia:transaction(F) of
+                {atomic, Result} -> Result;
+                {aborted, _Reason} -> {error, database_error}
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+update_address(_, _) ->
+    {error, invalid_address}.
+
+%% @doc
+%% Detects likely duplicate parties by normalized full name.
+%%
+%% Returns groups where more than one party has the same normalized name.
+%%
+%% @spec detect_duplicate_parties() -> {ok, [#{normalized_name => binary(), party_ids => [uuid()]}]} | {error, atom()}.
+detect_duplicate_parties() ->
+    F = fun() ->
+        AllParties = mnesia:select(party, [{'_', [], ['$_']}]),
+        Grouped = lists:foldl(
+            fun(Party, Acc) ->
+                NameKey = normalize_name(Party#party.full_name),
+                Existing = maps:get(NameKey, Acc, []),
+                maps:put(NameKey, [Party | Existing], Acc)
+            end,
+            #{},
+            AllParties
+        ),
+        Duplicates = maps:fold(
+            fun(NameKey, Parties, Out) ->
+                case length(Parties) > 1 of
+                    true ->
+                        [#{
+                            normalized_name => NameKey,
+                            party_ids => [P#party.party_id || P <- Parties]
+                        } | Out];
+                    false ->
+                        Out
+                end
+            end,
+            [],
+            Grouped
+        ),
+        {ok, Duplicates}
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end.
+
+%% @doc
+%% Merges source party into target party and transfers account ownership.
+%%
+%% @spec merge_parties(uuid(), uuid(), binary()) -> {ok, #party{}} | {error, atom()}.
+merge_parties(SourcePartyId, TargetPartyId, Reason)
+        when is_binary(Reason), SourcePartyId =/= TargetPartyId ->
+    F = fun() ->
+        case {mnesia:read(party, SourcePartyId, write), mnesia:read(party, TargetPartyId, write)} of
+            {[], _} ->
+                {error, source_party_not_found};
+            {_, []} ->
+                {error, target_party_not_found};
+            {[SourceParty], [TargetParty]} ->
+                case {SourceParty#party.status, TargetParty#party.status} of
+                    {closed, _} ->
+                        {error, source_party_closed};
+                    {_, closed} ->
+                        {error, target_party_closed};
+                    _ ->
+                        Accounts = mnesia:index_read(account, SourcePartyId, party_id),
+                        lists:foreach(
+                            fun(Account) ->
+                                UpdatedAccount = Account#account{
+                                    party_id = TargetPartyId,
+                                    updated_at = erlang:system_time(millisecond)
+                                },
+                                mnesia:write(UpdatedAccount)
+                            end,
+                            Accounts
+                        ),
+                        UpdatedSource = bump_party_version(SourceParty#party{
+                            status = closed,
+                            merged_into_party_id = TargetPartyId,
+                            review_notes = Reason
+                        }),
+                        mnesia:write(UpdatedSource),
+                        write_party_audit(SourcePartyId, merge_into, UpdatedSource#party.version, #{target_party_id => TargetPartyId}),
+                        write_party_audit(TargetPartyId, merge_target, TargetParty#party.version, #{source_party_id => SourcePartyId}),
+                        {ok, UpdatedSource}
+                end
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end;
+merge_parties(_, _, _) ->
+    {error, invalid_merge_request}.
+
+%% -----------------------------------------------------------------------------
+%% Internal helpers
+%% -----------------------------------------------------------------------------
+
+-spec bump_party_version(#party{}) -> #party{}.
+bump_party_version(Party) ->
+    Party#party{
+        version = Party#party.version + 1,
+        updated_at = erlang:system_time(millisecond)
+    }.
+
+-spec write_party_audit(uuid(), atom(), pos_integer(), map()) -> ok.
+write_party_audit(PartyId, Action, Version, Metadata) ->
+    Audit = #party_audit{
+        audit_id = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
+        party_id = PartyId,
+        action = Action,
+        version = Version,
+        metadata = Metadata,
+        created_at = erlang:system_time(millisecond)
+    },
+    mnesia:write(Audit),
+    ok.
+
+-spec matches_party_filters(#party{}, map()) -> boolean().
+matches_party_filters(Party, Filters) ->
+    StatusMatch = case maps:find(status, Filters) of
+        {ok, Status} -> Party#party.status =:= Status;
+        error -> true
+    end,
+    EmailMatch = case maps:find(email_contains, Filters) of
+        {ok, Contains} when is_binary(Contains) ->
+            binary:match(Party#party.email, Contains) =/= nomatch;
+        _ ->
+            true
+    end,
+    StatusMatch andalso EmailMatch.
+
+-spec normalize_name(binary()) -> binary().
+normalize_name(Name) ->
+    Trimmed = string:trim(Name),
+    Collapsed = re:replace(Trimmed, <<"\\s+">>, <<" ">>, [global, {return, binary}]),
+    list_to_binary(string:lowercase(binary_to_list(Collapsed))).
+
+-spec validate_address(map()) -> ok | {error, invalid_address}.
+validate_address(Address) ->
+    Required = [line1, city, country],
+    case lists:all(
+        fun(Key) ->
+            case maps:find(Key, Address) of
+                {ok, Value} when is_binary(Value), byte_size(Value) > 0 -> true;
+                _ -> false
+            end
+        end,
+        Required
+    ) of
+        true -> ok;
+        false -> {error, invalid_address}
     end.

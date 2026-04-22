@@ -75,7 +75,8 @@
     freeze_account/1,
     unfreeze_account/1,
     close_account/1,
-    get_balance/1
+    get_balance/1,
+    set_withdrawal_limit/2
 ]).
 
 %% Supported currencies
@@ -444,6 +445,30 @@ get_balance(AccountId) ->
                 }};
             [] ->
                 {error, account_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end.
+
+%% @doc Set a per-transaction withdrawal limit on an account.
+%%
+%% Any withdrawal exceeding this amount will be rejected with
+%% `withdrawal_limit_exceeded'. Pass `undefined' to remove the limit.
+%%
+%% @param AccountId The account to configure
+%% @param Limit     Max single withdrawal in minor units
+%% @returns ok on success, {error, account_not_found} if missing
+
+-spec set_withdrawal_limit(uuid(), amount() | undefined) -> ok | {error, atom()}.
+set_withdrawal_limit(AccountId, Limit) ->
+    F = fun() ->
+        case mnesia:read(account, AccountId, write) of
+            [] -> {error, account_not_found};
+            [Account] ->
+                mnesia:write(Account#account{withdrawal_limit = Limit}),
+                ok
         end
     end,
     case mnesia:transaction(F) of

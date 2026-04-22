@@ -62,5 +62,13 @@ init([]) ->
         intensity => 5,
         period => 10
     },
-    Children = [],
+    Children = [
+        #{
+            id      => cb_rate_limiter,
+            start   => {cb_rate_limiter, start_link, []},
+            restart => permanent,
+            type    => worker,
+            modules => [cb_rate_limiter]
+        }
+    ],
     {ok, {SupFlags, Children}}.

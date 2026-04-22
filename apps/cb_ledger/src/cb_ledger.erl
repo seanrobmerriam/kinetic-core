@@ -74,7 +74,11 @@
 -export([
     post_entries/2,
     get_entries_for_transaction/1,
-    get_entries_for_account/3
+    get_entries_for_account/3,
+    create_chart_account/4,
+    get_trial_balance/1,
+    create_balance_snapshot/1,
+    get_balance_snapshots/3
 ]).
 
 %% @doc Posts a debit/credit entry pair atomically to the ledger.
@@ -238,3 +242,127 @@ get_entries_for_account(AccountId, Page, PageSize) when Page >= 1, PageSize >= 1
     end;
 get_entries_for_account(_, _, _) ->
     {error, invalid_pagination}.
+
+%% @doc Creates a chart-of-accounts node.
+-spec create_chart_account(binary(), binary(), gl_account_type(), binary() | undefined) ->
+    {ok, #chart_account{}} | {error, atom()}.
+create_chart_account(Code, Name, AccountType, ParentCode)
+        when is_binary(Code), is_binary(Name) ->
+    case lists:member(AccountType, [asset, liability, equity, revenue, expense]) of
+        true ->
+            F = fun() ->
+                case mnesia:read(chart_account, Code) of
+                    [_] ->
+                        {error, chart_account_exists};
+                    [] ->
+                        case validate_parent_chart_account(ParentCode) of
+                            ok ->
+                                Now = erlang:system_time(millisecond),
+                                Account = #chart_account{
+                                    code = Code,
+                                    name = Name,
+                                    account_type = AccountType,
+                                    parent_code = ParentCode,
+                                    status = active,
+                                    created_at = Now,
+                                    updated_at = Now
+                                },
+                                mnesia:write(Account),
+                                {ok, Account};
+                            {error, _} = Error ->
+                                Error
+                        end
+                end
+            end,
+            case mnesia:transaction(F) of
+                {atomic, Result} -> Result;
+                {aborted, _Reason} -> {error, database_error}
+            end;
+        false ->
+            {error, invalid_account_type}
+    end.
+
+%% @doc Returns trial balance totals for the requested currency.
+-spec get_trial_balance(currency()) -> {ok, map()} | {error, atom()}.
+get_trial_balance(Currency) ->
+    F = fun() ->
+        Entries = mnesia:index_read(ledger_entry, Currency, currency),
+        {DebitTotal, CreditTotal} = lists:foldl(
+            fun(Entry, {Debits, Credits}) ->
+                case Entry#ledger_entry.entry_type of
+                    debit -> {Debits + Entry#ledger_entry.amount, Credits};
+                    credit -> {Debits, Credits + Entry#ledger_entry.amount}
+                end
+            end,
+            {0, 0},
+            Entries
+        ),
+        #{
+            currency => Currency,
+            total_debits => DebitTotal,
+            total_credits => CreditTotal,
+            balanced => DebitTotal =:= CreditTotal,
+            as_of => erlang:system_time(millisecond)
+        }
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> {ok, Result};
+        {aborted, Reason} -> {error, Reason}
+    end.
+
+%% @doc Captures a point-in-time account balance snapshot.
+-spec create_balance_snapshot(uuid()) -> {ok, #balance_snapshot{}} | {error, atom()}.
+create_balance_snapshot(AccountId) ->
+    F = fun() ->
+        case mnesia:read(account, AccountId) of
+            [Account] ->
+                Snapshot = #balance_snapshot{
+                    snapshot_id = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
+                    account_id = AccountId,
+                    balance = Account#account.balance,
+                    currency = Account#account.currency,
+                    snapshot_at = erlang:system_time(millisecond)
+                },
+                mnesia:write(Snapshot),
+                {ok, Snapshot};
+            [] ->
+                {error, account_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end.
+
+%% @doc Retrieves paginated snapshots for an account, newest first.
+-spec get_balance_snapshots(uuid(), pos_integer(), pos_integer()) -> {ok, map()} | {error, atom()}.
+get_balance_snapshots(AccountId, Page, PageSize)
+        when Page >= 1, PageSize >= 1, PageSize =< 100 ->
+    F = fun() ->
+        Snapshots = mnesia:index_read(balance_snapshot, AccountId, account_id),
+        Sorted = lists:sort(
+            fun(A, B) -> A#balance_snapshot.snapshot_at >= B#balance_snapshot.snapshot_at end,
+            Snapshots
+        ),
+        Total = length(Sorted),
+        Offset = (Page - 1) * PageSize,
+        Items = lists:sublist(Sorted, Offset + 1, PageSize),
+        #{items => Items, total => Total, page => Page, page_size => PageSize}
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> {ok, Result};
+        {aborted, _Reason} -> {error, database_error}
+    end;
+get_balance_snapshots(_, _, _) ->
+    {error, invalid_pagination}.
+
+-spec validate_parent_chart_account(binary() | undefined) -> ok | {error, parent_chart_account_not_found}.
+validate_parent_chart_account(undefined) ->
+    ok;
+validate_parent_chart_account(ParentCode) when is_binary(ParentCode) ->
+    case mnesia:read(chart_account, ParentCode) of
+        [_] -> ok;
+        [] -> {error, parent_chart_account_not_found}
+    end;
+validate_parent_chart_account(_) ->
+    {error, parent_chart_account_not_found}.

@@ -16,13 +16,22 @@ import {
   Text,
   ThemeIcon,
   Title,
+  UnstyledButton,
+  useMantineTheme,
 } from "@mantine/core";
 import {
   IconArrowDown,
   IconArrowRight,
   IconArrowUp,
+  IconBook,
   IconBuildingBank,
+  IconCashBanknote,
   IconClock,
+  IconCoin,
+  IconReceipt,
+  IconRepeat,
+  IconReportMoney,
+  IconShield,
   IconUsers,
   IconWallet,
   type Icon,
@@ -35,6 +44,61 @@ import type { Account, LedgerEntry, Party, Transaction } from "@/lib/types";
 
 interface ListResponse<T> {
   items: T[];
+}
+
+const quickActions = [
+  { label: "Accounts", href: "/accounts", icon: IconBuildingBank, color: "indigo" },
+  { label: "Customers", href: "/customers", icon: IconUsers, color: "violet" },
+  { label: "Transfers", href: "/transfer", icon: IconRepeat, color: "blue" },
+  { label: "Payments", href: "/payments", icon: IconCoin, color: "red" },
+  { label: "Deposit", href: "/deposit", icon: IconCashBanknote, color: "green" },
+  { label: "Transactions", href: "/transactions", icon: IconReceipt, color: "teal" },
+  { label: "Loans", href: "/loans", icon: IconReportMoney, color: "orange" },
+  { label: "Ledger", href: "/ledger", icon: IconBook, color: "cyan" },
+  { label: "Compliance", href: "/compliance", icon: IconShield, color: "pink" },
+] as const;
+
+function QuickActionsGrid() {
+  const theme = useMantineTheme();
+  return (
+    <Card withBorder radius="md" padding="lg" style={{ backgroundColor: "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7))" }}>
+      <Group justify="space-between">
+        <Text fw={500} fz="lg">Quick Actions</Text>
+        <Anchor component={Link} href="/accounts" c="inherit" size="xs">View all</Anchor>
+      </Group>
+      <SimpleGrid cols={3} mt="md" spacing="md">
+        {quickActions.map(({ label, href, icon: Icon, color }) => (
+          <UnstyledButton
+            key={label}
+            component={Link}
+            href={href}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              borderRadius: "var(--mantine-radius-md)",
+              height: 90,
+              backgroundColor: "light-dark(var(--mantine-color-white), var(--mantine-color-dark-6))",
+              transition: "box-shadow 150ms ease, transform 100ms ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = "var(--mantine-shadow-sm)";
+              (e.currentTarget as HTMLElement).style.transform = "scale(1.02)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = "";
+              (e.currentTarget as HTMLElement).style.transform = "";
+            }}
+          >
+            <Icon color={theme.colors[color][6]} size={32} stroke={1.5} />
+            <Text size="xs" mt={7}>{label}</Text>
+          </UnstyledButton>
+        ))}
+      </SimpleGrid>
+    </Card>
+  );
 }
 
 type TabKey = "accounts" | "ledger" | "payments";
@@ -235,6 +299,7 @@ export default function DashboardPage() {
 
   return (
     <Stack gap="lg">
+      <QuickActionsGrid />
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
         <Kpi
           label="Total Deposits"

@@ -1,5 +1,7 @@
 # AGENTS.md
 
+### Current Development Phase: P0-S5
+
 ## Purpose
 
 This file defines implementation standards for contributors and coding agents working in this repository.
@@ -18,17 +20,12 @@ Goals:
 - `REQUIREMENTS.md`
 - `DEVELOPMENT.md`
 
-2. Prefer small, focused changes:
-- Change only what is required for the task.
-- Avoid unrelated refactors in feature or bugfix commits.
+2. Check the "Curent Development Phase" at the top of this file; that is the subphase you will be working on., 
 
-3. Preserve consistency:
-- Follow existing module boundaries under `apps/*`.
-- Prefer existing naming patterns and file organization.
+3. Create a new git worktree for the subphase you are going to work on; all work is to be done in the worktree, and then merged into the main branch via PR when done.
 
-4. Keep behavior explicit:
-- Do not rely on hidden side effects.
-- Surface errors clearly with structured return values.
+4. Update the line at the top of this file that says '### Current Development Phase: ' by adding the subphase after the one you just completed.
+
 
 ### Commit and PR Hygiene
 

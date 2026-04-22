@@ -31,9 +31,9 @@ The roadmap is split into six phases:
 
 This section breaks each phase into smaller execution units that can be scheduled as sprint work.
 
-### Phase 0 Subphases and Tasks
+### Phase 0 Subphases and Tasks - Done
 
-#### P0-S1: Domain Foundations
+#### P0-S1: Domain Foundations - Done
 
 - TASK-001 [DONE 2026-04-21]: Define customer aggregate model, lifecycle states, and validation schema.
 - TASK-002 [DONE 2026-04-21]: Define account aggregate model, state machine, and account-party relationship rules.
@@ -41,7 +41,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-004 [DONE 2026-04-21]: Add customer search with pagination, sorting, and filter parameters.
 - TASK-005 [DONE 2026-04-21]: Add duplicate detection and merge workflow design with audit events.
 
-#### P0-S2: Ledger and Posting Core
+#### P0-S2: Ledger and Posting Core - Done
 
 - TASK-006 [DONE 2026-04-21]: Implement chart of accounts structure with account type hierarchy.
 - TASK-007 [DONE 2026-04-21]: Implement immutable journal entry model for double-entry postings.
@@ -49,7 +49,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-009 [DONE 2026-04-21]: Add trial balance and general ledger query endpoints.
 - TASK-010 [DONE 2026-04-21]: Add historical balance snapshot generation and retrieval.
 
-#### P0-S3: Transaction Processing Baseline
+#### P0-S3: Transaction Processing Baseline - Done
 
 - TASK-011 [DONE 2026-04-21]: Implement deposit workflows for cash, check, and transfer-in channels.
 - TASK-012 [DONE 2026-04-21]: Implement withdrawal workflow with account state and limit checks.
@@ -57,7 +57,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-014 [DONE 2026-04-21]: Add transaction idempotency keys and conflict handling behavior.
 - TASK-015 [DONE 2026-04-21]: Add transaction query capabilities by range, type, amount, and status.
 
-#### P0-S4: API and Security Baseline
+#### P0-S4: API and Security Baseline - Done
 
 - TASK-016 [DONE 2026-04-21]: Publish OpenAPI baseline for release-blocking endpoints.
 - TASK-017 [DONE 2026-04-21]: Implement request validation and standardized error envelope.
@@ -65,7 +65,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-019 [DONE 2026-04-21]: Implement rate limiting and health or metrics endpoints.
 - TASK-020 [DONE 2026-04-21]: Implement webhook event emission for transaction state changes.
 
-#### P0-S5: Compliance, Currency, and Payments
+#### P0-S5: Compliance, Currency, and Payments - Done
 
 - TASK-021 [DONE 2026-04-21]: Implement currency entity, precision rules, and conversion engine.
 - TASK-022 [DONE 2026-04-21]: Implement exchange rate management with historical lookup support.
@@ -73,7 +73,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-024 [DONE 2026-04-21]: Implement domestic payment initiation, status, cancel, and retry flows.
 - TASK-025 [DONE 2026-04-21]: Implement exception queue and straight-through processing state machine.
 
-#### P0-S6: Basic Omnichannel API Support
+#### P0-S6: Basic Omnichannel API Support - Done
 
 - TASK-026 [DONE]: Implement channel type enumeration and per-channel transaction limits with validation.
 - TASK-027 [DONE]: Implement channel activity logging with party, channel, and action context.
@@ -81,7 +81,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-029 [DONE]: Extend auth sessions with channel type; implement notification preference management.
 - TASK-030 [DONE]: Implement ATM interface baseline with balance inquiry and withdrawal endpoints.
 
-#### P0-S7: Dashboard Completion
+#### P0-S7: Dashboard Completion - Done
 
 - TASK-031 [DONE]: Add PaymentOrder, ExceptionItem, ChannelLimit, and ChannelActivity TypeScript types to dashboard.
 - TASK-032 [DONE]: Implement Payment Orders dashboard page with initiation form, session order list, cancel, and retry.
@@ -119,10 +119,10 @@ This section breaks each phase into smaller execution units that can be schedule
 
 #### P1-S1: API Surface Expansion
 
-- TASK-026: Complete OpenAPI coverage for all existing platform endpoints.
-- TASK-027: Implement composite customer and account read endpoints.
-- TASK-028: Implement API SDK generation pipeline for Java, Python, Node.js, and .NET.
-- TASK-029: Add partner API key lifecycle and throttling policy controls.
+- TASK-026 [DONE]: Complete OpenAPI coverage for all existing platform endpoints.
+- TASK-027 [DONE]: Implement composite customer and account read endpoints.
+- TASK-028 [DONE]: Implement API SDK generation pipeline for Java, Python, Node.js, and .NET.
+- TASK-029 [DONE]: Add partner API key lifecycle and throttling policy controls.
 
 #### P1-S2: Query and Developer Experience
 

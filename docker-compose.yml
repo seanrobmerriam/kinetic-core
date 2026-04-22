@@ -23,6 +23,22 @@ services:
         condition: service_healthy
     ports:
       - "8080:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    command: npm run dev
+    develop:
+      watch:
+        - path: ./apps/cb_dashboard/src
+          action: sync
+          target: /app/src
+        - path: ./apps/cb_dashboard/public
+          action: sync
+          target: /app/public
+        - path: ./apps/cb_dashboard/package.json
+          action: rebuild
+        - path: ./apps/cb_dashboard/next.config.ts
+          action: rebuild
 
 volumes:
   ironledger_mnesia:

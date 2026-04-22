@@ -23,10 +23,6 @@ services:
         condition: service_healthy
     ports:
       - "8080:80"
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
-    command: npm run dev
     develop:
       watch:
         - path: ./apps/cb_dashboard/src

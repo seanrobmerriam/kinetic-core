@@ -8,7 +8,6 @@ import {
   Divider,
   Group,
   ScrollArea,
-  Tabs,
   Text,
   UnstyledButton,
 } from "@mantine/core";
@@ -32,6 +31,7 @@ import {
 } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
 import { NavLinksGroup } from "./NavLinksGroup";
+import classes from "./Sidebar.module.css";
 
 interface NavItem {
   label: string;
@@ -77,13 +77,15 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: "Logs", icon: IconFiles, href: "/logs" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ activeTab }: { activeTab: string }) {
   const { state } = useAuth();
   const email =
     state.status === "authenticated" && state.user ? state.user.email : "";
   const initial = email ? email.charAt(0).toUpperCase() : "?";
   const role =
     state.status === "authenticated" && state.user ? state.user.role : "";
+
+  const items = activeTab === "admin" ? ADMIN_ITEMS : BANKING_ITEMS;
 
   return (
     <AppShell.Navbar
@@ -94,62 +96,13 @@ export function Sidebar() {
         overflow: "hidden",
       }}
     >
-      {/* Header */}
-      <Box
-        p="md"
-        style={{
-          borderBottom:
-            "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))",
-        }}
-      >
-        <Group justify="space-between" wrap="nowrap">
-          <Box>
-            <Text fw={700} size="md" lh={1.1}>
-              Menu
-            </Text>
-            <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-              Banking Solution
-            </Text>
-          </Box>
-        </Group>
-      </Box>
-
-      {/* Tabbed nav */}
-      <Tabs
-        defaultValue="banking"
-        style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
-      >
-        <Tabs.List grow px="md" pt="xs">
-          <Tabs.Tab value="banking" fw={500}>Banking</Tabs.Tab>
-          <Tabs.Tab value="admin" fw={500}>Admin</Tabs.Tab>
-        </Tabs.List>
-
-        <Tabs.Panel
-          value="banking"
-          style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}
-        >
-          <ScrollArea style={{ flex: 1 }} px="md" py="xs">
-            <Box py={4}>
-              {BANKING_ITEMS.map((item) => (
-                <NavLinksGroup {...item} key={item.label} />
-              ))}
-            </Box>
-          </ScrollArea>
-        </Tabs.Panel>
-
-        <Tabs.Panel
-          value="admin"
-          style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}
-        >
-          <ScrollArea style={{ flex: 1 }} px="md" py="xs">
-            <Box py={4}>
-              {ADMIN_ITEMS.map((item) => (
-                <NavLinksGroup {...item} key={item.label} />
-              ))}
-            </Box>
-          </ScrollArea>
-        </Tabs.Panel>
-      </Tabs>
+      <ScrollArea style={{ flex: 1 }} px="md" py="xs">
+        <Box py={4}>
+          {items.map((item) => (
+            <NavLinksGroup {...item} key={item.label} />
+          ))}
+        </Box>
+      </ScrollArea>
 
       {/* Footer: user button */}
       <Divider />
@@ -157,12 +110,7 @@ export function Sidebar() {
         <UnstyledButton
           component={Link}
           href="/settings"
-          style={{
-            display: "block",
-            width: "100%",
-            padding: "var(--mantine-spacing-xs)",
-            borderRadius: "var(--mantine-radius-sm)",
-          }}
+          className={classes.userButton}
         >
           <Group gap="md" align="center" wrap="nowrap">
             <Avatar

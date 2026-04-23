@@ -72,6 +72,8 @@ export function SortableTable<T>({
   searchPlaceholder = "Search...",
   emptyMessage = "No items found",
   minWidth = 700,
+  searchValue,
+  onSearchChange,
 }: {
   data: T[];
   columns: ColumnDef<T>[];
@@ -79,8 +81,12 @@ export function SortableTable<T>({
   searchPlaceholder?: string;
   emptyMessage?: string;
   minWidth?: number;
+  searchValue?: string;
+  onSearchChange?: (v: string) => void;
 }) {
-  const [search, setSearch] = useState("");
+  const isControlled = onSearchChange !== undefined;
+  const [internalSearch, setInternalSearch] = useState("");
+  const search = isControlled ? (searchValue ?? "") : internalSearch;
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [reversed, setReversed] = useState(false);
 
@@ -126,15 +132,17 @@ export function SortableTable<T>({
 
   return (
     <>
-      <Box px="md" pt="md">
-        <TextInput
-          leftSection={<IconSearch size={16} stroke={1.5} />}
-          placeholder={searchPlaceholder}
-          value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
-          maw={400}
-        />
-      </Box>
+      {!isControlled && (
+        <Box px="md" pt="md">
+          <TextInput
+            leftSection={<IconSearch size={16} stroke={1.5} />}
+            placeholder={searchPlaceholder}
+            value={internalSearch}
+            onChange={(e) => setInternalSearch(e.currentTarget.value)}
+            maw={400}
+          />
+        </Box>
+      )}
       <Table.ScrollContainer minWidth={minWidth}>
         <Table verticalSpacing="sm" highlightOnHover>
           <Table.Thead>

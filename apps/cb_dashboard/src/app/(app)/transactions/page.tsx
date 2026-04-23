@@ -9,7 +9,9 @@ import {
   Paper,
   SegmentedControl,
   Stack,
+  TextInput,
 } from "@mantine/core";
+import { IconSearch } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
@@ -46,6 +48,7 @@ export default function TransactionsPage() {
   const { tick, bump } = useRefresh();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -185,6 +188,13 @@ export default function TransactionsPage() {
 
   return (
     <Stack gap="lg">
+      <TextInput
+        leftSection={<IconSearch size={16} stroke={1.5} />}
+        placeholder="Search transactions..."
+        value={search}
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        maw={400}
+      />
       <SegmentedControl
         value={filterStatus}
         onChange={setFilterStatus}
@@ -199,6 +209,8 @@ export default function TransactionsPage() {
           searchPlaceholder="Search transactions..."
           emptyMessage="No transactions found"
           minWidth={800}
+          searchValue={search}
+          onSearchChange={setSearch}
         />
       </Paper>
     </Stack>

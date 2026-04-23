@@ -6,7 +6,9 @@ import {
   ActionIcon,
   AppShell,
   Avatar,
+  Box,
   Group,
+  Tabs,
   Text,
   Title,
   Tooltip,
@@ -25,7 +27,15 @@ import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { capitalize } from "@/lib/format";
 
-export function Header({ onRefresh }: { onRefresh?: () => void }) {
+export function Header({
+  onRefresh,
+  activeTab,
+  setActiveTab,
+}: {
+  onRefresh?: () => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}) {
   const router = useRouter();
   const { state, logout, devToolsEnabled, setDevToolsEnabled } = useAuth();
   const { theme, toggle } = useTheme();
@@ -81,8 +91,8 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
       : "?";
 
   return (
-    <AppShell.Header>
-      <Group h="100%" px="lg" justify="space-between" wrap="nowrap">
+    <AppShell.Header style={{ display: "flex", flexDirection: "column" }}>
+      <Group flex={1} px="lg" justify="space-between" wrap="nowrap">
         <div>
           <Title order={3} fw={600}>
             Kinetic Core
@@ -175,6 +185,24 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
           </Tooltip>
         </Group>
       </Group>
+
+      {/* Banking / Admin tab strip at bottom of header */}
+      <Box px="lg" pb={0}>
+        <Tabs
+          value={activeTab}
+          onChange={(v) => setActiveTab(v ?? "banking")}
+          variant="default"
+        >
+          <Tabs.List>
+            <Tabs.Tab value="banking" fw={500}>
+              Banking
+            </Tabs.Tab>
+            <Tabs.Tab value="admin" fw={500}>
+              Admin
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs>
+      </Box>
     </AppShell.Header>
   );
 }

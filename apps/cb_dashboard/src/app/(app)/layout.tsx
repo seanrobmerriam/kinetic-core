@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell, Center, Loader, Stack, Text } from "@mantine/core";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { clear } = useNotify();
   const { bump } = useRefresh();
   const lastPath = useRef<string | null>(null);
+  const [activeTab, setActiveTab] = useState("banking");
 
   useEffect(() => {
     if (lastPath.current !== pathname) {
@@ -46,7 +47,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      header={{ height: 70 }}
+      header={{ height: 95 }}
       navbar={{ width: 260, breakpoint: "sm" }}
       padding="lg"
     >
@@ -55,8 +56,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           bump();
           router.refresh();
         }}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
-      <Sidebar />
+      <Sidebar activeTab={activeTab} />
       <AppShell.Main>
         <Alerts />
         {children}

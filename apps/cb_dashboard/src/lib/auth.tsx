@@ -8,6 +8,7 @@ import {
   clearStoredSessionId,
   loadStoredSessionId,
   persistSessionId,
+  probeApiBase,
   setSessionId,
   setUnauthorizedHandler,
 } from "@/lib/api";
@@ -53,14 +54,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
-    const stored = loadStoredSessionId();
-    if (!stored) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setState({ status: "unauthenticated", user: null, error: "" });
-      return;
-    }
-    setSessionId(stored);
     (async () => {
+      // Pin the working API base before any auth call goes out, so a
+      // transient failure on /auth/me cannot lock the client onto an
+      // unreachable port.
+      await probeApiBase();
+      const stored = loadStoredSessionId();
+      if (!stored) {
+        setState({ status: "unauthenticated", user: null, error: "" });
+        return;
+      }
+      setSessionId(stored);
       try {
         const result = await api<{ user: AuthUser }>("GET", "/auth/me");
         setState({ status: "authenticated", user: result.user, error: "" });

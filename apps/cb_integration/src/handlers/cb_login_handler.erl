@@ -36,8 +36,8 @@ init(Req, State) ->
             Req2 = cb_cors:reply_preflight(Req),
             {ok, Req2, State};
         _ ->
-            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-            Req2 = cowboy_req:reply(405, Headers, <<"{\"error\": \"method_not_allowed\"}">>, Req),
+            {_Code405, _Hdrs405, _Body405} = cb_http_errors:to_response_with_metrics(method_not_allowed),
+            Req2 = cowboy_req:reply(_Code405, _Hdrs405, _Body405, Req),
             {ok, Req2, State}
     end.
 

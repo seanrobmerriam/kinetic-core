@@ -70,6 +70,7 @@ start(_StartType, _StartArgs) ->
 
     %% Create tables
     ok = cb_schema:create_tables(),
+    ok = cb_metrics_counter:init(),
     ok = cb_auth:ensure_bootstrap_users(),
 
     %% Start Cowboy HTTP server
@@ -82,7 +83,7 @@ start(_StartType, _StartArgs) ->
         [{port, Port}, {num_acceptors, Acceptors}],
         #{
             env => #{dispatch => Dispatch},
-            middlewares => [cowboy_router, cb_log_middleware, cb_cors_middleware, cb_rate_limit_middleware, cb_auth_middleware, cb_deprecation_middleware, cowboy_handler]
+            middlewares => [cowboy_router, cb_log_middleware, cb_cors_middleware, cb_version_middleware, cb_rate_limit_middleware, cb_auth_middleware, cb_deprecation_middleware, cowboy_handler]
         }
     ),
 

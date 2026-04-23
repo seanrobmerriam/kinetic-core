@@ -70,7 +70,8 @@ The following requirements constitute the foundational capabilities necessary fo
 
 ### 6. Basic Compliance Framework
 
-- Implement customer risk classification tier assignment
+- Implement customer risk classification tier assignme
+Can you create a PR for thnt
 - Build transaction monitoring rule engine foundation
 - Create sanctions list screening integration framework
 - Implement identity verification status tracking

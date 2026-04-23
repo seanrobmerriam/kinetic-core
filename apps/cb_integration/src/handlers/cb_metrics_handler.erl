@@ -22,10 +22,13 @@ init(Req, State) ->
 
 handle(<<"GET">>, Req, State) ->
     {WallMs, _} = erlang:statistics(wall_clock),
+    HttpCounters = cb_metrics_counter:get_all(),
     Metrics = #{
-        process_count => erlang:system_info(process_count),
-        memory_total  => erlang:memory(total),
-        uptime_ms     => WallMs
+        process_count       => erlang:system_info(process_count),
+        memory_total        => erlang:memory(total),
+        uptime_ms           => WallMs,
+        http_requests_total => maps:get(http_requests_total, HttpCounters, 0),
+        http_5xx_total      => maps:get(http_5xx_total, HttpCounters, 0)
     },
     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
     Req2 = cowboy_req:reply(200, Headers, jsone:encode(Metrics), Req),
@@ -34,6 +37,6 @@ handle(<<"OPTIONS">>, Req, State) ->
     Req2 = cb_cors:reply_preflight(Req),
     {ok, Req2, State};
 handle(_, Req, State) ->
-    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\":\"method_not_allowed\"}">>, Req),
+    {Code, Hdrs, RespBody} = cb_http_errors:to_response_with_metrics(method_not_allowed),
+    Req2 = cowboy_req:reply(Code, Hdrs, RespBody, Req),
     {ok, Req2, State}.

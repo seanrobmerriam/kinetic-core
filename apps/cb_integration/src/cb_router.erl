@@ -160,6 +160,9 @@ dispatch() ->
             %% API specification
             {<<"/api/v1/openapi.json">>, cb_openapi_handler, []},
 
+            %% OAuth 2.0 token endpoint
+            {<<"/api/v1/oauth/token">>, cb_oauth_handler, []},
+
             %% VM metrics
             {<<"/metrics">>, cb_metrics_handler, []},
 

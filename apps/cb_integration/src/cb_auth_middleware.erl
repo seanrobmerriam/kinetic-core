@@ -44,7 +44,19 @@ execute(Req, Env) ->
                                         false -> {ok, Req, Env}
                                     end;
                                 {error, _} ->
-                                    unauthorized(Req)
+                                    case cb_oauth:validate_token(Token) of
+                                        {ok, OAuthCtx} ->
+                                            erlang:put(auth_session, OAuthCtx),
+                                            erlang:put(auth_user, oauth_user(OAuthCtx)),
+                                            Role = maps:get(role, OAuthCtx),
+                                            Method = cowboy_req:method(Req),
+                                            case is_write_method(Method) andalso Role =:= read_only of
+                                                true  -> forbidden(Req);
+                                                false -> {ok, Req, Env}
+                                            end;
+                                        {error, _} ->
+                                            unauthorized(Req)
+                                    end
                             end
                     end
             end
@@ -52,6 +64,7 @@ execute(Req, Env) ->
 
 is_public_path(<<"/health">>) -> true;
 is_public_path(<<"/api/v1/auth/login">>) -> true;
+is_public_path(<<"/api/v1/oauth/token">>) -> true;
 is_public_path(<<"/api/v1/openapi.json">>) -> true;
 is_public_path(<<"/metrics">>) -> true;
 is_public_path(_) -> false.
@@ -91,6 +104,14 @@ key_user(KeyMeta) ->
         user_id => maps:get(key_id, KeyMeta),
         email   => maps:get(partner_id, KeyMeta),
         role    => maps:get(role, KeyMeta),
+        status  => active
+    }.
+
+oauth_user(OAuthCtx) ->
+    #{
+        user_id => maps:get(client_id, OAuthCtx),
+        email   => maps:get(client_id, OAuthCtx),
+        role    => maps:get(role, OAuthCtx),
         status  => active
     }.
 

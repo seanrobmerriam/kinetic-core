@@ -67,6 +67,7 @@ create_subscription(CallbackURL, EventType)
         event_type      = EventType,
         callback_url    = CallbackURL,
         status          = active,
+        hmac_secret     = base64:encode(crypto:strong_rand_bytes(32)),
         created_at      = Now,
         updated_at      = Now
     },
@@ -322,7 +323,10 @@ attempt_delivery(Event, Del) ->
         _ ->
             URL     = binary_to_list(Sub#webhook_subscription.callback_url),
             Payload = jsone:encode(event_to_map(Event)),
-            Headers = [{"content-type", "application/json"}],
+            Secret  = Sub#webhook_subscription.hmac_secret,
+            Sig     = hmac_signature(Secret, Payload),
+            Headers = [{"content-type", "application/json"},
+                       {"x-ironledger-signature", binary_to_list(Sig)}],
             Req     = {URL, Headers, "application/json", Payload},
             case httpc:request(post, Req, [{timeout, 5000}], []) of
                 {ok, {{_, Code, _}, _, _}} when Code >= 200, Code < 300 ->
@@ -333,6 +337,11 @@ attempt_delivery(Event, Del) ->
                     update_delivery_status(Del, failed, 0)
             end
     end.
+
+hmac_signature(Secret, Payload) ->
+    Mac = crypto:mac(hmac, sha256, Secret, Payload),
+    Hex = <<<<(integer_to_binary(N, 16))/binary>> || <<N:4>> <= Mac>>,
+    <<"sha256=", (string:lowercase(Hex))/binary>>.
 
 update_delivery_status(Del, Status, Code) ->
     Now = erlang:system_time(millisecond),

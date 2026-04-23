@@ -22,9 +22,10 @@ handle(<<"GET">>, Req, State) ->
 handle(<<"OPTIONS">>, Req, State) ->
     Req2 = cb_cors:reply_preflight(Req),
     {ok, Req2, State};
+
 handle(_, Req, State) ->
-    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\":\"method_not_allowed\"}">>, Req),
+    {_Code405, _Hdrs405, _Body405} = cb_http_errors:to_response_with_metrics(method_not_allowed),
+    Req2 = cowboy_req:reply(_Code405, _Hdrs405, _Body405, Req),
     {ok, Req2, State}.
 
 %% Build the OpenAPI 3.0.3 specification document.
@@ -302,6 +303,36 @@ schemas() ->
                 <<"expires_at">>         => #{<<"type">> => <<"integer">>},
                 <<"created_at">>         => #{<<"type">> => <<"integer">>},
                 <<"updated_at">>         => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"OAuthToken">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"access_token">> => #{<<"type">> => <<"string">>},
+                <<"token_type">>   => #{<<"type">> => <<"string">>, <<"example">> => <<"Bearer">>},
+                <<"expires_in">>   => #{<<"type">> => <<"integer">>, <<"description">> => <<"Seconds until expiry">>}
+            },
+            <<"required">> => [<<"access_token">>, <<"token_type">>, <<"expires_in">>]
+        },
+        <<"WebhookDelivery">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"delivery_id">>      => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"subscription_id">>  => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"event_id">>         => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"attempt_status">>   => #{<<"type">> => <<"string">>, <<"enum">> => [<<"success">>, <<"failed">>, <<"pending">>]},
+                <<"response_code">>    => #{<<"type">> => <<"integer">>},
+                <<"created_at">>       => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>       => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ApiKeyUsage">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"key_id">>     => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"method">>     => #{<<"type">> => <<"string">>},
+                <<"path">>       => #{<<"type">> => <<"string">>},
+                <<"recorded_at">> => #{<<"type">> => <<"integer">>}
             }
         }
     }.
@@ -1022,7 +1053,7 @@ paths() ->
                     <<"404">> => error_response()
                 }
             },
-            <<"put">> => #{
+            <<"patch">> => #{
                 <<"summary">> => <<"Update a webhook subscription">>,
                 <<"parameters">> => [path_param(<<"subscription_id">>)],
                 <<"responses">> => #{
@@ -1264,6 +1295,152 @@ paths() ->
                 <<"security">> => [],
                 <<"responses">> => #{
                     <<"200">> => #{<<"description">> => <<"OpenAPI 3.0 spec">>}
+                }
+            }
+        },
+        <<"/api/v1/transactions">> => #{
+            <<"get">> => #{
+                <<"summary">>  => <<"List all transactions">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Transaction list">>}
+                }
+            }
+        },
+        <<"/api/v1/transactions/{txn_id}/receipt">> => #{
+            <<"get">> => #{
+                <<"summary">>    => <<"Get transaction receipt">>,
+                <<"parameters">> => [path_param(<<"txn_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Transaction receipt">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/transactions/{txn_id}/tags">> => #{
+            <<"get">> => #{
+                <<"summary">>    => <<"Get tags for a transaction">>,
+                <<"parameters">> => [path_param(<<"txn_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Transaction tags">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/ledger/entries/latest">> => #{
+            <<"get">> => #{
+                <<"summary">>  => <<"Get latest ledger entries">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Latest ledger entries">>}
+                }
+            }
+        },
+        <<"/api/v1/ledger/trial-balance">> => #{
+            <<"get">> => #{
+                <<"summary">>  => <<"Get trial balance">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Trial balance report">>}
+                }
+            }
+        },
+        <<"/api/v1/ledger/general-ledger">> => #{
+            <<"get">> => #{
+                <<"summary">>  => <<"Get general ledger">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"General ledger entries">>}
+                }
+            }
+        },
+        <<"/api/v1/ledger/chart-of-accounts">> => #{
+            <<"get">> => #{
+                <<"summary">>  => <<"List chart of accounts">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Chart of accounts">>}
+                }
+            }
+        },
+        <<"/api/v1/ledger/chart-of-accounts/{code}">> => #{
+            <<"get">> => #{
+                <<"summary">>    => <<"Get a specific chart of accounts entry">>,
+                <<"parameters">> => [path_param(<<"code">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Chart of accounts entry">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/accounts/{account_id}/snapshots">> => #{
+            <<"get">> => #{
+                <<"summary">>    => <<"Get balance snapshots for an account">>,
+                <<"parameters">> => [path_param(<<"account_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Balance snapshots">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/webhooks/{subscription_id}/deliveries">> => #{
+            <<"get">> => #{
+                <<"summary">>    => <<"List delivery attempts for a webhook subscription">>,
+                <<"parameters">> => [path_param(<<"subscription_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Delivery attempts">>,
+                                  <<"content">> => json_ref(<<"WebhookDelivery">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/api-keys/{key_id}/usage">> => #{
+            <<"get">> => #{
+                <<"summary">>    => <<"Get usage records for an API key">>,
+                <<"parameters">> => [path_param(<<"key_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"API key usage records">>,
+                                  <<"content">> => json_ref(<<"ApiKeyUsage">>)},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/deprecations">> => #{
+            <<"get">> => #{
+                <<"summary">>  => <<"List deprecated API notices">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Deprecation notices">>}
+                }
+            }
+        },
+        <<"/api/graphql">> => #{
+            <<"post">> => #{
+                <<"summary">>  => <<"GraphQL endpoint">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"GraphQL response">>}
+                }
+            }
+        },
+        <<"/api/v1/oauth/token">> => #{
+            <<"post">> => #{
+                <<"summary">>  => <<"Issue OAuth 2.0 access token (client_credentials)">>,
+                <<"security">> => [],
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => #{
+                        <<"application/x-www-form-urlencoded">> => #{
+                            <<"schema">> => #{
+                                <<"type">> => <<"object">>,
+                                <<"required">> => [<<"grant_type">>, <<"client_id">>, <<"client_secret">>],
+                                <<"properties">> => #{
+                                    <<"grant_type">>    => #{<<"type">> => <<"string">>, <<"enum">> => [<<"client_credentials">>]},
+                                    <<"client_id">>     => #{<<"type">> => <<"string">>},
+                                    <<"client_secret">> => #{<<"type">> => <<"string">>}
+                                }
+                            }
+                        }
+                    }
+                },
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Access token issued">>,
+                                  <<"content">> => json_ref(<<"OAuthToken">>)},
+                    <<"400">> => error_response(),
+                    <<"401">> => error_response()
                 }
             }
         }

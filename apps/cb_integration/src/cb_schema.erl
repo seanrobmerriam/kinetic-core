@@ -86,7 +86,8 @@ create_tables() ->
               auth_user, auth_session, audit_log, approval_request,
               approval_decision, event_outbox, webhook_subscription,
               webhook_delivery, report_statement, report_export,
-              api_usage_event],
+              api_usage_event,
+              oauth_client, oauth_token],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -108,7 +109,8 @@ create_tables() ->
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export | api_usage_event
+    report_export | api_usage_event |
+    oauth_client | oauth_token
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -141,7 +143,8 @@ create_if_not_exists(TableName) ->
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export | api_usage_event
+    report_export | api_usage_event |
+    oauth_client | oauth_token
 ) ->
     [{'attributes', [atom(), ...]} |
      {'index', ['account_id' | 'currency' | 'dest_account_id' | 'email' |
@@ -343,7 +346,7 @@ table_spec(webhook_subscription) ->
     [
         {ram_copies, [node()]},
         {attributes, [subscription_id, event_type, callback_url, status,
-                      created_at, updated_at]},
+                      hmac_secret, created_at, updated_at]},
         {index, [event_type, status]}
     ];
 table_spec(webhook_delivery) ->
@@ -378,4 +381,17 @@ table_spec(transaction_tag) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, transaction_tag)},
         {index, [txn_id]}
+    ];
+table_spec(oauth_client) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, [client_id, client_secret_hash, name, scope, role,
+                      status, created_at, updated_at]},
+        {index, [status]}
+    ];
+table_spec(oauth_token) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, [token, client_id, scope, role, expires_at, created_at]},
+        {index, [client_id, expires_at]}
     ].

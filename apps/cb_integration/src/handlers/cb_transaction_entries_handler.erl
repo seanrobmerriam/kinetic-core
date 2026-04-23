@@ -35,8 +35,8 @@ handle(<<"OPTIONS">>, _TxnId, Req, State) ->
     {ok, Req2, State};
 
 handle(_, _TxnId, Req, State) ->
-    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\": \"method_not_allowed\"}">>, Req),
+    {_Code405, _Hdrs405, _Body405} = cb_http_errors:to_response_with_metrics(method_not_allowed),
+    Req2 = cowboy_req:reply(_Code405, _Hdrs405, _Body405, Req),
     {ok, Req2, State}.
 
 entry_to_json(Entry) ->

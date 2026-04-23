@@ -16,6 +16,7 @@
     event_type      :: binary(),   %% specific event type or <<"*">> for all
     callback_url    :: binary(),
     status          :: active | inactive,
+    hmac_secret     :: binary(),
     created_at      :: integer(),
     updated_at      :: integer()
 }).

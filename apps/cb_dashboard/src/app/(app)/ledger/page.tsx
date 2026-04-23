@@ -10,6 +10,7 @@ import {
   Group,
   Loader,
   Paper,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -96,6 +97,21 @@ const entryColumns: ColumnDef<LedgerEntry>[] = [
     getValue: (e) => e.posted_at,
     render: (e) => formatTimestamp(e.posted_at),
   },
+  {
+    key: "actions",
+    label: "",
+    sortable: false,
+    render: (e) => (
+      <Button
+        component={Link}
+        href={`/transactions/${e.txn_id}`}
+        size="xs"
+        variant="subtle"
+      >
+        View
+      </Button>
+    ),
+  },
 ];
 
 export default function LedgerPage() {
@@ -106,8 +122,11 @@ export default function LedgerPage() {
   const [latestError, setLatestError] = useState<string | null>(null);
 
   const [accountId, setAccountId] = useState("");
+  const [txnId, setTxnId] = useState("");
+  const [entryType, setEntryType] = useState<string | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [filterLoading, setFilterLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,21 +153,121 @@ export default function LedgerPage() {
   }, []);
 
   const filter = async () => {
-    if (!accountId) return;
+    setFilterLoading(true);
     try {
-      const resp = await api<ListResponse<LedgerEntry>>(
-        "GET",
-        `/accounts/${accountId}/entries`,
-      );
-      setEntries(resp.items ?? []);
+      let results: LedgerEntry[];
+      if (accountId.trim()) {
+        const resp = await api<ListResponse<LedgerEntry>>(
+          "GET",
+          `/accounts/${accountId.trim()}/entries`,
+        );
+        results = resp.items ?? [];
+      } else {
+        results = [...latestEntries];
+      }
+      if (txnId.trim()) {
+        const needle = txnId.trim().toLowerCase();
+        results = results.filter((e) =>
+          e.txn_id.toLowerCase().includes(needle),
+        );
+      }
+      if (entryType && entryType !== "all") {
+        results = results.filter((e) => e.entry_type === entryType);
+      }
+      setEntries(results);
       setLoaded(true);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setFilterLoading(false);
     }
+  };
+
+  const clearFilters = () => {
+    setAccountId("");
+    setTxnId("");
+    setEntryType(null);
+    setEntries([]);
+    setLoaded(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") void filter();
   };
 
   return (
     <Stack gap="xl">
+      <section aria-labelledby="account-filter-heading">
+        <Stack gap="md">
+          <Title id="account-filter-heading" order={3}>
+            Filter Ledger Entries
+          </Title>
+
+          <Card withBorder shadow="sm" radius="md" padding="lg">
+            <Stack gap="md">
+              <Group grow wrap="wrap">
+                <TextInput
+                  id="ledger-account-filter"
+                  label="Account ID"
+                  placeholder="Filter by account ID"
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.currentTarget.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <TextInput
+                  id="ledger-txn-filter"
+                  label="Transaction ID"
+                  placeholder="Filter by transaction ID"
+                  value={txnId}
+                  onChange={(e) => setTxnId(e.currentTarget.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <Select
+                  label="Entry Type"
+                  placeholder="All types"
+                  value={entryType}
+                  onChange={setEntryType}
+                  data={[
+                    { value: "all", label: "All types" },
+                    { value: "debit", label: "Debit" },
+                    { value: "credit", label: "Credit" },
+                  ]}
+                  clearable
+                />
+              </Group>
+              <Group>
+                <Button onClick={() => void filter()} loading={filterLoading}>
+                  Apply Filters
+                </Button>
+                <Button variant="subtle" onClick={clearFilters}>
+                  Clear
+                </Button>
+              </Group>
+            </Stack>
+          </Card>
+
+          {loaded &&
+            (entries.length === 0 ? (
+              <Card withBorder padding="xl" radius="md">
+                <Text c="dimmed" ta="center">
+                  No ledger entries match the filters
+                </Text>
+              </Card>
+            ) : (
+              <Paper withBorder radius="md" shadow="sm">
+                <SortableTable
+                  data={entries}
+                  columns={entryColumns}
+                  rowKey={(e) => e.entry_id}
+                  searchPlaceholder="Search entries…"
+                  emptyMessage="No ledger entries found"
+                  minWidth={950}
+                />
+              </Paper>
+            ))}
+        </Stack>
+      </section>
+
       <section aria-labelledby="latest-entries-heading">
         <Stack gap="md">
           <Title id="latest-entries-heading" order={3}>
@@ -182,53 +301,7 @@ export default function LedgerPage() {
                 rowKey={(e) => e.entry_id}
                 searchPlaceholder="Search latest entries…"
                 emptyMessage="No ledger entries found"
-                minWidth={900}
-              />
-            </Paper>
-          )}
-        </Stack>
-      </section>
-
-      <section aria-labelledby="account-filter-heading">
-        <Stack gap="md">
-          <Title id="account-filter-heading" order={3}>
-            Ledger Entries by Account
-          </Title>
-
-          <Card withBorder shadow="sm" radius="md" padding="lg">
-            <Group align="flex-end" wrap="nowrap">
-              <TextInput
-                id="ledger-account-filter"
-                label="Filter by Account ID"
-                placeholder="Enter account ID"
-                value={accountId}
-                onChange={(e) => setAccountId(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") filter();
-                }}
-                style={{ flex: 1 }}
-              />
-              <Button onClick={filter}>Filter</Button>
-            </Group>
-          </Card>
-
-          {!loaded || entries.length === 0 ? (
-            <Card withBorder padding="xl" radius="md">
-              <Text c="dimmed" ta="center">
-                {loaded
-                  ? "No ledger entries found"
-                  : "Select an account to view ledger entries"}
-              </Text>
-            </Card>
-          ) : (
-            <Paper withBorder radius="md" shadow="sm">
-              <SortableTable
-                data={entries}
-                columns={entryColumns}
-                rowKey={(e) => e.entry_id}
-                searchPlaceholder="Search entries…"
-                emptyMessage="No ledger entries found"
-                minWidth={900}
+                minWidth={950}
               />
             </Paper>
           )}

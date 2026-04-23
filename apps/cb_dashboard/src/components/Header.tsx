@@ -108,23 +108,20 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
               <Avatar
                 color="indigo"
                 radius="md"
-                size={42}
+                size={46}
                 variant="gradient"
                 gradient={{ from: "indigo", to: "violet" }}
               >
                 {userInitial}
               </Avatar>
               <div>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} lh={1}>
-                  {capitalize(state.user.role)}
-                </Text>
-                <Text size="sm" fw={500} lh={1.3} mt={2}>
+                <Text size="sm" fw={600} lh={1.3}>
                   {state.user.email}
                 </Text>
-                <Group gap={6} align="center" wrap="nowrap" mt={3}>
-                  <IconAt size={14} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)" }} />
+                <Group gap={4} align="center" wrap="nowrap" mt={2}>
+                  <IconAt size={12} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)" }} />
                   <Text size="xs" c="dimmed">
-                    {state.user.email}
+                    {capitalize(state.user.role)}
                   </Text>
                 </Group>
               </div>

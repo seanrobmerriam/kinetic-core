@@ -2,22 +2,33 @@
 
 const SESSION_STORAGE_KEY = "ironledger.session_id";
 
+const PRIMARY_PORT = 18081;
+const FALLBACK_PORT = 8081;
+
+function envBase(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_API_BASE;
+  return typeof fromEnv === "string" ? fromEnv.trim().replace(/\/+$/, "") : "";
+}
+
 function defaultBase(): string {
+  const override = envBase();
+  if (override) return override;
   if (typeof window === "undefined") {
-    return "http://127.0.0.1:8081/api/v1";
+    return `http://127.0.0.1:${PRIMARY_PORT}/api/v1`;
   }
   const { protocol, hostname } = window.location;
-  return `${protocol || "http:"}//${hostname || "127.0.0.1"}:8081/api/v1`;
+  return `${protocol || "http:"}//${hostname || "127.0.0.1"}:${PRIMARY_PORT}/api/v1`;
 }
 
 function alternateBase(current: string): string {
+  if (envBase()) return "";
   if (typeof window === "undefined") return "";
   const { protocol, hostname } = window.location;
-  if (current.includes(":8081/api/v1")) {
-    return `${protocol}//${hostname}:18081/api/v1`;
+  if (current.includes(`:${PRIMARY_PORT}/api/v1`)) {
+    return `${protocol}//${hostname}:${FALLBACK_PORT}/api/v1`;
   }
-  if (current.includes(":18081/api/v1")) {
-    return `${protocol}//${hostname}:8081/api/v1`;
+  if (current.includes(`:${FALLBACK_PORT}/api/v1`)) {
+    return `${protocol}//${hostname}:${PRIMARY_PORT}/api/v1`;
   }
   return "";
 }

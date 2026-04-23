@@ -156,6 +156,7 @@
     ssn                 :: binary() | undefined,
     version             :: pos_integer(),
     merged_into_party_id :: uuid() | undefined,
+    metadata            :: map() | undefined,
     created_at          :: timestamp_ms(),
     updated_at          :: timestamp_ms()
 }).
@@ -384,14 +385,51 @@
 }).
 
 %% @doc Exception queue item for manual intervention.
+%%
+%% SLA fields:
+%% - sla_minutes: resolution target in minutes (undefined = no SLA set)
+%% - sla_deadline: absolute deadline in ms since epoch (undefined = no SLA set)
+%% - escalation_tier: 0 = not escalated, 1 = supervisor, 2 = manager
 -record(exception_item, {
     item_id          :: uuid(),
     payment_id       :: uuid(),
     reason           :: binary(),
-    status           :: pending | resolved,
+    status           :: pending | resolved | escalated,
     resolution       :: approved | rejected | undefined,
     resolved_by      :: binary() | undefined,
     resolution_notes :: binary() | undefined,
+    sla_minutes      :: pos_integer() | undefined,
+    sla_deadline     :: timestamp_ms() | undefined,
+    escalation_tier  :: non_neg_integer(),
+    created_at       :: timestamp_ms(),
+    updated_at       :: timestamp_ms()
+}).
+
+%% @doc Configurable STP routing rule.
+%%
+%% Rules are evaluated in ascending priority order (lower number = higher priority).
+%% The first rule whose condition matches determines the routing outcome.
+%%
+%% Condition types:
+%% - amount:          condition_params = #{threshold => pos_integer()}
+%% - kyc:             condition_params = #{required_status => approved | pending | ...}
+%% - account_status:  condition_params = #{required_status => active | ...}
+%% - aml:             condition_params = #{} (delegates to cb_aml)
+%% - sanctions:       condition_params = #{} (delegates to party blocked flag)
+%% - velocity:        condition_params = #{max_daily_amount => pos_integer()}
+%%
+%% Actions:
+%% - straight_through: auto-approve the payment
+%% - exception:        route to manual review queue
+%% - block:            reject outright (no manual review)
+-record(stp_routing_rule, {
+    rule_id          :: uuid(),
+    name             :: binary(),
+    priority         :: pos_integer(),
+    condition_type   :: amount | kyc | account_status | aml | sanctions | velocity,
+    condition_params :: map(),
+    action           :: straight_through | exception | block,
+    enabled          :: boolean(),
     created_at       :: timestamp_ms(),
     updated_at       :: timestamp_ms()
 }).

@@ -92,7 +92,7 @@ create_tables() ->
               kyc_workflow, kyc_step,
               idv_check,
               aml_rule, suspicious_activity, aml_case,
-              sar_report],
+              sar_report, stp_routing_rule],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -118,7 +118,8 @@ create_tables() ->
     report_export | api_usage_event |
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
-    aml_rule | suspicious_activity | aml_case | sar_report
+    aml_rule | suspicious_activity | aml_case | sar_report |
+    stp_routing_rule
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -155,7 +156,8 @@ create_if_not_exists(TableName) ->
     report_export | api_usage_event |
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
-    aml_rule | suspicious_activity | aml_case | sar_report
+    aml_rule | suspicious_activity | aml_case | sar_report |
+    stp_routing_rule
 ) ->
     [{'attributes', [atom(), ...]} |
      {'index', ['account_id' | 'currency' | 'dest_account_id' | 'email' |
@@ -459,4 +461,10 @@ table_spec(sar_report) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, sar_report)},
         {index, [case_id, party_id, status]}
+    ];
+table_spec(stp_routing_rule) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, stp_routing_rule)},
+        {index, [priority, condition_type, enabled]}
     ].

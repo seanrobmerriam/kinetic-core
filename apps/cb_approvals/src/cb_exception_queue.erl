@@ -9,6 +9,7 @@
 
 -export([
     enqueue/2,
+    enqueue/3,
     get_item/1,
     list_pending/0,
     resolve/3
@@ -17,7 +18,19 @@
 %% @doc Enqueue a payment order for manual review.
 -spec enqueue(uuid(), binary()) -> {ok, #exception_item{}} | {error, term()}.
 enqueue(PaymentId, Reason) ->
+    enqueue(PaymentId, Reason, undefined).
+
+%% @doc Enqueue with an explicit SLA in minutes.
+%%
+%% `SlaMinutes = undefined` means no SLA is attached.
+-spec enqueue(uuid(), binary(), pos_integer() | undefined) ->
+    {ok, #exception_item{}} | {error, term()}.
+enqueue(PaymentId, Reason, SlaMinutes) ->
     Now = erlang:system_time(millisecond),
+    SlaDeadline = case SlaMinutes of
+        undefined -> undefined;
+        M when is_integer(M), M > 0 -> Now + M * 60 * 1000
+    end,
     ItemId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
     Item = #exception_item{
         item_id          = ItemId,
@@ -27,6 +40,9 @@ enqueue(PaymentId, Reason) ->
         resolution       = undefined,
         resolved_by      = undefined,
         resolution_notes = undefined,
+        sla_minutes      = SlaMinutes,
+        sla_deadline     = SlaDeadline,
+        escalation_tier  = 0,
         created_at       = Now,
         updated_at       = Now
     },

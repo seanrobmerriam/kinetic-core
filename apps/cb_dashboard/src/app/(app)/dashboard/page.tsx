@@ -133,12 +133,11 @@ function Kpi({ label, value, hint, Icon, tone }: KpiProps) {
           )}
         </Stack>
         <ThemeIcon
-          variant="light"
+          variant="transparent"
           color={tone}
           size={44}
-          radius="md"
         >
-          <Icon size={22} stroke={1.7} />
+          <Icon size={28} stroke={1.5} />
         </ThemeIcon>
       </Group>
     </Card>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, Collapse, Group, Text, ThemeIcon, UnstyledButton } from "@mantine/core";
+import { Box, Collapse, Group, Text, UnstyledButton } from "@mantine/core";
 import { IconChevronRight, type Icon } from "@/components/icons";
 import classes from "./NavLinksGroup.module.css";
 
@@ -64,9 +64,9 @@ export function NavLinksGroup({
       >
         <Group justify="space-between" gap={0}>
           <Box style={{ display: "flex", alignItems: "center" }}>
-            <ThemeIcon variant="light" size={30}>
-              <Icon size={18} />
-            </ThemeIcon>
+            <Box style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon size={20} stroke={1.5} />
+            </Box>
             <Box ml="md">{label}</Box>
           </Box>
         </Group>
@@ -79,9 +79,9 @@ export function NavLinksGroup({
       <UnstyledButton onClick={() => setOpened((o) => !o)} className={classes.control}>
         <Group justify="space-between" gap={0}>
           <Box style={{ display: "flex", alignItems: "center" }}>
-            <ThemeIcon variant="light" size={30}>
-              <Icon size={18} />
-            </ThemeIcon>
+            <Box style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon size={20} stroke={1.5} />
+            </Box>
             <Box ml="md">{label}</Box>
           </Box>
           {hasLinks && (

@@ -18,6 +18,7 @@ import {
   IconCode,
   IconFiles,
   IconKey,
+  IconCoin,
   IconLayoutDashboard,
   IconReceipt,
   IconReportMoney,
@@ -57,6 +58,7 @@ const BANKING_ITEMS: NavItem[] = [
     ],
   },
   { label: "Loans", icon: IconReportMoney, href: "/loans" },
+  { label: "Products", icon: IconCoin, href: "/products" },
   { label: "Compliance", icon: IconShieldCheck, href: "/compliance" },
 ];
 
@@ -66,14 +68,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: "Permissions", icon: IconKey, href: "/permissions" },
   { label: "Settings", icon: IconSettings, href: "/settings" },
   { label: "Developer", icon: IconCode, href: "/developer" },
-  {
-    label: "System",
-    icon: IconSitemap,
-    links: [
-      { label: "Channels", href: "/channels" },
-      { label: "Products", href: "/products" },
-    ],
-  },
+  { label: "Channels", icon: IconSitemap, href: "/channels" },
   { label: "Logs", icon: IconFiles, href: "/logs" },
 ];
 

@@ -8,24 +8,26 @@ import {
   Divider,
   Group,
   ScrollArea,
+  Tabs,
   Text,
   UnstyledButton,
 } from "@mantine/core";
 import {
   IconBook,
   IconBuildingBank,
-  IconCash,
   IconChevronRight,
   IconCode,
+  IconFiles,
+  IconKey,
   IconLayoutDashboard,
   IconReceipt,
   IconReportMoney,
   IconSettings,
+  IconShield,
   IconShieldCheck,
   IconSitemap,
   IconTransfer,
   IconUsers,
-  IconWallet,
   type Icon,
 } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
@@ -39,7 +41,7 @@ interface NavItem {
   links?: { label: string; href: string }[];
 }
 
-const NAV_ITEMS: NavItem[] = [
+const BANKING_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: IconLayoutDashboard, href: "/dashboard" },
   { label: "Customers", icon: IconUsers, href: "/customers" },
   { label: "Accounts", icon: IconBuildingBank, href: "/accounts" },
@@ -56,16 +58,23 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: "Loans", icon: IconReportMoney, href: "/loans" },
   { label: "Compliance", icon: IconShieldCheck, href: "/compliance" },
+];
+
+const ADMIN_ITEMS: NavItem[] = [
+  { label: "Users", icon: IconUsers, href: "/users" },
+  { label: "Roles", icon: IconShield, href: "/roles" },
+  { label: "Permissions", icon: IconKey, href: "/permissions" },
+  { label: "Settings", icon: IconSettings, href: "/settings" },
   { label: "Developer", icon: IconCode, href: "/developer" },
   {
     label: "System",
-    icon: IconSettings,
+    icon: IconSitemap,
     links: [
       { label: "Channels", href: "/channels" },
       { label: "Products", href: "/products" },
-      { label: "Settings", href: "/settings" },
     ],
   },
+  { label: "Logs", icon: IconFiles, href: "/logs" },
 ];
 
 export function Sidebar() {
@@ -75,10 +84,6 @@ export function Sidebar() {
   const initial = email ? email.charAt(0).toUpperCase() : "?";
   const role =
     state.status === "authenticated" && state.user ? state.user.role : "";
-
-  const links = NAV_ITEMS.map((item) => (
-    <NavLinksGroup {...item} key={item.label} />
-  ));
 
   return (
     <AppShell.Navbar
@@ -109,10 +114,42 @@ export function Sidebar() {
         </Group>
       </Box>
 
-      {/* Scrollable nav links */}
-      <ScrollArea style={{ flex: 1 }} px="md" py="xs">
-        <Box py={4}>{links}</Box>
-      </ScrollArea>
+      {/* Tabbed nav */}
+      <Tabs
+        defaultValue="banking"
+        style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
+      >
+        <Tabs.List grow px="md" pt="xs">
+          <Tabs.Tab value="banking" fw={500}>Banking</Tabs.Tab>
+          <Tabs.Tab value="admin" fw={500}>Admin</Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel
+          value="banking"
+          style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}
+        >
+          <ScrollArea style={{ flex: 1 }} px="md" py="xs">
+            <Box py={4}>
+              {BANKING_ITEMS.map((item) => (
+                <NavLinksGroup {...item} key={item.label} />
+              ))}
+            </Box>
+          </ScrollArea>
+        </Tabs.Panel>
+
+        <Tabs.Panel
+          value="admin"
+          style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}
+        >
+          <ScrollArea style={{ flex: 1 }} px="md" py="xs">
+            <Box py={4}>
+              {ADMIN_ITEMS.map((item) => (
+                <NavLinksGroup {...item} key={item.label} />
+              ))}
+            </Box>
+          </ScrollArea>
+        </Tabs.Panel>
+      </Tabs>
 
       {/* Footer: user button */}
       <Divider />

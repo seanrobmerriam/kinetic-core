@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ActionIcon,
@@ -25,43 +25,7 @@ import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { capitalize } from "@/lib/format";
 
-const PAGE_TITLES: Record<string, string> = {
-  dashboard: "Dashboard",
-  customers: "Customers",
-  accounts: "Accounts",
-  "account-detail": "Account Details",
-  transactions: "Transactions",
-  ledger: "Ledger",
-  products: "Products",
-  loans: "Loans",
-  settings: "Settings",
-  transfer: "Transfer Funds",
-  deposit: "Deposit / Withdraw",
-};
-
-const PAGE_SUBTITLES: Record<string, string> = {
-  dashboard: "Operational overview",
-  customers: "Manage parties and onboarding",
-  accounts: "Customer accounts and balances",
-  "account-detail": "Account activity and holds",
-  transactions: "Payments across all accounts",
-  ledger: "Posted ledger entries",
-  products: "Savings and loan products",
-  loans: "Loan origination and servicing",
-  settings: "Workspace preferences",
-  transfer: "Move money between accounts",
-  deposit: "Cash in and out",
-};
-
-function pageKey(pathname: string): string {
-  if (pathname.startsWith("/accounts/") && pathname.length > "/accounts/".length) {
-    return "account-detail";
-  }
-  return pathname.split("/")[1] || "dashboard";
-}
-
 export function Header({ onRefresh }: { onRefresh?: () => void }) {
-  const pathname = usePathname() ?? "/";
   const router = useRouter();
   const { state, logout, devToolsEnabled, setDevToolsEnabled } = useAuth();
   const { theme, toggle } = useTheme();
@@ -111,9 +75,6 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
     else router.refresh();
   };
 
-  const key = pageKey(pathname);
-  const title = PAGE_TITLES[key] ?? "Dashboard";
-  const subtitle = PAGE_SUBTITLES[key] ?? "";
   const userInitial =
     state.status === "authenticated" && state.user
       ? state.user.email.charAt(0).toUpperCase()
@@ -124,13 +85,11 @@ export function Header({ onRefresh }: { onRefresh?: () => void }) {
       <Group h="100%" px="lg" justify="space-between" wrap="nowrap">
         <div>
           <Title order={3} fw={600}>
-            {title}
+            Kinetic Core
           </Title>
-          {subtitle && (
-            <Text size="sm" c="dimmed">
-              {subtitle}
-            </Text>
-          )}
+          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+            Banking Solution
+          </Text>
         </div>
 
         <Group gap="xs" wrap="nowrap">

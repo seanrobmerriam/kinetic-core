@@ -143,9 +143,15 @@ parse_csv_identity(Line) ->
     Fields = split_csv_line(Line),
     case Fields of
         [FirstName, LastName, _Gender, AgeStr, Email, _Phone, _Education, _Occupation, _Salary, _MaritalStatus] ->
-            Age = try binary_to_integer(AgeStr) catch _:_ -> 30 end,
-            FullName = <<FirstName/binary, " ", LastName/binary>>,
-            {true, #{full_name => FullName, base_email => Email, age => Age}};
+            case binary:match(Email, <<"@">>) of
+                nomatch ->
+                    %% Skip header rows or rows with non-email in the email field.
+                    false;
+                _ ->
+                    Age = try binary_to_integer(AgeStr) catch _:_ -> 30 end,
+                    FullName = <<FirstName/binary, " ", LastName/binary>>,
+                    {true, #{full_name => FullName, base_email => Email, age => Age}}
+            end;
         _ ->
             false
     end.

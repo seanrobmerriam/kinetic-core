@@ -5,6 +5,8 @@ import {
   Box,
   Center,
   Group,
+  Pagination,
+  Stack,
   Table,
   Text,
   TextInput,
@@ -72,6 +74,7 @@ export function SortableTable<T>({
   searchPlaceholder = "Search...",
   emptyMessage = "No items found",
   minWidth = 700,
+  pageSize = 50,
   searchValue,
   onSearchChange,
 }: {
@@ -81,6 +84,8 @@ export function SortableTable<T>({
   searchPlaceholder?: string;
   emptyMessage?: string;
   minWidth?: number;
+  /** Rows per page. Pagination renders only when total filtered rows exceed this. Default: 50 */
+  pageSize?: number;
   searchValue?: string;
   onSearchChange?: (v: string) => void;
 }) {
@@ -89,6 +94,18 @@ export function SortableTable<T>({
   const search = isControlled ? (searchValue ?? "") : internalSearch;
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [reversed, setReversed] = useState(false);
+  const [page, setPage] = useState(1);
+
+  // Reset page to 1 when filters or sort change (setState-during-render pattern —
+  // avoids the cascading-render lint error that useEffect-setState would trigger).
+  const [prevFilterKey, setPrevFilterKey] = useState(
+    () => `${search}|${sortBy}|${reversed}`,
+  );
+  const filterKey = `${search}|${sortBy}|${reversed}`;
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setPage(1);
+  }
 
   const setSorting = (key: string) => {
     setReversed(sortBy === key ? !reversed : false);
@@ -126,9 +143,16 @@ export function SortableTable<T>({
     }
 
     return rows;
-    // columns reference is structurally stable per call site; data/search/sort drive updates
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, search, sortBy, reversed]);
+
+  const totalPages = Math.max(1, Math.ceil(processed.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageSlice = processed.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize,
+  );
+  const showPagination = processed.length > pageSize;
 
   return (
     <>
@@ -178,7 +202,7 @@ export function SortableTable<T>({
                 </Table.Td>
               </Table.Tr>
             ) : (
-              processed.map((row) => (
+              pageSlice.map((row) => (
                 <Table.Tr key={rowKey(row)}>
                   {columns.map((col) => (
                     <Table.Td
@@ -201,6 +225,22 @@ export function SortableTable<T>({
           </Table.Tbody>
         </Table>
       </Table.ScrollContainer>
+      {showPagination && (
+        <Stack align="center" pb="md">
+          <Text size="xs" c="dimmed">
+            {(safePage - 1) * pageSize + 1}–
+            {Math.min(safePage * pageSize, processed.length)} of{" "}
+            {processed.length}
+          </Text>
+          <Pagination
+            total={totalPages}
+            value={safePage}
+            onChange={setPage}
+            size="sm"
+            withEdges
+          />
+        </Stack>
+      )}
     </>
   );
 }

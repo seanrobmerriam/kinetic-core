@@ -207,3 +207,27 @@ export interface ChannelActivity {
   status_code: number;
   created_at: number;
 }
+
+export interface TransactionTag {
+  tag_id: string;
+  txn_id: string;
+  category: string | null;
+  tags: string[];
+  created_at: number;
+  updated_at: number;
+}
+
+export interface TransactionReceipt {
+  txn_id: string;
+  txn_type: string;
+  status: string;
+  amount: number;
+  currency: string;
+  source_account_id: string | null;
+  dest_account_id: string | null;
+  description: string | null;
+  channel: string | null;
+  created_at: number;
+  posted_at: number | null;
+  ledger_entries: LedgerEntry[];
+}

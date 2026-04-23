@@ -45,7 +45,7 @@ export default function TransferCreatePage() {
       try {
         const [partyResp, accountsResp] = await Promise.all([
           api<ListResponse<Party>>("GET", "/parties"),
-          api<{ accounts: Account[] } | ListResponse<Account>>("GET", "/accounts?page_size=500"),
+          api<{ accounts: Account[] } | ListResponse<Account>>("GET", "/accounts?page_size=100"),
         ]);
 
         const parties: Party[] = partyResp.items ?? [];

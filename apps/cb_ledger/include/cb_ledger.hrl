@@ -436,6 +436,35 @@
     updated_at  :: timestamp_ms()
 }).
 
+%% @doc Cross-channel session record.
+%%
+%% Tracks a party's authenticated session on a specific channel.
+%% Sessions can be invalidated individually or all at once for a party,
+%% enabling cross-channel session synchronisation and forced logout flows.
+-record(channel_session, {
+    session_id     :: uuid(),
+    party_id       :: uuid(),
+    channel        :: channel_type(),
+    status         :: active | invalidated,
+    initiated_at   :: timestamp_ms(),
+    invalidated_at :: timestamp_ms() | undefined,
+    metadata       :: map()
+}).
+
+%% @doc Per-channel feature flag.
+%%
+%% Controls which features are enabled on a per-channel basis.
+%% Keyed by the composite `{channel_type(), FeatureName}' to allow
+%% O(1) lookups. The `channel' field is stored separately to support
+%% secondary index queries by channel.
+-record(channel_feature_flag, {
+    flag_key   :: {channel_type(), binary()},
+    channel    :: channel_type(),
+    feature    :: binary(),
+    enabled    :: boolean(),
+    updated_at :: timestamp_ms()
+}).
+
 %% =============================================================================
 %% Compliance & AML Types
 %% =============================================================================

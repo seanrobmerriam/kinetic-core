@@ -37,6 +37,7 @@ import {
   Upload,
   ViewGrid,
   Wallet,
+  Plus,
   WarningCircle,
   WarningTriangle,
 } from "iconoir-react";
@@ -99,6 +100,7 @@ export const IconReceipt = wrap(JournalPage, "IconReceipt");
 export const IconRefresh = wrap(Refresh, "IconRefresh");
 export const IconRepeat = wrap(Refresh, "IconRepeat");
 export const IconReportMoney = wrap(Reports, "IconReportMoney");
+export const IconPlus = wrap(Plus, "IconPlus");
 export const IconSearch = wrap(Search, "IconSearch");
 export const IconSelector = wrap(Sort, "IconSelector");
 export const IconSettings = wrap(Settings, "IconSettings");

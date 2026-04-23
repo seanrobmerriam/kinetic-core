@@ -2,30 +2,28 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   Badge,
   Button,
-  Card,
   Group,
   Paper,
   SegmentedControl,
-  Select,
-  SimpleGrid,
   Stack,
-  TextInput,
+  Text,
   Title,
 } from "@mantine/core";
+import { IconPlus } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
-import { capitalize, formatAmount, truncateID } from "@/lib/format";
+import { capitalize, formatAmount, formatDate, truncateID } from "@/lib/format";
 import type { Account, Party } from "@/lib/types";
 import { SortableTable } from "@/components/SortableTable";
 import type { ColumnDef } from "@/components/SortableTable";
 
 interface ListResponse<T> {
   items: T[];
+  total?: number;
 }
 
 const STATUSES = [
@@ -43,115 +41,70 @@ function statusColor(s: string) {
 }
 
 export default function AccountsPage() {
-  const searchParams = useSearchParams();
-  const { setError, setSuccess } = useNotify();
-  const { tick, bump } = useRefresh();
-  const [parties, setParties] = useState<Party[]>([]);
+  const { setError } = useNotify();
+  const { tick } = useRefresh();
+  const [partyMap, setPartyMap] = useState<Record<string, Party>>({});
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  // Checking account form
-  const [checkingPartyId, setCheckingPartyId] = useState<string>(
-    searchParams?.get("party") ?? "",
-  );
-  const [checkingName, setCheckingName] = useState("");
-  const [checkingCurrency, setCheckingCurrency] = useState<string | null>("USD");
-
-  // Savings account form
-  const [savingsPartyId, setSavingsPartyId] = useState<string>(
-    searchParams?.get("party") ?? "",
-  );
-  const [savingsName, setSavingsName] = useState("");
-  const [savingsCurrency, setSavingsCurrency] = useState<string | null>("USD");
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const partyResp = await api<ListResponse<Party>>("GET", "/parties");
-        const ps = partyResp.items ?? [];
-        if (!cancelled) setParties(ps);
-        let all: Account[] = [];
-        for (const p of ps) {
-          try {
-            const accResp = await api<ListResponse<Account>>(
-              "GET",
-              `/parties/${p.party_id}/accounts`,
-            );
-            if (accResp.items) all = all.concat(accResp.items);
-          } catch {
-            /* skip */
-          }
-        }
-        if (!cancelled) setAccounts(all);
-      } catch (err) {
+    Promise.all([
+      api<ListResponse<Account>>("GET", "/accounts?page_size=500"),
+      api<ListResponse<Party>>("GET", "/parties"),
+    ])
+      .then(([acctResp, partyResp]) => {
+        if (cancelled) return;
+        setAccounts(acctResp.items ?? []);
+        const map: Record<string, Party> = {};
+        for (const p of partyResp.items ?? []) map[p.party_id] = p;
+        setPartyMap(map);
+      })
+      .catch((err) => {
         if (!cancelled) setError((err as Error).message);
-      }
-    })();
+      });
     return () => {
       cancelled = true;
     };
   }, [tick, setError]);
 
   const filtered = useMemo(() => {
-    let list = accounts;
-    if (filterStatus && filterStatus !== "all")
-      list = list.filter((a) => a.status === filterStatus);
-    return list;
+    if (filterStatus === "all") return accounts;
+    return accounts.filter((a) => a.status === filterStatus);
   }, [accounts, filterStatus]);
-
-  const createChecking = async () => {
-    if (!checkingPartyId) {
-      setError("Select a customer first");
-      return;
-    }
-    if (!checkingName) {
-      setError("Account name is required");
-      return;
-    }
-    try {
-      await api("POST", "/accounts", {
-        party_id: checkingPartyId,
-        name: checkingName,
-        currency: checkingCurrency,
-      });
-      setSuccess("Checking account created");
-      setCheckingName("");
-      bump();
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  };
-
-  const createSavings = async () => {
-    if (!savingsPartyId) {
-      setError("Select a customer first");
-      return;
-    }
-    if (!savingsName) {
-      setError("Account name is required");
-      return;
-    }
-    try {
-      await api("POST", "/accounts", {
-        party_id: savingsPartyId,
-        name: savingsName,
-        currency: savingsCurrency,
-      });
-      setSuccess("Savings account created");
-      setSavingsName("");
-      bump();
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  };
 
   const acctColumns: ColumnDef<Account>[] = [
     {
       key: "id",
       label: "Account ID",
       getValue: (a) => a.account_id,
-      render: (a) => truncateID(a.account_id),
-      ff: "monospace",
+      render: (a) => (
+        <Text ff="monospace" size="sm">
+          {truncateID(a.account_id)}
+        </Text>
+      ),
+    },
+    {
+      key: "customer",
+      label: "Customer",
+      getValue: (a) => partyMap[a.party_id]?.full_name ?? a.party_id,
+      render: (a) => {
+        const party = partyMap[a.party_id];
+        return party ? (
+          <Text
+            component={Link}
+            href={`/customers/${a.party_id}`}
+            size="sm"
+            c="blue"
+          >
+            {party.full_name}
+          </Text>
+        ) : (
+          <Text ff="monospace" size="sm" c="dimmed">
+            {truncateID(a.party_id)}
+          </Text>
+        );
+      },
     },
     { key: "name", label: "Name", getValue: (a) => a.name, fw: 500 },
     { key: "currency", label: "Currency", getValue: (a) => a.currency },
@@ -159,10 +112,12 @@ export default function AccountsPage() {
       key: "balance",
       label: "Balance",
       getValue: (a) => a.balance,
-      render: (a) => formatAmount(a.balance, a.currency),
+      render: (a) => (
+        <Text ff="monospace" size="sm" fw={500} ta="right">
+          {formatAmount(a.balance, a.currency)}
+        </Text>
+      ),
       ta: "right",
-      ff: "monospace",
-      fw: 500,
     },
     {
       key: "status",
@@ -175,8 +130,18 @@ export default function AccountsPage() {
       ),
     },
     {
+      key: "created_at",
+      label: "Opened",
+      getValue: (a) => a.created_at,
+      render: (a) => (
+        <Text size="sm" c="dimmed">
+          {formatDate(a.created_at)}
+        </Text>
+      ),
+    },
+    {
       key: "actions",
-      label: "Actions",
+      label: "",
       sortable: false,
       render: (a) => (
         <Button
@@ -193,97 +158,21 @@ export default function AccountsPage() {
 
   return (
     <Stack gap="lg">
-      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
-        <Card
-          withBorder
-          shadow="sm"
-          radius="md"
-          padding="lg"
-          data-testid="create-checking-account-form"
+      <Group justify="space-between" align="flex-end">
+        <div>
+          <Title order={2}>Accounts</Title>
+          <Text c="dimmed" size="sm" mt={4}>
+            {accounts.length} account{accounts.length !== 1 ? "s" : ""} total
+          </Text>
+        </div>
+        <Button
+          component={Link}
+          href="/accounts/create"
+          leftSection={<IconPlus size={16} />}
         >
-          <Title order={4} mb="md">
-            New Checking Account
-          </Title>
-          <Stack>
-            <Select
-              id="checking-party-select"
-              label="Customer"
-              placeholder="Select customer"
-              data={parties.map((p) => ({
-                value: p.party_id,
-                label: `${p.full_name} (${p.email})`,
-              }))}
-              value={checkingPartyId}
-              onChange={(v) => setCheckingPartyId(v ?? "")}
-              searchable
-            />
-            <TextInput
-              id="checking-account-name"
-              label="Account Name"
-              placeholder="Main Checking"
-              value={checkingName}
-              onChange={(e) => setCheckingName(e.currentTarget.value)}
-            />
-            <Select
-              id="checking-account-currency"
-              label="Currency"
-              data={["USD", "EUR", "GBP", "JPY"]}
-              value={checkingCurrency}
-              onChange={setCheckingCurrency}
-            />
-            <Group>
-              <Button id="create-checking-account-button" onClick={createChecking}>
-                Create Checking Account
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
-
-        <Card
-          withBorder
-          shadow="sm"
-          radius="md"
-          padding="lg"
-          data-testid="create-savings-account-form"
-        >
-          <Title order={4} mb="md">
-            New Savings Account
-          </Title>
-          <Stack>
-            <Select
-              id="savings-party-select"
-              label="Customer"
-              placeholder="Select customer"
-              data={parties.map((p) => ({
-                value: p.party_id,
-                label: `${p.full_name} (${p.email})`,
-              }))}
-              value={savingsPartyId}
-              onChange={(v) => setSavingsPartyId(v ?? "")}
-              searchable
-            />
-            <TextInput
-              id="savings-account-name"
-              label="Account Name"
-              placeholder="Main Savings"
-              value={savingsName}
-              onChange={(e) => setSavingsName(e.currentTarget.value)}
-            />
-            <Select
-              id="savings-account-currency"
-              label="Currency"
-              data={["USD", "EUR", "GBP", "JPY"]}
-              value={savingsCurrency}
-              onChange={setSavingsCurrency}
-            />
-            <Group>
-              <Button id="create-savings-account-button" onClick={createSavings}>
-                Create Savings Account
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
-      </SimpleGrid>
+          Create Account
+        </Button>
+      </Group>
 
       <SegmentedControl
         value={filterStatus}
@@ -296,9 +185,9 @@ export default function AccountsPage() {
           data={filtered}
           columns={acctColumns}
           rowKey={(a) => a.account_id}
-          searchPlaceholder="Search accounts..."
+          searchPlaceholder="Search by name, customer, currency…"
           emptyMessage="No accounts found"
-          minWidth={700}
+          minWidth={900}
         />
       </Paper>
     </Stack>

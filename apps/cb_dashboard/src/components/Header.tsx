@@ -103,41 +103,6 @@ export function Header({
         </div>
 
         <Group gap="xs" wrap="nowrap">
-          {state.status === "authenticated" && state.user && (
-            <Group
-              gap="md"
-              data-testid="current-user"
-              wrap="nowrap"
-              visibleFrom="sm"
-              style={{
-                borderLeft:
-                  "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))",
-                paddingLeft: "var(--mantine-spacing-md)",
-              }}
-            >
-              <Avatar
-                color="indigo"
-                radius="md"
-                size={46}
-                variant="gradient"
-                gradient={{ from: "indigo", to: "violet" }}
-              >
-                {userInitial}
-              </Avatar>
-              <div>
-                <Text size="sm" fw={600} lh={1.3}>
-                  {state.user.email}
-                </Text>
-                <Group gap={4} align="center" wrap="nowrap" mt={2}>
-                  <IconAt size={12} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)" }} />
-                  <Text size="xs" c="dimmed">
-                    {capitalize(state.user.role)}
-                  </Text>
-                </Group>
-              </div>
-            </Group>
-          )}
-
           {devToolsEnabled && (
             <Tooltip label="Import mock data">
               <ActionIcon
@@ -180,6 +145,41 @@ export function Header({
               <IconLogout size={18} />
             </ActionIcon>
           </Tooltip>
+
+          {state.status === "authenticated" && state.user && (
+            <Group
+              gap="sm"
+              data-testid="current-user"
+              wrap="nowrap"
+              visibleFrom="sm"
+              style={{
+                borderLeft:
+                  "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))",
+                paddingLeft: "var(--mantine-spacing-md)",
+              }}
+            >
+              <Avatar
+                color="indigo"
+                radius="md"
+                size={46}
+                variant="gradient"
+                gradient={{ from: "indigo", to: "violet" }}
+              >
+                {userInitial}
+              </Avatar>
+              <div>
+                <Text fz="xs" tt="uppercase" fw={700} c="dimmed" lh={1.2}>
+                  {capitalize(state.user.role)}
+                </Text>
+                <Group wrap="nowrap" gap={6} mt={4}>
+                  <IconAt size={12} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)", flexShrink: 0 }} />
+                  <Text fz="xs" c="dimmed" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>
+                    {state.user.email}
+                  </Text>
+                </Group>
+              </div>
+            </Group>
+          )}
         </Group>
       </Group>
 

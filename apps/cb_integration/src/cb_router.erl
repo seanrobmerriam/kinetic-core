@@ -302,6 +302,33 @@ dispatch() ->
             {<<"/api/v1/settlements/:run_id">>, cb_settlement_handler, []},
             {<<"/api/v1/settlements/:run_id/:action">>, cb_settlement_handler, []},
 
+            %% Treasury liquidity and cash management (P4-S1, TASK-062)
+            {<<"/api/v1/treasury/positions">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/positions/:id">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/positions/:id/:action">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/forecasts">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/placements">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/placements/:id">>, cb_treasury_handler, []},
+
+            %% Trade finance instruments (P4-S1, TASK-063)
+            {<<"/api/v1/trade/instruments">>, cb_trade_finance_handler, []},
+            {<<"/api/v1/trade/instruments/:id">>, cb_trade_finance_handler, []},
+            {<<"/api/v1/trade/instruments/:id/:action">>, cb_trade_finance_handler, []},
+            {<<"/api/v1/trade/documents/:id/:action">>, cb_trade_finance_handler, []},
+
+            %% Risk metrics and capital buffers (P4-S1, TASK-064)
+            {<<"/api/v1/risk/metrics">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/risk/metrics/:id">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/risk/breaches">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/risk/check">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/capital/buffers">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/capital/buffers/:id">>, cb_risk_capital_handler, []},
+
+            %% Federated cross-module reporting (P4-S1, TASK-065)
+            {<<"/api/v1/reports/federation">>, cb_federation_report_handler, []},
+            {<<"/api/v1/reports/federation/:id">>, cb_federation_report_handler, []},
+            {<<"/api/v1/reports/federation/:id/:action">>, cb_federation_report_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

@@ -9,6 +9,7 @@ import {
   Card,
   Divider,
   Group,
+  Modal,
   Paper,
   SimpleGrid,
   Spoiler,
@@ -70,6 +71,8 @@ export default function CustomerDetailPage({
   const { tick, bump } = useRefresh();
   const [party, setParty] = useState<Party | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [reactivateOpen, setReactivateOpen] = useState(false);
+  const [reactivateBusy, setReactivateBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +105,20 @@ export default function CustomerDetailPage({
       bump();
     } catch (err) {
       setError((err as Error).message);
+    }
+  };
+
+  const reactivate = async () => {
+    setReactivateBusy(true);
+    try {
+      await api("POST", `/parties/${partyId}/reactivate`);
+      setSuccess("Customer reactivated");
+      setReactivateOpen(false);
+      bump();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setReactivateBusy(false);
     }
   };
 
@@ -259,14 +276,57 @@ export default function CustomerDetailPage({
             Suspend Customer
           </Button>
         )}
-        <Button
-          color="red"
-          variant="light"
-          onClick={() => action(`/parties/${partyId}/close`, "Customer closed")}
-        >
-          Close Customer
-        </Button>
+        {party.status === "suspended" && (
+          <Button
+            color="teal"
+            variant="light"
+            onClick={() => setReactivateOpen(true)}
+          >
+            Reactivate Customer
+          </Button>
+        )}
+        {party.status !== "closed" && (
+          <Button
+            color="red"
+            variant="light"
+            onClick={() => action(`/parties/${partyId}/close`, "Customer closed")}
+          >
+            Close Customer
+          </Button>
+        )}
       </Group>
+
+      <Modal
+        opened={reactivateOpen}
+        onClose={() => (reactivateBusy ? null : setReactivateOpen(false))}
+        title="Reactivate customer?"
+        centered
+        closeOnClickOutside={!reactivateBusy}
+        closeOnEscape={!reactivateBusy}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            This will restore <Text component="span" fw={600}>{party.full_name}</Text>{" "}
+            to <Badge variant="light" color="teal" radius="sm">Active</Badge> status.
+          </Text>
+          <Text size="sm" c="dimmed">
+            An audit-trail entry will be recorded against this party. Suspended-state
+            restrictions (transaction holds, channel limits) will be removed.
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="default"
+              onClick={() => setReactivateOpen(false)}
+              disabled={reactivateBusy}
+            >
+              Cancel
+            </Button>
+            <Button color="teal" onClick={reactivate} loading={reactivateBusy}>
+              Reactivate
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <div>
         <Title order={4} mb="sm">

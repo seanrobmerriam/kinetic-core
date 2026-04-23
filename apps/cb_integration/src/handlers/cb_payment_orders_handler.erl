@@ -1,6 +1,7 @@
 %% @doc Payment Orders HTTP Handler
 %%
 %% Handles the payment order lifecycle API:
+%% - GET /api/v1/payment-orders - list all payment orders
 %% - POST /api/v1/payment-orders - initiate a new payment order
 %% - GET /api/v1/payment-orders/:payment_id - get order by ID
 %% - POST /api/v1/payment-orders/:payment_id/cancel - cancel an order
@@ -36,7 +37,7 @@ handle(<<"POST">>, Req, State) ->
 handle(<<"GET">>, Req, State) ->
     case cowboy_req:binding(payment_id, Req) of
         undefined ->
-            not_found(Req, State);
+            list_all_payments(Req, State);
         PaymentId ->
             get_payment(PaymentId, Req, State)
     end;
@@ -80,6 +81,15 @@ initiate_payment(Req, State) ->
             Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
             {ok, Req3, State}
     end.
+
+list_all_payments(Req, State) ->
+    Orders = cb_payment_orders:list_all(),
+    Sorted = lists:sort(fun(A, B) -> A#payment_order.created_at >= B#payment_order.created_at end, Orders),
+    Items = [order_to_json(O) || O <- Sorted],
+    Resp = #{items => Items},
+    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+    Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
+    {ok, Req2, State}.
 
 get_payment(PaymentId, Req, State) ->
     case cb_payment_orders:get_payment(PaymentId) of

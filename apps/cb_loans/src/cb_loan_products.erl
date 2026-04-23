@@ -22,9 +22,10 @@
 %%% <h2>Product Lifecycle</h2>
 %%%
 %%% <ol>
-%%%   <li><b>Create</b>: Define a new loan product template</li>
+%%%   <li><b>Draft</b>: Product configured but not yet available</li>
 %%%   <li><b>Active</b>: Product is available for new applications</li>
-%%%   <li><b>Inactive</b>: Product is archived, no new loans allowed</li>
+%%%   <li><b>Inactive</b>: Product temporarily suspended</li>
+%%%   <li><b>Sunset</b>: Product permanently retired</li>
 %%% </ol>
 %%%
 %%% @end
@@ -36,11 +37,17 @@
 -export([
          start_link/0,
          create_product/9,
+         create_draft_product/9,
          get_product/1,
          list_products/0,
          update_product/2,
          activate_product/1,
-         deactivate_product/1
+         deactivate_product/1,
+         launch_product/1,
+         sunset_product/1,
+         set_eligibility/2,
+         set_fees/2,
+         check_eligibility/2
         ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -198,6 +205,30 @@ handle_call({deactivate_product, ProductId}, _From, State) ->
     Reply = do_deactivate_product(ProductId),
     {reply, Reply, State};
 
+handle_call({create_draft_product, Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType}, _From, State) ->
+    Reply = do_create_draft_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType),
+    {reply, Reply, State};
+
+handle_call({launch_product, ProductId}, _From, State) ->
+    Reply = do_launch_product(ProductId),
+    {reply, Reply, State};
+
+handle_call({sunset_product, ProductId}, _From, State) ->
+    Reply = do_sunset_product(ProductId),
+    {reply, Reply, State};
+
+handle_call({set_eligibility, ProductId, Eligibility}, _From, State) ->
+    Reply = do_set_eligibility(ProductId, Eligibility),
+    {reply, Reply, State};
+
+handle_call({set_fees, ProductId, Fees}, _From, State) ->
+    Reply = do_set_fees(ProductId, Fees),
+    {reply, Reply, State};
+
+handle_call({check_eligibility, ProductId, Application}, _From, State) ->
+    Reply = do_check_eligibility(ProductId, Application),
+    {reply, Reply, State};
+
 handle_call(_Request, _From, State) ->
     {reply, unknown_call, State}.
 
@@ -234,6 +265,9 @@ do_create_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMont
                 interest_rate = InterestRate,
                 interest_type = InterestType,
                 status = active,
+                version = 1,
+                eligibility = #{},
+                fees = #{},
                 created_at = Now,
                 updated_at = Now
             },
@@ -346,7 +380,7 @@ do_set_product_status(ProductId, DesiredStatus) ->
 
 apply_updates(Product, Updates) ->
     Now = erlang:system_time(millisecond),
-    maps:fold(fun(K, V, Acc) ->
+    WithFields = maps:fold(fun(K, V, Acc) ->
         case K of
             name -> Acc#loan_product{name = V, updated_at = Now};
             description -> Acc#loan_product{description = V, updated_at = Now};
@@ -360,7 +394,70 @@ apply_updates(Product, Updates) ->
             status -> Acc#loan_product{status = V, updated_at = Now};
             _ -> Acc
         end
-    end, Product, Updates).
+    end, Product, Updates),
+    WithFields#loan_product{
+        version = Product#loan_product.version + 1,
+        updated_at = Now
+    }.
+
+%%
+%% @doc Creates a new loan product in draft status.
+%%
+%% Same parameters as create_product/9 but the product starts in
+%% 'draft' state and must be launched before accepting applications.
+%%
+-spec create_draft_product(binary(), binary(), atom(), integer(), integer(), integer(), integer(), non_neg_integer(), atom()) ->
+    {ok, product_id()} | {error, term()}.
+create_draft_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType) ->
+    gen_server:call(?SERVER, {create_draft_product, Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType}).
+
+%%
+%% @doc Transitions a loan product from draft to active.
+%%
+%% Only products in 'draft' status can be launched. Bumps the version.
+%%
+-spec launch_product(product_id()) -> {ok, loan_product()} | {error, term()}.
+launch_product(ProductId) ->
+    gen_server:call(?SERVER, {launch_product, ProductId}).
+
+%%
+%% @doc Permanently retires an active loan product.
+%%
+%% Transitions the product from 'active' to 'sunset'. Bumps the version.
+%% No new loans can be created under a sunset product.
+%%
+-spec sunset_product(product_id()) -> {ok, loan_product()} | {error, term()}.
+sunset_product(ProductId) ->
+    gen_server:call(?SERVER, {sunset_product, ProductId}).
+
+%%
+%% @doc Sets the eligibility criteria map for a loan product.
+%%
+%% Eligibility keys: min_credit_score, max_dti_bps, min_annual_income.
+%% Bumps the product version on each call.
+%%
+-spec set_eligibility(product_id(), map()) -> {ok, loan_product()} | {error, term()}.
+set_eligibility(ProductId, Eligibility) ->
+    gen_server:call(?SERVER, {set_eligibility, ProductId, Eligibility}).
+
+%%
+%% @doc Sets the fee schedule map for a loan product.
+%%
+%% Fees keys: origination_fee_bps, late_fee, prepayment_fee_bps.
+%% Bumps the product version on each call.
+%%
+-spec set_fees(product_id(), map()) -> {ok, loan_product()} | {error, term()}.
+set_fees(ProductId, Fees) ->
+    gen_server:call(?SERVER, {set_fees, ProductId, Fees}).
+
+%%
+%% @doc Checks whether an application meets the product eligibility criteria.
+%%
+%% Application map keys: credit_score, dti_bps, annual_income.
+%%
+-spec check_eligibility(product_id(), map()) -> ok | {error, term()}.
+check_eligibility(ProductId, Application) ->
+    gen_server:call(?SERVER, {check_eligibility, ProductId, Application}).
 
 validate_currency(Currency) ->
     ValidCurrencies = ['USD', 'EUR', 'GBP', 'JPY'],
@@ -399,3 +496,203 @@ validate_product_ranges(MinAmount, MaxAmount, MinTermMonths, MaxTermMonths)
     end;
 validate_product_ranges(_, _, _, _) ->
     {error, invalid_parameters}.
+
+do_create_draft_product(Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType) ->
+    ValidCurrency = validate_currency(Currency),
+    ValidInterestType = validate_interest_type(InterestType),
+    ValidInterestRate = validate_interest_rate(InterestRate),
+    ValidRanges = validate_product_ranges(MinAmount, MaxAmount, MinTermMonths, MaxTermMonths),
+    case {ValidCurrency, ValidInterestType, ValidInterestRate, ValidRanges} of
+        {ok, ok, ok, ok} ->
+            ProductId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
+            Now = erlang:system_time(millisecond),
+            Product = #loan_product{
+                product_id = ProductId,
+                name = Name,
+                description = Description,
+                currency = Currency,
+                min_amount = MinAmount,
+                max_amount = MaxAmount,
+                min_term_months = MinTermMonths,
+                max_term_months = MaxTermMonths,
+                interest_rate = InterestRate,
+                interest_type = InterestType,
+                status = draft,
+                version = 1,
+                eligibility = #{},
+                fees = #{},
+                created_at = Now,
+                updated_at = Now
+            },
+            Fun = fun() ->
+                mnesia:write(?TABLE, Product, write),
+                _ = cb_events:write_outbox(<<"loan_product.draft_created">>, #{product_id => ProductId})
+            end,
+            case mnesia:transaction(Fun) of
+                {atomic, _} -> {ok, ProductId};
+                {aborted, Reason} -> {error, Reason}
+            end;
+        {{error, _} = CurrencyError, _, _, _} ->
+            CurrencyError;
+        {ok, {error, _} = InterestTypeError, _, _} ->
+            InterestTypeError;
+        {ok, ok, {error, _} = InterestRateError, _} ->
+            InterestRateError;
+        {ok, ok, ok, {error, _} = RangeError} ->
+            RangeError
+    end.
+
+do_launch_product(ProductId) when is_binary(ProductId) ->
+    Fun = fun() ->
+        case mnesia:read({?TABLE, ProductId}) of
+            [Product] ->
+                case Product#loan_product.status of
+                    draft ->
+                        Now = erlang:system_time(millisecond),
+                        Updated = Product#loan_product{
+                            status = active,
+                            version = Product#loan_product.version + 1,
+                            updated_at = Now
+                        },
+                        mnesia:write(?TABLE, Updated, write),
+                        _ = cb_events:write_outbox(<<"loan_product.launched">>, #{product_id => ProductId}),
+                        {ok, Updated};
+                    _ ->
+                        {error, product_not_in_draft}
+                end;
+            [] ->
+                {error, product_not_found}
+        end
+    end,
+    case mnesia:transaction(Fun) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
+    end;
+do_launch_product(_) ->
+    {error, invalid_product_id}.
+
+do_sunset_product(ProductId) when is_binary(ProductId) ->
+    Fun = fun() ->
+        case mnesia:read({?TABLE, ProductId}) of
+            [Product] ->
+                case Product#loan_product.status of
+                    active ->
+                        Now = erlang:system_time(millisecond),
+                        Updated = Product#loan_product{
+                            status = sunset,
+                            version = Product#loan_product.version + 1,
+                            updated_at = Now
+                        },
+                        mnesia:write(?TABLE, Updated, write),
+                        _ = cb_events:write_outbox(<<"loan_product.sunset">>, #{product_id => ProductId}),
+                        {ok, Updated};
+                    _ ->
+                        {error, product_not_active}
+                end;
+            [] ->
+                {error, product_not_found}
+        end
+    end,
+    case mnesia:transaction(Fun) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
+    end;
+do_sunset_product(_) ->
+    {error, invalid_product_id}.
+
+do_set_eligibility(ProductId, Eligibility) when is_binary(ProductId), is_map(Eligibility) ->
+    Fun = fun() ->
+        case mnesia:read({?TABLE, ProductId}) of
+            [Product] ->
+                Now = erlang:system_time(millisecond),
+                Updated = Product#loan_product{
+                    eligibility = Eligibility,
+                    version = Product#loan_product.version + 1,
+                    updated_at = Now
+                },
+                mnesia:write(?TABLE, Updated, write),
+                {ok, Updated};
+            [] ->
+                {error, product_not_found}
+        end
+    end,
+    case mnesia:transaction(Fun) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
+    end;
+do_set_eligibility(_, _) ->
+    {error, invalid_parameters}.
+
+do_set_fees(ProductId, Fees) when is_binary(ProductId), is_map(Fees) ->
+    Fun = fun() ->
+        case mnesia:read({?TABLE, ProductId}) of
+            [Product] ->
+                Now = erlang:system_time(millisecond),
+                Updated = Product#loan_product{
+                    fees = Fees,
+                    version = Product#loan_product.version + 1,
+                    updated_at = Now
+                },
+                mnesia:write(?TABLE, Updated, write),
+                {ok, Updated};
+            [] ->
+                {error, product_not_found}
+        end
+    end,
+    case mnesia:transaction(Fun) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
+    end;
+do_set_fees(_, _) ->
+    {error, invalid_parameters}.
+
+do_check_eligibility(ProductId, Application) when is_binary(ProductId), is_map(Application) ->
+    case do_get_product(ProductId) of
+        {ok, Product} ->
+            check_eligibility_criteria(Product#loan_product.eligibility, Application);
+        Error ->
+            Error
+    end;
+do_check_eligibility(_, _) ->
+    {error, invalid_parameters}.
+
+check_eligibility_criteria(Eligibility, Application) ->
+    Checks = [
+        fun() -> check_min_credit_score(Eligibility, Application) end,
+        fun() -> check_max_dti(Eligibility, Application) end,
+        fun() -> check_min_income(Eligibility, Application) end
+    ],
+    lists:foldl(fun
+        (_, {error, _} = Err) -> Err;
+        (CheckFun, ok)        -> CheckFun()
+    end, ok, Checks).
+
+check_min_credit_score(Eligibility, Application) ->
+    case maps:get(min_credit_score, Eligibility, undefined) of
+        undefined -> ok;
+        MinScore ->
+            case maps:get(credit_score, Application, 0) of
+                Score when Score >= MinScore -> ok;
+                _ -> {error, insufficient_credit_score}
+            end
+    end.
+
+check_max_dti(Eligibility, Application) ->
+    case maps:get(max_dti_bps, Eligibility, undefined) of
+        undefined -> ok;
+        MaxDti ->
+            case maps:get(dti_bps, Application, 0) of
+                Dti when Dti =< MaxDti -> ok;
+                _ -> {error, dti_too_high}
+            end
+    end.
+
+check_min_income(Eligibility, Application) ->
+    case maps:get(min_annual_income, Eligibility, undefined) of
+        undefined -> ok;
+        MinIncome ->
+            case maps:get(annual_income, Application, 0) of
+                Income when Income >= MinIncome -> ok;
+                _ -> {error, insufficient_income}
+            end
+    end.

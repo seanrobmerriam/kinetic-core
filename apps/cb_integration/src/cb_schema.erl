@@ -283,7 +283,7 @@ table_spec(savings_product) ->
         {ram_copies, [node()]},
         {attributes, [product_id, name, description, currency, interest_rate,
                       interest_type, compounding_period, minimum_balance,
-                      status, created_at, updated_at]},
+                      status, version, created_at, updated_at]},
         {index, [status, name]}
     ];
 table_spec(loan_products) ->
@@ -292,8 +292,8 @@ table_spec(loan_products) ->
         {record_name, loan_product},
         {attributes, [product_id, name, description, currency, min_amount,
                       max_amount, min_term_months, max_term_months,
-                      interest_rate, interest_type, status, created_at,
-                      updated_at]},
+                      interest_rate, interest_type, status, version,
+                      eligibility, fees, created_at, updated_at]},
         {index, [status, currency]}
     ];
 table_spec(loan_accounts) ->

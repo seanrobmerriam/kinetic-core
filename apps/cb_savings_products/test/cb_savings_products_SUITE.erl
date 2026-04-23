@@ -32,7 +32,16 @@
     % Idempotency tests (not applicable - products are created fresh each time)
     % Atomicity tests (not applicable - single table operations)
     create_and_activate_product/1,
-    create_and_deactivate_product/1
+    create_and_deactivate_product/1,
+    % P2-S3: versioning
+    create_product_version_is_one/1,
+    update_product_increments_version/1,
+    % P2-S3: draft / lifecycle
+    create_draft_product/1,
+    launch_product_from_draft/1,
+    launch_product_requires_draft/1,
+    sunset_product_from_active/1,
+    sunset_product_requires_active/1
 ]).
 
 all() ->
@@ -61,7 +70,16 @@ all() ->
         list_products_empty,
         % Combined state tests
         create_and_activate_product,
-        create_and_deactivate_product
+        create_and_deactivate_product,
+        % P2-S3: versioning
+        create_product_version_is_one,
+        update_product_increments_version,
+        % P2-S3: draft / lifecycle
+        create_draft_product,
+        launch_product_from_draft,
+        launch_product_requires_draft,
+        sunset_product_from_active,
+        sunset_product_requires_active
     ].
 
 init_per_suite(Config) ->
@@ -318,4 +336,61 @@ create_and_deactivate_product(_Config) ->
     {ok, Deactivated} = cb_savings_products:deactivate_product(Created#savings_product.product_id),
     ?assertEqual(inactive, Deactivated#savings_product.status),
 
+    ok.
+
+%% =============================================================================
+%% P2-S3: Versioning tests
+%% =============================================================================
+
+create_product_version_is_one(_Config) ->
+    {ok, Product} = cb_savings_products:create_product(
+        <<"Version Test">>, <<"Test">>, 'USD', 100, simple, monthly, 500),
+    ?assertEqual(1, Product#savings_product.version),
+    ok.
+
+update_product_increments_version(_Config) ->
+    {ok, Product} = cb_savings_products:create_product(
+        <<"Version Test">>, <<"Test">>, 'USD', 100, simple, monthly, 500),
+    ?assertEqual(1, Product#savings_product.version),
+    {ok, Updated} = cb_savings_products:update_product(
+        Product#savings_product.product_id, #{name => <<"Updated Name">>}),
+    ?assertEqual(2, Updated#savings_product.version),
+    ok.
+
+%% =============================================================================
+%% P2-S3: Draft / lifecycle tests
+%% =============================================================================
+
+create_draft_product(_Config) ->
+    {ok, Product} = cb_savings_products:create_draft_product(
+        <<"Draft Savings">>, <<"A draft">>, 'USD', 150, simple, monthly, 200),
+    ?assertEqual(draft, Product#savings_product.status),
+    ok.
+
+launch_product_from_draft(_Config) ->
+    {ok, Product} = cb_savings_products:create_draft_product(
+        <<"Draft Savings">>, <<"A draft">>, 'USD', 150, simple, monthly, 200),
+    {ok, Launched} = cb_savings_products:launch_product(Product#savings_product.product_id),
+    ?assertEqual(active, Launched#savings_product.status),
+    ok.
+
+launch_product_requires_draft(_Config) ->
+    {ok, Product} = cb_savings_products:create_product(
+        <<"Active Product">>, <<"Already active">>, 'USD', 100, simple, monthly, 100),
+    {error, Reason} = cb_savings_products:launch_product(Product#savings_product.product_id),
+    ?assertEqual(product_not_in_draft, Reason),
+    ok.
+
+sunset_product_from_active(_Config) ->
+    {ok, Product} = cb_savings_products:create_product(
+        <<"Active Product">>, <<"Will sunset">>, 'USD', 100, simple, monthly, 100),
+    {ok, Sunset} = cb_savings_products:sunset_product(Product#savings_product.product_id),
+    ?assertEqual(sunset, Sunset#savings_product.status),
+    ok.
+
+sunset_product_requires_active(_Config) ->
+    {ok, Product} = cb_savings_products:create_draft_product(
+        <<"Draft Savings">>, <<"A draft">>, 'USD', 150, simple, monthly, 200),
+    {error, Reason} = cb_savings_products:sunset_product(Product#savings_product.product_id),
+    ?assertEqual(product_not_active, Reason),
     ok.

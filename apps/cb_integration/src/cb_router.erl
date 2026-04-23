@@ -126,12 +126,18 @@ dispatch() ->
             {<<"/api/v1/savings-products/:product_id">>, cb_savings_products_handler, []},
             {<<"/api/v1/savings-products/:product_id/activate">>, cb_savings_products_handler, []},
             {<<"/api/v1/savings-products/:product_id/deactivate">>, cb_savings_products_handler, []},
+            {<<"/api/v1/savings-products/:product_id/launch">>, cb_savings_products_handler, []},
+            {<<"/api/v1/savings-products/:product_id/sunset">>, cb_savings_products_handler, []},
 
             %% Loan products
             {<<"/api/v1/loan-products">>, cb_loan_products_handler, []},
             {<<"/api/v1/loan-products/:product_id">>, cb_loan_products_handler, []},
             {<<"/api/v1/loan-products/:product_id/activate">>, cb_loan_products_handler, []},
             {<<"/api/v1/loan-products/:product_id/deactivate">>, cb_loan_products_handler, []},
+            {<<"/api/v1/loan-products/:product_id/launch">>, cb_loan_products_handler, []},
+            {<<"/api/v1/loan-products/:product_id/sunset">>, cb_loan_products_handler, []},
+            {<<"/api/v1/loan-products/:product_id/set-eligibility">>, cb_loan_products_handler, []},
+            {<<"/api/v1/loan-products/:product_id/set-fees">>, cb_loan_products_handler, []},
 
             %% Loans and repayments
             {<<"/api/v1/loans">>, cb_loans_handler, []},

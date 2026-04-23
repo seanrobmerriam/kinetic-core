@@ -285,9 +285,10 @@ function KycManagement() {
   };
 
   function kycColor(s: string) {
-    if (s === "verified") return "teal";
+    if (s === "approved") return "teal";
     if (s === "pending") return "yellow";
     if (s === "rejected") return "red";
+    if (s === "not_started") return "gray";
     return "gray";
   }
 
@@ -310,10 +311,10 @@ function KycManagement() {
               <Select
                 label="KYC Status"
                 data={[
+                  { value: "not_started", label: "Not Started" },
                   { value: "pending", label: "Pending" },
-                  { value: "verified", label: "Verified" },
+                  { value: "approved", label: "Approved" },
                   { value: "rejected", label: "Rejected" },
-                  { value: "expired", label: "Expired" },
                 ]}
                 value={kycStatus}
                 onChange={setKycStatus}

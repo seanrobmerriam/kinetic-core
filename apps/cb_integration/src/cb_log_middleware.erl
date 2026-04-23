@@ -52,6 +52,7 @@ execute(Req, Env) ->
     %% Post-request logging is handled differently (via stream handlers or hooks).
     %% Here we just log that we're processing the request.
     Result = {ok, Req, Env},
+    cb_metrics_counter:increment(http_requests_total),
 
     Duration = erlang:monotonic_time(millisecond) - Start,
     logger:info(#{

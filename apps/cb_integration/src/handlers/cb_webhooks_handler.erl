@@ -15,6 +15,8 @@
 %% @see cb_webhooks
 -module(cb_webhooks_handler).
 
+-include_lib("cb_events/include/cb_events.hrl").
+
 -export([init/2]).
 
 -spec init(cowboy_req:req(), any()) -> {ok, cowboy_req:req(), any()}.
@@ -54,8 +56,8 @@ handle(<<"OPTIONS">>, Req, State) ->
     {ok, Req2, State};
 
 handle(_, Req, State) ->
-    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-    Req2 = cowboy_req:reply(405, Headers, <<"{\"error\": \"method_not_allowed\"}">>, Req),
+    {Code, Hdrs, RespBody} = cb_http_errors:to_response_with_metrics(method_not_allowed),
+    Req2 = cowboy_req:reply(Code, Hdrs, RespBody, Req),
     {ok, Req2, State}.
 
 list_subscriptions(Req, State) ->
@@ -95,10 +97,10 @@ create_subscription(Req, State) ->
                     Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
                     {ok, Req3, State};
                 _ ->
-                    case cb_webhooks:create_subscription(EventType, CallbackUrl) of
+                    case cb_webhooks:create_subscription(CallbackUrl, EventType) of
                         {ok, Sub} ->
                             Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                            Req3 = cowboy_req:reply(201, Headers, jsone:encode(sub_to_map(Sub)), Req2),
+                            Req3 = cowboy_req:reply(201, Headers, jsone:encode(sub_to_map_with_secret(Sub)), Req2),
                             {ok, Req3, State};
                         {error, Reason} ->
                             {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
@@ -157,17 +159,20 @@ delete_subscription(SubscriptionId, Req, State) ->
     end.
 
 not_found(Req, State) ->
-    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-    Req2 = cowboy_req:reply(404, Headers, <<"{\"error\": \"not_found\"}">>, Req),
+    {Code, Hdrs, RespBody} = cb_http_errors:to_response(not_found),
+    Req2 = cowboy_req:reply(Code, Hdrs, RespBody, Req),
     {ok, Req2, State}.
 
 sub_to_map(Sub) ->
     #{
-        subscription_id => element(2, Sub),
-        event_type      => element(3, Sub),
-        callback_url    => element(4, Sub),
-        status          => element(5, Sub),
-        created_at      => element(6, Sub),
-        updated_at      => element(7, Sub)
+        subscription_id => Sub#webhook_subscription.subscription_id,
+        event_type      => Sub#webhook_subscription.event_type,
+        callback_url    => Sub#webhook_subscription.callback_url,
+        status          => Sub#webhook_subscription.status,
+        created_at      => Sub#webhook_subscription.created_at,
+        updated_at      => Sub#webhook_subscription.updated_at
     }.
+
+sub_to_map_with_secret(Sub) ->
+    (sub_to_map(Sub))#{hmac_secret => Sub#webhook_subscription.hmac_secret}.
 

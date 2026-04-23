@@ -46,7 +46,7 @@
 %% @see cb_http_errors:to_response/1
 -module(cb_http_errors).
 
--export([to_response/1]).
+-export([to_response/1, to_response_with_metrics/1]).
 
 %% @doc Convert an error atom to an HTTP response tuple.
 %%
@@ -60,7 +60,7 @@
 %% @param ErrorAtom The internal error atom from business logic
 %% @returns `{Status, ErrorAtom, Message}' tuple ready for HTTP response
 -spec to_response(term()) ->
-    {400 | 401 | 402 | 403 | 404 | 409 | 422 | 500 | 501,
+    {400 | 401 | 402 | 403 | 404 | 405 | 409 | 422 | 429 | 500 | 501,
      <<_:64, _:_*8>>,
      <<_:64, _:_*8>>}.
 
@@ -211,6 +211,15 @@ to_response(invalid_json) ->
 to_response(invalid_pagination) ->
     {422, <<"invalid_pagination">>, <<"Invalid pagination parameters">>};
 
+to_response(method_not_allowed) ->
+    {405, <<"method_not_allowed">>, <<"Method not allowed">>};
+
+%% OAuth errors
+to_response(oauth_invalid_client) ->
+    {401, <<"invalid_client">>, <<"Invalid client credentials">>};
+to_response(oauth_invalid_grant) ->
+    {400, <<"unsupported_grant_type">>, <<"Unsupported grant type">>};
+
 %% System errors
 to_response(database_error) ->
     {500, <<"database_error">>, <<"Database error">>};
@@ -222,3 +231,19 @@ to_response(not_implemented) ->
 %% Catch-all
 to_response(_Unknown) ->
     {500, <<"internal_error">>, <<"An unexpected error occurred">>}.
+
+%% @doc Convert an error reason to a Cowboy reply tuple.
+%%
+%% Increments the 5xx counter for server error responses so that
+%% `cb_metrics_handler' can surface the count.
+-spec to_response_with_metrics(atom()) ->
+    {non_neg_integer(), map(), binary()}.
+to_response_with_metrics(Reason) ->
+    {Code, ErrorAtom, Message} = to_response(Reason),
+    Body = jsone:encode(#{error => ErrorAtom, message => Message}),
+    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+    case Code >= 500 of
+        true  -> cb_metrics_counter:increment(http_5xx_total);
+        false -> ok
+    end,
+    {Code, Headers, Body}.

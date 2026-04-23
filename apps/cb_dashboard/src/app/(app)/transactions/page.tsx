@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   Badge,
   Button,
+  Group,
   Paper,
   SegmentedControl,
   Stack,
@@ -156,17 +158,28 @@ export default function TransactionsPage() {
       key: "actions",
       label: "Actions",
       sortable: false,
-      render: (t) =>
-        t.status === "posted" ? (
+      render: (t) => (
+        <Group gap="xs" wrap="nowrap">
           <Button
+            component={Link}
+            href={`/transactions/${t.txn_id}`}
             size="xs"
             variant="light"
-            color="yellow"
-            onClick={() => reverse(t.txn_id)}
           >
-            Reverse
+            View
           </Button>
-        ) : null,
+          {t.status === "posted" && (
+            <Button
+              size="xs"
+              variant="light"
+              color="yellow"
+              onClick={() => reverse(t.txn_id)}
+            >
+              Reverse
+            </Button>
+          )}
+        </Group>
+      ),
     },
   ];
 

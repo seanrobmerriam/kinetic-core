@@ -24,6 +24,8 @@ import type { ColumnDef } from "@/components/SortableTable";
 interface ListResponse<T> {
   items: T[];
   total?: number;
+  page?: number;
+  page_size?: number;
 }
 
 const STATUSES = [
@@ -49,13 +51,29 @@ export default function AccountsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      api<ListResponse<Account>>("GET", "/accounts?page_size=500"),
-      api<ListResponse<Party>>("GET", "/parties"),
-    ])
-      .then(([acctResp, partyResp]) => {
+
+    async function fetchAllAccounts(): Promise<Account[]> {
+      const PAGE_SIZE = 100;
+      const all: Account[] = [];
+      let page = 1;
+      while (true) {
+        const resp = await api<ListResponse<Account>>(
+          "GET",
+          `/accounts?page=${page}&page_size=${PAGE_SIZE}`
+        );
+        const items = resp.items ?? [];
+        all.push(...items);
+        const total = resp.total ?? items.length;
+        if (all.length >= total || items.length < PAGE_SIZE) break;
+        page += 1;
+      }
+      return all;
+    }
+
+    Promise.all([fetchAllAccounts(), api<ListResponse<Party>>("GET", "/parties")])
+      .then(([allAccounts, partyResp]) => {
         if (cancelled) return;
-        setAccounts(acctResp.items ?? []);
+        setAccounts(allAccounts);
         const map: Record<string, Party> = {};
         for (const p of partyResp.items ?? []) map[p.party_id] = p;
         setPartyMap(map);

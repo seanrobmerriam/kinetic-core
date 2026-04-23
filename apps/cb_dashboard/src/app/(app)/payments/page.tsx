@@ -12,16 +12,16 @@ import {
   Paper,
   Stack,
   Text,
-  ThemeIcon,
   Title,
+  useMantineTheme,
 } from "@mantine/core";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import {
-  IconArrowRight,
   IconBuildingBank,
-  IconCash,
+  IconDownload,
   IconTransfer,
+  IconUpload,
 } from "@/components/icons";
 import { formatAmount, formatTimestamp, truncateID } from "@/lib/format";
 import type { PaymentOrder } from "@/lib/types";
@@ -56,14 +56,14 @@ const PAYMENT_ACTIONS = [
   },
   {
     href: "/payments/pull-ach",
-    icon: IconCash,
+    icon: IconDownload,
     color: "teal",
     label: "Pull ACH",
     description: "Debit external account",
   },
   {
     href: "/payments/push-ach",
-    icon: IconArrowRight,
+    icon: IconUpload,
     color: "cyan",
     label: "Push ACH",
     description: "Credit external account",
@@ -72,6 +72,7 @@ const PAYMENT_ACTIONS = [
 
 export default function PaymentsPage() {
   const { setError, setSuccess } = useNotify();
+  const theme = useMantineTheme();
 
   const [orders, setOrders] = useState<PaymentOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,9 +142,11 @@ export default function PaymentsPage() {
               style={{ textDecoration: "none", height: "100%" }}
             >
               <Stack gap="sm">
-                <ThemeIcon size="xl" radius="md" color={color} variant="light">
-                  <Icon size={22} />
-                </ThemeIcon>
+                <Icon
+                  color={theme.colors[color]?.[6] ?? theme.primaryColor}
+                  size={32}
+                  stroke={1.5}
+                />
                 <div>
                   <Text fw={600} size="sm">
                     {label}

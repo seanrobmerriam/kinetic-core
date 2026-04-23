@@ -220,6 +220,46 @@ to_response(oauth_invalid_client) ->
 to_response(oauth_invalid_grant) ->
     {400, <<"unsupported_grant_type">>, <<"Unsupported grant type">>};
 
+%% Compliance / KYC workflow errors
+to_response(workflow_not_found) ->
+    {404, <<"workflow_not_found">>, <<"KYC workflow not found">>};
+to_response(step_not_found) ->
+    {404, <<"step_not_found">>, <<"KYC workflow step not found">>};
+to_response(invalid_workflow_status) ->
+    {409, <<"invalid_workflow_status">>, <<"Workflow is not in a valid state for this operation">>};
+to_response(invalid_step_transition) ->
+    {409, <<"invalid_step_transition">>, <<"Invalid step transition">>};
+
+%% Compliance / IDV errors
+to_response(check_not_found) ->
+    {404, <<"check_not_found">>, <<"Identity verification check not found">>};
+to_response(invalid_idv_check) ->
+    {422, <<"invalid_idv_check">>, <<"Invalid identity verification check">>};
+to_response(max_retries_exceeded) ->
+    {429, <<"max_retries_exceeded">>, <<"Maximum IDV retry limit reached">>};
+
+%% Compliance / AML errors
+to_response(rule_not_found) ->
+    {404, <<"rule_not_found">>, <<"AML rule not found">>};
+to_response(invalid_aml_rule) ->
+    {422, <<"invalid_aml_rule">>, <<"Invalid AML rule parameters">>};
+to_response(alert_not_found) ->
+    {404, <<"alert_not_found">>, <<"Suspicious activity alert not found">>};
+to_response(invalid_alert_status) ->
+    {409, <<"invalid_alert_status">>, <<"Alert is not in a valid state for this operation">>};
+to_response(case_not_found) ->
+    {404, <<"case_not_found">>, <<"Compliance case not found">>};
+to_response(invalid_case_status) ->
+    {409, <<"invalid_case_status">>, <<"Case is not in a valid state for this operation">>};
+
+%% Compliance / SAR errors
+to_response(sar_not_found) ->
+    {404, <<"sar_not_found">>, <<"SAR report not found">>};
+to_response(invalid_sar_status) ->
+    {409, <<"invalid_sar_status">>, <<"SAR is not in a valid state for this operation">>};
+to_response(case_already_filed) ->
+    {409, <<"case_already_filed">>, <<"SAR has already been filed and cannot be withdrawn">>};
+
 %% System errors
 to_response(database_error) ->
     {500, <<"database_error">>, <<"Database error">>};

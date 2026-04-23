@@ -436,6 +436,41 @@
     updated_at  :: timestamp_ms()
 }).
 
+%% =============================================================================
+%% Compliance & AML Types
+%% =============================================================================
+
+%% @doc Status of a KYC verification workflow instance.
+-type kyc_workflow_status() :: pending | in_progress | completed | failed | abandoned.
+
+%% @doc Status of a single step within a KYC workflow.
+-type kyc_step_status() :: pending | in_progress | completed | failed | skipped.
+
+%% @doc Step type within a KYC workflow.
+-type kyc_step_type() :: document_collection | identity_check | sanctions_screening |
+                         risk_assessment | manual_review | approval.
+
+%% @doc Identity verification provider.
+-type idv_provider() :: internal | equifax | experian | lexisnexis.
+
+%% @doc Status of an identity verification check.
+-type idv_check_status() :: pending | submitted | passed | failed | timed_out.
+
+%% @doc AML rule condition type.
+-type aml_condition_type() :: amount_threshold | country_risk | frequency | velocity | pattern.
+
+%% @doc AML rule action when the condition is triggered.
+-type aml_rule_action() :: flag | block | alert | escalate.
+
+%% @doc Status of a suspicious activity alert.
+-type suspicious_activity_status() :: open | under_review | cleared | escalated | filed.
+
+%% @doc Status of an AML compliance case.
+-type aml_case_status() :: open | investigating | closed | escalated.
+
+%% @doc Status of a Suspicious Activity Report.
+-type sar_report_status() :: draft | submitted | filed | withdrawn.
+
 %% @doc API key status type.
 -type api_key_status() :: active | revoked.
 
@@ -466,4 +501,130 @@
     method      :: binary(),
     path        :: binary(),
     recorded_at :: timestamp_ms()
+}).
+
+%% =============================================================================
+%% Compliance & AML Records (P2-S1)
+%% =============================================================================
+
+%% @doc A single step within a KYC verification workflow.
+%%
+%% Steps are created as part of a workflow and advance independently.
+-record(kyc_step, {
+    step_id         :: uuid(),
+    workflow_id     :: uuid(),
+    name            :: binary(),
+    step_type       :: kyc_step_type(),
+    sequence_order  :: pos_integer(),
+    status          :: kyc_step_status(),
+    data            :: map(),
+    completed_at    :: timestamp_ms() | undefined,
+    created_at      :: timestamp_ms()
+}).
+
+%% @doc A KYC verification workflow instance bound to a party.
+%%
+%% A workflow progresses through ordered steps: document collection,
+%% identity check, sanctions screening, risk assessment, and approval.
+%% The current_step_id tracks the active step.
+-record(kyc_workflow, {
+    workflow_id         :: uuid(),
+    party_id            :: uuid(),
+    name                :: binary(),
+    status              :: kyc_workflow_status(),
+    step_ids            :: [uuid()],
+    current_step_id     :: uuid() | undefined,
+    completed_at        :: timestamp_ms() | undefined,
+    created_at          :: timestamp_ms(),
+    updated_at          :: timestamp_ms()
+}).
+
+%% @doc An identity verification check request to an external provider.
+%%
+%% The check orchestrator submits a request, polls or receives a callback,
+%% and retries up to max_retries on transient failures.
+-record(idv_check, {
+    check_id        :: uuid(),
+    party_id        :: uuid(),
+    provider        :: idv_provider(),
+    status          :: idv_check_status(),
+    retry_count     :: non_neg_integer(),
+    max_retries     :: non_neg_integer(),
+    provider_ref    :: binary() | undefined,
+    result_data     :: map(),
+    requested_at    :: timestamp_ms(),
+    expires_at      :: timestamp_ms() | undefined,
+    completed_at    :: timestamp_ms() | undefined,
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).
+
+%% @doc An AML rule definition used to evaluate transactions and party behaviour.
+%%
+%% Rules have a condition type (e.g., amount_threshold, velocity) with a
+%% threshold value, and an action to take when the condition fires.
+-record(aml_rule, {
+    rule_id         :: uuid(),
+    name            :: binary(),
+    description     :: binary(),
+    condition_type  :: aml_condition_type(),
+    threshold_value :: number(),
+    action          :: aml_rule_action(),
+    enabled         :: boolean(),
+    version         :: pos_integer(),
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).
+
+%% @doc A suspicious activity alert raised by the AML rules engine.
+%%
+%% Alerts are generated when a rule fires and enter the open queue.
+%% Compliance staff review them and either clear or escalate to a case.
+-record(suspicious_activity, {
+    alert_id        :: uuid(),
+    party_id        :: uuid(),
+    txn_id          :: uuid() | undefined,
+    rule_id         :: uuid(),
+    reason          :: binary(),
+    status          :: suspicious_activity_status(),
+    risk_score      :: non_neg_integer(),
+    metadata        :: map(),
+    reviewed_by     :: uuid() | undefined,
+    reviewed_at     :: timestamp_ms() | undefined,
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).
+
+%% @doc A compliance case grouping one or more suspicious activity alerts.
+%%
+%% Cases are opened when alerts require deeper investigation. A case may
+%% be closed (no action), escalated (requires SAR filing), or still open.
+-record(aml_case, {
+    case_id         :: uuid(),
+    party_id        :: uuid(),
+    alert_ids       :: [uuid()],
+    status          :: aml_case_status(),
+    assignee        :: uuid() | undefined,
+    summary         :: binary(),
+    resolution      :: binary() | undefined,
+    closed_at       :: timestamp_ms() | undefined,
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).
+
+%% @doc A Suspicious Activity Report filed with a regulatory body.
+%%
+%% SARs are generated from escalated compliance cases. The report progresses
+%% from draft through submission to filed status.
+-record(sar_report, {
+    sar_id              :: uuid(),
+    case_id             :: uuid(),
+    party_id            :: uuid(),
+    reference_number    :: binary() | undefined,
+    narrative           :: binary(),
+    status              :: sar_report_status(),
+    submitted_at        :: timestamp_ms() | undefined,
+    filed_at            :: timestamp_ms() | undefined,
+    created_at          :: timestamp_ms(),
+    updated_at          :: timestamp_ms()
 }).

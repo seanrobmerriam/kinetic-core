@@ -1,0 +1,8 @@
+{application, cb_compliance,
+    [{description, "IronLedger Compliance & AML domain logic"},
+     {vsn, "0.1.0"},
+     {modules, []},
+     {registered, []},
+     {applications, [kernel, stdlib, mnesia, cb_ledger]},
+     {mod, {cb_compliance_app, []}}
+    ]}.

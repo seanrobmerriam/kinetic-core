@@ -1,15 +1,13 @@
 %% @doc Straight-Through Processing (STP) evaluation engine.
 %%
-%% Evaluates a payment order against configurable rules to determine whether
-%% it can be automatically processed (straight-through) or requires manual
-%% intervention (exception).
+%% Evaluation pipeline (in order):
+%% 1. Compliance hooks — sanctions + AML screening (cb_stp_hooks)
+%% 2. Configurable rule engine — custom routing rules (cb_stp_rules)
+%% 3. Legacy hardcoded checks — amount threshold, KYC, account status
 %%
-%% STP auto-approves if ALL of the following are true:
-%% 1. Amount <= STP threshold (default: 100_000 minor units / $1,000.00)
-%% 2. Party KYC status = approved
-%% 3. Source account status = active
-%%
-%% Any failure routes to the exception queue with a reason.
+%% The pipeline short-circuits: the first non-pass result is returned.
+%% This preserves backward compatibility — when no custom rules are configured
+%% the legacy checks behave exactly as before.
 -module(cb_stp).
 
 -include_lib("cb_ledger/include/cb_ledger.hrl").
@@ -24,6 +22,21 @@
 -spec evaluate(#payment_order{}) ->
     straight_through | {exception, binary()}.
 evaluate(Order) ->
+    case cb_stp_hooks:run_hooks(Order) of
+        {halt, Reason} ->
+            {exception, Reason};
+        ok ->
+            case cb_stp_rules:evaluate_order(Order) of
+                straight_through -> straight_through;
+                exception        -> {exception, <<"Matched routing rule: exception">>};
+                block            -> {exception, <<"Matched routing rule: block">>};
+                no_match         -> legacy_evaluate(Order)
+            end
+    end.
+
+-spec legacy_evaluate(#payment_order{}) ->
+    straight_through | {exception, binary()}.
+legacy_evaluate(Order) ->
     Threshold = stp_threshold(),
     case Order#payment_order.amount > Threshold of
         true ->

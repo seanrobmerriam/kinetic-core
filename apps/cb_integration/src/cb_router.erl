@@ -255,6 +255,17 @@ dispatch() ->
             {<<"/api/v1/compliance/sars">>, cb_sar_reports_handler, []},
             {<<"/api/v1/compliance/sars/:sar_id">>, cb_sar_report_handler, []},
 
+            %% STP routing rules (P3-S1)
+            {<<"/api/v1/stp/rules">>, cb_stp_rules_handler, []},
+            {<<"/api/v1/stp/rules/:rule_id">>, cb_stp_rules_handler, []},
+
+            %% STP metrics dashboard (P3-S1)
+            {<<"/api/v1/stp/metrics">>, cb_stp_metrics_handler, []},
+
+            %% Exception SLA and escalation (P3-S1)
+            {<<"/api/v1/stp/exceptions/overdue">>, cb_stp_exceptions_handler, []},
+            {<<"/api/v1/stp/exceptions/:item_id/:action">>, cb_stp_exceptions_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

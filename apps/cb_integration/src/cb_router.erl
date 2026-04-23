@@ -205,6 +205,34 @@ dispatch() ->
             {<<"/api/v1/atm/inquiry">>, cb_atm_handler, []},
             {<<"/api/v1/atm/withdraw">>, cb_atm_handler, []},
 
+            %% KYC workflow management (P2-S1)
+            {<<"/api/v1/kyc/workflows">>, cb_kyc_workflows_handler, []},
+            {<<"/api/v1/kyc/workflows/:workflow_id">>, cb_kyc_workflow_handler, []},
+            {<<"/api/v1/kyc/workflows/:workflow_id/start">>, cb_kyc_workflow_start_handler, []},
+            {<<"/api/v1/kyc/workflows/:workflow_id/advance">>, cb_kyc_workflow_advance_handler, []},
+            {<<"/api/v1/kyc/workflows/:workflow_id/steps">>, cb_kyc_workflow_steps_handler, []},
+
+            %% Identity verification (P2-S1)
+            {<<"/api/v1/parties/:party_id/identity-checks">>, cb_party_idv_handler, []},
+            {<<"/api/v1/identity-checks/:check_id">>, cb_idv_check_handler, []},
+            {<<"/api/v1/identity-checks/:check_id/retry">>, cb_idv_retry_handler, []},
+
+            %% AML rules (P2-S1)
+            {<<"/api/v1/aml/rules">>, cb_aml_rules_handler, []},
+            {<<"/api/v1/aml/rules/:rule_id">>, cb_aml_rule_handler, []},
+
+            %% Suspicious activity queue (P2-S1)
+            {<<"/api/v1/aml/suspicious-activity">>, cb_suspicious_activity_handler, []},
+            {<<"/api/v1/aml/suspicious-activity/:alert_id">>, cb_suspicious_activity_item_handler, []},
+
+            %% AML compliance cases (P2-S1)
+            {<<"/api/v1/aml/cases">>, cb_aml_cases_handler, []},
+            {<<"/api/v1/aml/cases/:case_id">>, cb_aml_case_handler, []},
+
+            %% SAR reports (P2-S1)
+            {<<"/api/v1/compliance/sars">>, cb_sar_reports_handler, []},
+            {<<"/api/v1/compliance/sars/:sar_id">>, cb_sar_report_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

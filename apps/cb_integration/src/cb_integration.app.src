@@ -17,7 +17,8 @@
                   cb_loans,
                   cb_interest,
                   cb_auth,
-                  cb_channels
+                  cb_channels,
+                  cb_compliance
                  ]},
   {env, []},
   {modules, []},

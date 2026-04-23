@@ -87,7 +87,11 @@ create_tables() ->
               approval_decision, event_outbox, webhook_subscription,
               webhook_delivery, report_statement, report_export,
               api_usage_event,
-              oauth_client, oauth_token],
+              oauth_client, oauth_token,
+              kyc_workflow, kyc_step,
+              idv_check,
+              aml_rule, suspicious_activity, aml_case,
+              sar_report],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -110,7 +114,9 @@ create_tables() ->
     approval_request | approval_decision | event_outbox |
     webhook_subscription | webhook_delivery | report_statement |
     report_export | api_usage_event |
-    oauth_client | oauth_token
+    oauth_client | oauth_token |
+    kyc_workflow | kyc_step | idv_check |
+    aml_rule | suspicious_activity | aml_case | sar_report
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -144,7 +150,9 @@ create_if_not_exists(TableName) ->
     approval_request | approval_decision | event_outbox |
     webhook_subscription | webhook_delivery | report_statement |
     report_export | api_usage_event |
-    oauth_client | oauth_token
+    oauth_client | oauth_token |
+    kyc_workflow | kyc_step | idv_check |
+    aml_rule | suspicious_activity | aml_case | sar_report
 ) ->
     [{'attributes', [atom(), ...]} |
      {'index', ['account_id' | 'currency' | 'dest_account_id' | 'email' |
@@ -394,4 +402,46 @@ table_spec(oauth_token) ->
         {ram_copies, [node()]},
         {attributes, [token, client_id, scope, role, expires_at, created_at]},
         {index, [client_id, expires_at]}
+    ];
+table_spec(kyc_workflow) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, kyc_workflow)},
+        {index, [party_id, status]}
+    ];
+table_spec(kyc_step) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, kyc_step)},
+        {index, [workflow_id, status]}
+    ];
+table_spec(idv_check) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, idv_check)},
+        {index, [party_id, status]}
+    ];
+table_spec(aml_rule) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, aml_rule)},
+        {index, [enabled, condition_type]}
+    ];
+table_spec(suspicious_activity) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, suspicious_activity)},
+        {index, [party_id, rule_id, status]}
+    ];
+table_spec(aml_case) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, aml_case)},
+        {index, [party_id, status]}
+    ];
+table_spec(sar_report) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, sar_report)},
+        {index, [case_id, party_id, status]}
     ].

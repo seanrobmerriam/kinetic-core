@@ -213,7 +213,8 @@ function ExceptionQueue() {
 interface KycResponse {
   party_id: string;
   kyc_status: string;
-  risk_tier: string;
+  onboarding_status: string;
+  review_notes: string | null;
   updated_at: number;
 }
 
@@ -224,7 +225,7 @@ function KycManagement() {
   const [kyc, setKyc] = useState<Record<string, KycResponse>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [kycStatus, setKycStatus] = useState<string | null>(null);
-  const [riskTier, setRiskTier] = useState<string | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -262,17 +263,17 @@ function KycManagement() {
     setSelected(id);
     const existing = kyc[id];
     setKycStatus(existing?.kyc_status ?? null);
-    setRiskTier(existing?.risk_tier ?? null);
+    setReviewNotes(existing?.review_notes ?? "");
   };
 
   const save = async () => {
-    if (!selected || !kycStatus || !riskTier || submitting) return;
+    if (!selected || !kycStatus || submitting) return;
     setSubmitting(true);
     try {
       const updated = await api<KycResponse>(
         "PATCH",
         `/parties/${selected}/kyc`,
-        { kyc_status: kycStatus, risk_tier: riskTier },
+        { kyc_status: kycStatus, review_notes: reviewNotes || undefined },
       );
       setKyc((prev) => ({ ...prev, [selected]: updated }));
       setSuccess("KYC updated");
@@ -292,10 +293,7 @@ function KycManagement() {
     return "gray";
   }
 
-  function tierColor(t: string) {
-    if (t === "low") return "teal";
-    if (t === "medium") return "yellow";
-    if (t === "high") return "red";
+  function tierColor() {
     return "gray";
   }
 
@@ -307,31 +305,26 @@ function KycManagement() {
             Update KYC — {parties.find((p) => p.party_id === selected)?.full_name}
           </Title>
           <Stack>
-            <Group grow>
-              <Select
-                label="KYC Status"
-                data={[
-                  { value: "not_started", label: "Not Started" },
-                  { value: "pending", label: "Pending" },
-                  { value: "approved", label: "Approved" },
-                  { value: "rejected", label: "Rejected" },
-                ]}
-                value={kycStatus}
-                onChange={setKycStatus}
-              />
-              <Select
-                label="Risk Tier"
-                data={[
-                  { value: "low", label: "Low" },
-                  { value: "medium", label: "Medium" },
-                  { value: "high", label: "High" },
-                ]}
-                value={riskTier}
-                onChange={setRiskTier}
-              />
-            </Group>
+            <Select
+              label="KYC Status"
+              data={[
+                { value: "not_started", label: "Not Started" },
+                { value: "pending", label: "Pending" },
+                { value: "approved", label: "Approved" },
+                { value: "rejected", label: "Rejected" },
+              ]}
+              value={kycStatus}
+              onChange={setKycStatus}
+            />
+            <Textarea
+              label="Review Notes"
+              placeholder="Optional review notes…"
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.currentTarget.value)}
+              rows={3}
+            />
             <Group>
-              <Button onClick={save} loading={submitting} disabled={!kycStatus || !riskTier}>
+              <Button onClick={save} loading={submitting} disabled={!kycStatus}>
                 Save
               </Button>
               <Button variant="subtle" onClick={() => setSelected(null)}>
@@ -368,7 +361,7 @@ function KycManagement() {
                     color={kycColor(k.kyc_status)}
                     radius="sm"
                   >
-                    {capitalize(k.kyc_status)}
+                    {capitalize(k.kyc_status.replace(/_/g, " "))}
                   </Badge>
                 ) : (
                   <Text size="sm" c="dimmed">—</Text>
@@ -376,18 +369,14 @@ function KycManagement() {
               },
             },
             {
-              key: "risk_tier",
-              label: "Risk Tier",
-              getValue: (p) => kyc[p.party_id]?.risk_tier ?? "",
+              key: "onboarding_status",
+              label: "Onboarding",
+              getValue: (p) => kyc[p.party_id]?.onboarding_status ?? "",
               render: (p) => {
                 const k = kyc[p.party_id];
-                return k ? (
-                  <Badge
-                    variant="light"
-                    color={tierColor(k.risk_tier)}
-                    radius="sm"
-                  >
-                    {capitalize(k.risk_tier)}
+                return k?.onboarding_status ? (
+                  <Badge variant="outline" color={tierColor(k.onboarding_status)} radius="sm">
+                    {capitalize(k.onboarding_status.replace(/_/g, " "))}
                   </Badge>
                 ) : (
                   <Text size="sm" c="dimmed">—</Text>

@@ -148,7 +148,7 @@ export function Header({
 
           {state.status === "authenticated" && state.user && (
             <Group
-              gap="md"
+              gap="sm"
               data-testid="current-user"
               wrap="nowrap"
               visibleFrom="sm"
@@ -168,13 +168,13 @@ export function Header({
                 {userInitial}
               </Avatar>
               <div>
-                <Text size="sm" fw={600} lh={1.3}>
-                  {state.user.email}
+                <Text fz="xs" tt="uppercase" fw={700} c="dimmed" lh={1.2}>
+                  {capitalize(state.user.role)}
                 </Text>
-                <Group gap={4} align="center" wrap="nowrap" mt={2}>
-                  <IconAt size={12} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)" }} />
-                  <Text size="xs" c="dimmed">
-                    {capitalize(state.user.role)}
+                <Group wrap="nowrap" gap={6} mt={4}>
+                  <IconAt size={12} stroke={1.5} style={{ color: "var(--mantine-color-dimmed)", flexShrink: 0 }} />
+                  <Text fz="xs" c="dimmed" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>
+                    {state.user.email}
                   </Text>
                 </Group>
               </div>

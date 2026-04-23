@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  Anchor,
   Badge,
   Button,
   Card,
@@ -41,7 +43,16 @@ const entryColumns: ColumnDef<LedgerEntry>[] = [
     key: "txn_id",
     label: "Transaction ID",
     getValue: (e) => e.txn_id,
-    render: (e) => truncateID(e.txn_id),
+    render: (e) => (
+      <Anchor
+        component={Link}
+        href={`/transactions/${e.txn_id}`}
+        size="sm"
+        ff="monospace"
+      >
+        {truncateID(e.txn_id)}
+      </Anchor>
+    ),
     ff: "monospace",
   },
   {

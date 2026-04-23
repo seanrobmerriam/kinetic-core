@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Anchor,
   Badge,
   Button,
   Card,
@@ -257,7 +259,16 @@ export default function LoansPage() {
       key: "id",
       label: "Loan",
       getValue: (l) => l.loan_id,
-      render: (l) => truncateID(l.loan_id),
+      render: (l) => (
+        <Anchor
+          component={Link}
+          href={`/loans/${l.loan_id}`}
+          size="sm"
+          ff="monospace"
+        >
+          {truncateID(l.loan_id)}
+        </Anchor>
+      ),
       ff: "monospace",
     },
     {
@@ -299,7 +310,12 @@ export default function LoansPage() {
       sortable: false,
       render: (l) => (
         <Group gap="xs">
-          <Button size="xs" variant="light" onClick={() => loadLoan(l.loan_id)}>
+          <Button
+            size="xs"
+            variant="light"
+            component={Link}
+            href={`/loans/${l.loan_id}`}
+          >
             View
           </Button>
           {l.status === "pending" && (

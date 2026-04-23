@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  Anchor,
   Badge,
   Button,
   Card,
@@ -252,7 +254,16 @@ function OrderTable({
       key: "id",
       label: "ID",
       getValue: (o) => o.payment_id,
-      render: (o) => truncateID(o.payment_id),
+      render: (o) => (
+        <Anchor
+          component={Link}
+          href={`/payments/${o.payment_id}`}
+          size="sm"
+          ff="monospace"
+        >
+          {truncateID(o.payment_id)}
+        </Anchor>
+      ),
       ff: "monospace",
     },
     {

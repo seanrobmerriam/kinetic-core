@@ -112,13 +112,24 @@ handle(_, Req, State) ->
 party_to_json(Party) ->
     #{
         party_id => Party#party.party_id,
-        full_name => Party#party.full_name,
+        full_name => safe_utf8(Party#party.full_name),
         email => Party#party.email,
         status => Party#party.status,
         kyc_status => Party#party.kyc_status,
         onboarding_status => Party#party.onboarding_status,
-        review_notes => Party#party.review_notes,
+        review_notes => null_if_undefined(Party#party.review_notes),
         doc_refs => Party#party.doc_refs,
         created_at => Party#party.created_at,
         updated_at => Party#party.updated_at
     }.
+
+null_if_undefined(undefined) -> null;
+null_if_undefined(Value) -> Value.
+
+safe_utf8(undefined) -> null;
+safe_utf8(Bin) when is_binary(Bin) ->
+    case unicode:characters_to_binary(Bin, utf8, utf8) of
+        Out when is_binary(Out) -> Out;
+        _ -> << <<(if B >= 32, B < 127 -> B; true -> $? end)>> || <<B>> <= Bin >>
+    end;
+safe_utf8(Other) -> Other.

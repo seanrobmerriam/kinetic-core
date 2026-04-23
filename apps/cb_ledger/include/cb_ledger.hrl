@@ -763,3 +763,109 @@
     created_at          :: timestamp_ms(),
     updated_at          :: timestamp_ms()
 }).
+
+%%====================================================================
+%% P3-S3: Streaming and Advanced Payments Types
+%%====================================================================
+
+%% Schema compatibility policy: backward = new readers can read old data;
+%% forward = old readers can read new data; full = both.
+-type schema_compatibility() :: backward | forward | full | none.
+
+%% SWIFT/ISO 20022 message classification.
+-type swift_message_type() :: mt103 | mt202 | mx_pain001 | mx_camt053.
+
+%% SWIFT/ISO 20022 processing status.
+-type swift_message_status() :: received | validated | rejected | translated | posted.
+
+%% Settlement run lifecycle.
+-type settlement_run_status() :: open | closed | reconciled | failed.
+
+%% Reconciliation match state for a single entry.
+-type reconciliation_match_status() :: matched | unmatched | disputed.
+
+%%====================================================================
+%% P3-S3: Streaming and Advanced Payments Records
+%%====================================================================
+
+%% @doc Versioned event schema definition for the registry.
+%%
+%% Each (event_type, version) pair is unique. The schema field holds
+%% a map describing the expected payload structure. Compatibility controls
+%% which evolution strategies are allowed for this event type.
+-record(event_schema_version, {
+    schema_id     :: uuid(),
+    event_type    :: binary(),
+    version       :: pos_integer(),
+    schema        :: map(),
+    compatibility :: schema_compatibility(),
+    created_at    :: timestamp_ms()
+}).
+
+%% @doc Streaming consumer cursor — tracks read offset per consumer/topic.
+%%
+%% last_event_ts: millisecond timestamp of the last event successfully
+%% delivered to this consumer. Used for cursor-based replay.
+-record(consumer_cursor, {
+    cursor_id     :: uuid(),
+    consumer_id   :: binary(),
+    topic         :: binary(),
+    last_event_ts :: timestamp_ms(),
+    updated_at    :: timestamp_ms()
+}).
+
+%% @doc Incoming SWIFT or ISO 20022 payment message.
+%%
+%% raw_payload holds the original binary (MT field string or XML).
+%% parsed_fields holds a normalized key-value map extracted by the pipeline.
+%% payment_id is set once the message has been translated to a payment_order.
+-record(swift_message, {
+    message_id     :: uuid(),
+    message_type   :: swift_message_type(),
+    sender_bic     :: binary(),
+    receiver_bic   :: binary(),
+    reference      :: binary(),
+    amount         :: amount() | undefined,
+    currency       :: currency() | undefined,
+    raw_payload    :: binary(),
+    parsed_fields  :: map(),
+    status         :: swift_message_status(),
+    rejection_reason :: binary() | undefined,
+    payment_id     :: uuid() | undefined,
+    received_at    :: timestamp_ms(),
+    updated_at     :: timestamp_ms()
+}).
+
+%% @doc A settlement batch run for a single payment rail.
+%%
+%% expected_total: sum of expected settlement credits/debits (minor units).
+%% actual_total: sum of matched entries from the ledger.
+-record(settlement_run, {
+    run_id         :: uuid(),
+    rail           :: binary(),
+    status         :: settlement_run_status(),
+    expected_total :: amount(),
+    actual_total   :: amount(),
+    opened_at      :: timestamp_ms(),
+    closed_at      :: timestamp_ms() | undefined,
+    reconciled_at  :: timestamp_ms() | undefined,
+    updated_at     :: timestamp_ms()
+}).
+
+%% @doc One entry in a settlement reconciliation run.
+%%
+%% payment_id and ledger_entry_id pair: if match_status = matched,
+%% both are present and the amounts agree. If unmatched, ledger_entry_id
+%% may be undefined (no matching ledger entry was found).
+-record(reconciliation_entry, {
+    entry_id        :: uuid(),
+    run_id          :: uuid(),
+    payment_id      :: uuid(),
+    ledger_entry_id :: uuid() | undefined,
+    expected_amount :: amount(),
+    actual_amount   :: amount() | undefined,
+    currency        :: currency(),
+    match_status    :: reconciliation_match_status(),
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).

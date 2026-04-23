@@ -93,7 +93,9 @@ create_tables() ->
               idv_check,
               aml_rule, suspicious_activity, aml_case,
               sar_report, stp_routing_rule,
-              connector_definition, connector_version, partner_application],
+              connector_definition, connector_version, partner_application,
+              event_schema_version, consumer_cursor,
+              swift_message, settlement_run, reconciliation_entry],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -486,4 +488,34 @@ table_spec(partner_application) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, partner_application)},
         {index, [partner_id, status]}
+    ];
+table_spec(event_schema_version) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, event_schema_version)},
+        {index, [event_type, version]}
+    ];
+table_spec(consumer_cursor) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, consumer_cursor)},
+        {index, [consumer_id, topic]}
+    ];
+table_spec(swift_message) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, swift_message)},
+        {index, [message_type, status, payment_id]}
+    ];
+table_spec(settlement_run) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, settlement_run)},
+        {index, [rail, status]}
+    ];
+table_spec(reconciliation_entry) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, reconciliation_entry)},
+        {index, [run_id, payment_id, match_status]}
     ].

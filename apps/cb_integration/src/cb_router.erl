@@ -281,6 +281,27 @@ dispatch() ->
             {<<"/api/v1/marketplace/partners/:application_id">>, cb_partner_onboarding_handler, []},
             {<<"/api/v1/marketplace/partners/:application_id/:action">>, cb_partner_onboarding_handler, []},
 
+            %% Event schema registry (P3-S3)
+            {<<"/api/v1/events/schemas">>, cb_event_schema_handler, []},
+            {<<"/api/v1/events/schemas/:event_type">>, cb_event_schema_handler, []},
+            {<<"/api/v1/events/schemas/:event_type/:version">>, cb_event_schema_handler, []},
+
+            %% Streaming consumers (P3-S3)
+            {<<"/api/v1/streams/consumers">>, cb_streaming_handler, []},
+            {<<"/api/v1/streams/backfill">>, cb_streaming_handler, []},
+            {<<"/api/v1/streams/consumers/:consumer_id/:action">>, cb_streaming_handler, []},
+
+            %% SWIFT / ISO 20022 pipeline (P3-S3)
+            {<<"/api/v1/payments/swift">>, cb_swift_handler, []},
+            {<<"/api/v1/payments/swift/status/:action">>, cb_swift_handler, []},
+            {<<"/api/v1/payments/swift/:message_id">>, cb_swift_handler, []},
+            {<<"/api/v1/payments/swift/:message_id/:action">>, cb_swift_handler, []},
+
+            %% Settlement and reconciliation (P3-S3)
+            {<<"/api/v1/settlements">>, cb_settlement_handler, []},
+            {<<"/api/v1/settlements/:run_id">>, cb_settlement_handler, []},
+            {<<"/api/v1/settlements/:run_id/:action">>, cb_settlement_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

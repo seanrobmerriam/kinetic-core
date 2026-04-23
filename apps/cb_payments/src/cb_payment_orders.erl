@@ -13,6 +13,7 @@
 -export([
     initiate/5,
     get_payment/1,
+    list_all/0,
     cancel_payment/1,
     retry_payment/1,
     list_payments_for_party/1
@@ -182,6 +183,11 @@ retry_payment(PaymentId) ->
         {ok, _} ->
             {error, cannot_retry}
     end.
+
+%% @doc List all payment orders across all parties.
+-spec list_all() -> [#payment_order{}].
+list_all() ->
+    mnesia:dirty_match_object(payment_order, mnesia:table_info(payment_order, wild_pattern)).
 
 %% @doc List all payment orders for a party.
 -spec list_payments_for_party(uuid()) -> [#payment_order{}].

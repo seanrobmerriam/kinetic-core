@@ -110,8 +110,13 @@ dispatch() ->
 
             %% Ledger entries
             {<<"/api/v1/ledger/entries/latest">>, cb_ledger_latest_handler, []},
+            {<<"/api/v1/ledger/trial-balance">>, cb_ledger_trial_balance_handler, []},
+            {<<"/api/v1/ledger/general-ledger">>, cb_ledger_gl_handler, []},
+            {<<"/api/v1/ledger/chart-of-accounts">>, cb_chart_accounts_handler, []},
+            {<<"/api/v1/ledger/chart-of-accounts/:code">>, cb_chart_accounts_handler, []},
             {<<"/api/v1/transactions/:txn_id/entries">>, cb_transaction_entries_handler, []},
             {<<"/api/v1/accounts/:account_id/entries">>, cb_account_entries_handler, []},
+            {<<"/api/v1/accounts/:account_id/snapshots">>, cb_account_snapshots_handler, []},
 
             %% Savings products
             {<<"/api/v1/savings-products">>, cb_savings_products_handler, []},

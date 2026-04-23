@@ -81,6 +81,9 @@
     interest_rate :: non_neg_integer(),
     interest_type :: atom(),
     status :: atom(),
+    version :: pos_integer(),
+    eligibility :: map(),
+    fees :: map(),
     created_at :: integer(),
     updated_at :: integer()
 }).
@@ -160,6 +163,25 @@
     status :: atom(),
     created_at :: integer()
 }).
+
+%%
+%% @doc Represents one installment in a generated repayment schedule.
+%%
+%% @see cb_repayment_schedule
+%%
+-record(installment, {
+    month   :: pos_integer(),
+    due_date :: integer(),
+    payment :: integer(),
+    principal :: integer(),
+    interest :: integer(),
+    balance :: integer()
+}).
+
+%%
+%% @doc Type alias for a repayment schedule installment.
+%%
+-type installment() :: #installment{}.
 
 %%
 %% @doc Type alias for a loan product record.

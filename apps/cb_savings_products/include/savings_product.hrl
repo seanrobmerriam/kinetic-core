@@ -91,6 +91,7 @@
     compounding_period  :: atom(),
     minimum_balance     :: integer(),
     status              :: atom(),
+    version             :: pos_integer(),
     created_at          :: integer(),
     updated_at          :: integer()
 }).
@@ -127,7 +128,7 @@
 %%%
 %%% @doc Type alias for product operational status.
 %%%
--type product_status() :: active | inactive.
+-type product_status() :: draft | active | inactive | sunset.
 %%% - `active`: Product is available for new savings accounts
 %%% - `inactive`: Product is deprecated, no new accounts can be opened
 

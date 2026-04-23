@@ -1,6 +1,9 @@
 %% @doc Development mock data importer.
 %%
-%% Builds a deterministic demo dataset and is safe to run repeatedly.
+%% Seeds the database from names.csv (apps/cb_integration/priv/names.csv).
+%% Every identity receives at least one product (checking account).
+%% ~25% also receive a savings account; ~33% also receive a pending loan.
+%% The import is idempotent — safe to run repeatedly.
 
 -module(cb_mock_data_importer).
 
@@ -19,23 +22,7 @@ import() ->
     end).
 
 do_import(Summary0) ->
-    {ok, AliceMainId, Summary1} = ensure_party_account(
-        <<"Alice Chen">>, <<"alice.mock@ironledger.dev">>, <<"Alice Main Checking">>, 'USD', Summary0
-    ),
-    {ok, AliceSavingsId, Summary2} = ensure_party_account(
-        <<"Alice Chen">>, <<"alice.mock@ironledger.dev">>, <<"Alice Savings Reserve">>, 'USD', Summary1
-    ),
-    {ok, BobMainId, Summary3} = ensure_party_account(
-        <<"Bob Smith">>, <<"bob.mock@ironledger.dev">>, <<"Bob Main Checking">>, 'USD', Summary2
-    ),
-    {ok, _CarolMainId, Summary4} = ensure_party_account(
-        <<"Carol Diaz">>, <<"carol.mock@ironledger.dev">>, <<"Carol Main Checking">>, 'USD', Summary3
-    ),
-    {ok, _DaveMainId, Summary5} = ensure_party_account(
-        <<"Dave Patel">>, <<"dave.mock@ironledger.dev">>, <<"Dave Main Checking">>, 'EUR', Summary4
-    ),
-
-    {ok, _GrowthSavingsProductId, Summary6} = ensure_savings_product(
+    {ok, _GrowthSavingsProductId, Summary1} = ensure_savings_product(
         <<"Growth Saver">>,
         <<"Demo high-yield savings product">>,
         'USD',
@@ -43,9 +30,9 @@ do_import(Summary0) ->
         compound,
         monthly,
         10000,
-        Summary5
+        Summary0
     ),
-    {ok, _StarterSavingsProductId, Summary7} = ensure_savings_product(
+    {ok, _StarterSavingsProductId, Summary2} = ensure_savings_product(
         <<"Starter Saver">>,
         <<"Demo starter savings product">>,
         'USD',
@@ -53,9 +40,9 @@ do_import(Summary0) ->
         simple,
         monthly,
         0,
-        Summary6
+        Summary1
     ),
-    {ok, LoanProductId, Summary8} = ensure_loan_product(
+    {ok, LoanProductId, Summary3} = ensure_loan_product(
         <<"Personal Flex Loan">>,
         <<"Demo unsecured personal loan">>,
         'USD',
@@ -65,147 +52,135 @@ do_import(Summary0) ->
         60,
         850,
         declining,
-        Summary7
+        Summary2
     ),
+    bulk_ensure_csv_parties(LoanProductId, Summary3).
 
-    {ok, Summary9} = ensure_payment_txn(
-        <<"mock-deposit-alice-main-v1">>,
-        fun() -> cb_payments:deposit(<<"mock-deposit-alice-main-v1">>, AliceMainId, 250000, 'USD', <<"Initial funding">>) end,
-        Summary8
-    ),
-    {ok, Summary10} = ensure_payment_txn(
-        <<"mock-deposit-alice-savings-v1">>,
-        fun() -> cb_payments:deposit(<<"mock-deposit-alice-savings-v1">>, AliceSavingsId, 900000, 'USD', <<"Savings seed">>) end,
-        Summary9
-    ),
-    {ok, Summary11} = ensure_payment_txn(
-        <<"mock-deposit-bob-main-v1">>,
-        fun() -> cb_payments:deposit(<<"mock-deposit-bob-main-v1">>, BobMainId, 180000, 'USD', <<"Payroll credit">>) end,
-        Summary10
-    ),
-    {ok, Summary12} = ensure_payment_txn(
-        <<"mock-transfer-alice-to-bob-v1">>,
-        fun() -> cb_payments:transfer(<<"mock-transfer-alice-to-bob-v1">>, AliceMainId, BobMainId, 35000, 'USD', <<"Shared expenses">>) end,
-        Summary11
-    ),
-    {ok, Summary13} = ensure_payment_txn(
-        <<"mock-withdraw-bob-main-v1">>,
-        fun() -> cb_payments:withdraw(<<"mock-withdraw-bob-main-v1">>, BobMainId, 12000, 'USD', <<"ATM withdrawal">>) end,
-        Summary12
-    ),
+%% --- CSV-based bulk import ------------------------------------------------
 
-    {ok, Summary14} = ensure_hold(AliceMainId, 15000, <<"Card authorization demo">>, Summary13),
+bulk_ensure_csv_parties(LoanProductId, Summary0) ->
+    Identities = load_csv_identities(),
+    bulk_ensure_csv_parties(Identities, 1, LoanProductId, Summary0).
 
-    {ok, AlicePartyId} = find_party_id_by_email(<<"alice.mock@ironledger.dev">>),
-    {ok, Summary15} = ensure_loan_with_repayment(
-        LoanProductId,
-        AlicePartyId,
-        AliceMainId,
-        300000,
-        'USD',
-        24,
-        850,
-        25000,
-        Summary14
-    ),
-
-    %% Bulk demo dataset: ensures the dashboard has a meaningful volume of
-    %% records to exercise pagination, search, and reporting flows. All
-    %% generators are deterministic and idempotent so re-running the importer
-    %% does not produce duplicates.
-    BulkPartyCount = 3000,
-    BulkLoanCount = 4485,
-    case bulk_ensure_parties(BulkPartyCount, Summary15) of
-        {ok, BulkParties, Summary16} ->
-            case bulk_ensure_deposits(BulkParties, Summary16) of
-                {ok, Summary17} ->
-                    case bulk_ensure_loans(LoanProductId, BulkParties, BulkLoanCount, Summary17) of
-                        {ok, Summary18} ->
-                            {ok, Summary18};
-                        {error, _} = Err -> Err
+bulk_ensure_csv_parties([], _N, _LoanProductId, Summary) ->
+    {ok, Summary};
+bulk_ensure_csv_parties([Identity | Rest], N, LoanProductId, Summary0) ->
+    #{full_name := FullName, base_email := BaseEmail, age := Age} = Identity,
+    %% Make email unique by appending the row index (the CSV has ~1600 unique
+    %% base emails across 4002 rows).
+    [LocalPart, Domain] = binary:split(BaseEmail, <<"@">>),
+    Email = <<LocalPart/binary, "-", (integer_to_binary(N))/binary, "@", Domain/binary>>,
+    case ensure_party_account(FullName, Email, <<"Main Checking">>, 'USD', Summary0) of
+        {ok, CheckingId, Summary1} ->
+            {ok, PartyId} = find_party_id_by_email(Email),
+            SsnInt = 100000000 + ((N * 97331) rem 900000000),
+            _ = cb_party:update_age(PartyId, Age),
+            _ = cb_party:update_ssn(PartyId, integer_to_binary(SsnInt)),
+            _ = cb_party:update_address(PartyId, mock_address(N)),
+            DepKey = <<"csv-deposit-", (integer_to_binary(N))/binary>>,
+            DepAmount = 100000 + (N * 1000),
+            {ok, Summary2} = ensure_payment_txn(
+                DepKey,
+                fun() -> cb_payments:deposit(DepKey, CheckingId, DepAmount, 'USD', <<"Initial deposit">>) end,
+                Summary1
+            ),
+            %% Every 4th person also gets a savings account.
+            Summary3 = case N rem 4 of
+                0 ->
+                    case ensure_account(PartyId, <<"Savings Account">>, 'USD', Summary2) of
+                        {ok, SavId, S3} ->
+                            SavKey = <<"csv-sav-deposit-", (integer_to_binary(N))/binary>>,
+                            SavAmount = 50000 + (N * 500),
+                            case ensure_payment_txn(
+                                SavKey,
+                                fun() -> cb_payments:deposit(SavKey, SavId, SavAmount, 'USD', <<"Savings deposit">>) end,
+                                S3
+                            ) of
+                                {ok, S4} -> S4;
+                                {error, _} -> S3
+                            end;
+                        {error, _} -> Summary2
                     end;
-                {error, _} = Err -> Err
-            end;
-        {error, _} = Err -> Err
+                _ -> Summary2
+            end,
+            %% Every 3rd person also gets a pending loan.
+            Summary4 = case N rem 3 of
+                0 ->
+                    MinP = 50000,
+                    MaxP = 2000000,
+                    Step = 1000,
+                    Slots = (MaxP - MinP) div Step + 1,
+                    Principal = MinP + ((N - 1) rem Slots) * Step,
+                    case ensure_loan_pending(LoanProductId, PartyId, CheckingId, Principal, 'USD', 12, 850, Summary3) of
+                        {ok, S5} -> S5;
+                        {error, _} -> Summary3
+                    end;
+                _ -> Summary3
+            end,
+            bulk_ensure_csv_parties(Rest, N + 1, LoanProductId, Summary4);
+        {error, Reason} ->
+            {error, Reason}
     end.
 
-%% --- Bulk demo dataset helpers -------------------------------------------
+%% --- CSV identity loader --------------------------------------------------
 
-bulk_ensure_parties(Count, Summary0) ->
-    Names = load_names(),
-    bulk_ensure_parties(1, Count, Names, [], Summary0).
-
-bulk_ensure_parties(N, Count, _Names, Acc, Summary) when N > Count ->
-    {ok, lists:reverse(Acc), Summary};
-bulk_ensure_parties(N, Count, Names, Acc, Summary0) ->
-    NLen = length(Names),
-    FirstName = lists:nth(((N - 1) rem NLen) + 1, Names),
-    LastIdx = ((N * 97) rem NLen) + 1,
-    LastName = lists:nth(LastIdx, Names),
-    FullName = <<FirstName/binary, " ", LastName/binary>>,
-    Idx = integer_to_binary(N),
-    Email = <<"mock-", Idx/binary, "@ironledger.dev">>,
-    AccountName = <<"Main Checking">>,
-    case ensure_party_account(FullName, Email, AccountName, 'USD', Summary0) of
-        {ok, AccountId, Summary1} ->
-            case find_party_id_by_email(Email) of
-                {ok, PartyId} ->
-                    Age = 18 + ((N * 7) rem 83),
-                    SsnInt = 100000000 + ((N * 97331) rem 900000000),
-                    Ssn = integer_to_binary(SsnInt),
-                    Address = mock_address(N),
-                    _ = cb_party:update_age(PartyId, Age),
-                    _ = cb_party:update_ssn(PartyId, Ssn),
-                    _ = cb_party:update_address(PartyId, Address),
-                    bulk_ensure_parties(N + 1, Count, Names, [{PartyId, AccountId} | Acc], Summary1);
-                {error, _} = Err ->
-                    Err
-            end;
-        {error, _} = Err ->
-            Err
-    end.
-
-load_names() ->
+load_csv_identities() ->
     PrivDir = code:priv_dir(cb_integration),
-    FilePath = filename:join(PrivDir, "btn_givennames.txt"),
+    FilePath = filename:join(PrivDir, "names.csv"),
     {ok, Bin} = file:read_file(FilePath),
     Lines = binary:split(Bin, <<"\n">>, [global]),
-    lists:filtermap(
-        fun(Line) ->
-            Trimmed = string:trim(Line),
-            case Trimmed of
-                <<"#", _/binary>> -> false;
-                <<>> -> false;
-                _ ->
-                    Parts = binary:split(Trimmed, <<"\t">>),
-                    case Parts of
-                        [Name | _] when byte_size(Name) > 0 ->
-                            case capitalize(Name) of
-                                skip -> false;
-                                Capitalized -> {true, Capitalized}
-                            end;
-                        _ -> false
-                    end
-            end
-        end,
-        Lines
-    ).
+    %% Skip header line.
+    case Lines of
+        [_Header | DataLines] ->
+            lists:filtermap(fun parse_csv_identity/1, DataLines);
+        _ ->
+            []
+    end.
 
-capitalize(<<>>) ->
-    skip;
-capitalize(Bin) ->
-    case unicode:characters_to_list(Bin, utf8) of
-        {error, _, _} -> skip;
-        {incomplete, _, _} -> skip;
-        Chars when is_list(Chars) ->
-            case string:titlecase(Chars) of
-                [] -> skip;
-                Title ->
-                    case unicode:characters_to_binary(Title, utf8, utf8) of
-                        {error, _, _} -> skip;
-                        {incomplete, _, _} -> skip;
-                        Out when is_binary(Out) -> Out
-                    end
+parse_csv_identity(<<>>) ->
+    false;
+parse_csv_identity(Line) ->
+    Fields = split_csv_line(Line),
+    case Fields of
+        [FirstName, LastName, _Gender, AgeStr, Email, _Phone, _Education, _Occupation, _Salary, _MaritalStatus] ->
+            Age = try binary_to_integer(AgeStr) catch _:_ -> 30 end,
+            FullName = <<FirstName/binary, " ", LastName/binary>>,
+            {true, #{full_name => FullName, base_email => Email, age => Age}};
+        _ ->
+            false
+    end.
+
+%% Split a CSV line of the form: "f1","f2",...,"fN"
+%% Splits on the three-char token `","` so inner quotes are preserved.
+split_csv_line(Line) ->
+    Parts = binary:split(Line, <<"\",\"">>, [global]),
+    case Parts of
+        [First | [_ | _] = Rest] ->
+            FirstClean = case First of
+                <<"\"", F/binary>> -> F;
+                F -> F
+            end,
+            AllButLast = lists:droplast(Rest),
+            Last = lists:last(Rest),
+            LastClean = strip_trailing_quote_cr(Last),
+            [FirstClean | AllButLast] ++ [LastClean];
+        _ ->
+            Parts
+    end.
+
+strip_trailing_quote_cr(<<>>) ->
+    <<>>;
+strip_trailing_quote_cr(Bin) ->
+    S1 = case binary:last(Bin) of
+        $\r -> binary:part(Bin, 0, byte_size(Bin) - 1);
+        _   -> Bin
+    end,
+    case byte_size(S1) of
+        0 -> <<>>;
+        _ ->
+            case binary:last(S1) of
+                $\" -> binary:part(S1, 0, byte_size(S1) - 1);
+                _   -> S1
             end
     end.
 
@@ -237,66 +212,6 @@ mock_address(N) ->
         country => <<"US">>
     }.
 
-bulk_ensure_deposits(Parties, Summary0) ->
-    bulk_ensure_deposits(Parties, 1, Summary0).
-
-bulk_ensure_deposits([], _N, Summary) ->
-    {ok, Summary};
-bulk_ensure_deposits([{_PartyId, AccountId} | Rest], N, Summary0) ->
-    Idx = pad3(N),
-    Key = <<"mock-bulk-deposit-", Idx/binary>>,
-    Amount = 100000 + (N * 1000),
-    Description = <<"Bulk demo deposit ", Idx/binary>>,
-    case ensure_payment_txn(
-        Key,
-        fun() -> cb_payments:deposit(Key, AccountId, Amount, 'USD', Description) end,
-        Summary0
-    ) of
-        {ok, Summary1} ->
-            bulk_ensure_deposits(Rest, N + 1, Summary1);
-        {error, _} = Err ->
-            Err
-    end.
-
--dialyzer({nowarn_function, bulk_ensure_loans/4}).
-bulk_ensure_loans(_ProductId, _Parties, 0, Summary) ->
-    {ok, Summary};
-bulk_ensure_loans(_ProductId, [], _Remaining, Summary) ->
-    {ok, Summary};
-bulk_ensure_loans(ProductId, Parties, Remaining, Summary0) ->
-    bulk_ensure_loans_loop(ProductId, Parties, Parties, 1, Remaining, Summary0).
-
-bulk_ensure_loans_loop(_ProductId, _AllParties, _Cursor, _N, 0, Summary) ->
-    {ok, Summary};
-bulk_ensure_loans_loop(ProductId, AllParties, [], N, Remaining, Summary) ->
-    bulk_ensure_loans_loop(ProductId, AllParties, AllParties, N, Remaining, Summary);
-bulk_ensure_loans_loop(ProductId, AllParties, [{PartyId, AccountId} | Rest], N, Remaining, Summary0) ->
-    %% Vary the principal per loan so that each {product, party, account,
-    %% principal, currency, term} tuple is unique and the find_loan
-    %% idempotency guard correctly distinguishes seeded loans on re-runs.
-    %%
-    %% The Personal Flex Loan product is created with min_amount=50000 and
-    %% max_amount=2000000 (see ensure_loan_product/9 call above). Bulk
-    %% imports request thousands of loans, so the principal must wrap
-    %% within that range to avoid amount_out_of_product_range. Stepping by
-    %% 1000 minor units gives 1951 distinct slots in [50000, 2000000];
-    %% consecutive loans for the same party land 3000 iterations apart,
-    %% which maps to a different slot, preserving the per-party
-    %% idempotency tuple.
-    MinPrincipal = 50000,
-    MaxPrincipal = 2000000,
-    Step = 1000,
-    RangeSlots = (MaxPrincipal - MinPrincipal) div Step + 1,
-    Principal = MinPrincipal + ((N - 1) rem RangeSlots) * Step,
-    TermMonths = 12,
-    InterestRate = 850,
-    case ensure_loan_pending(ProductId, PartyId, AccountId, Principal, 'USD', TermMonths, InterestRate, Summary0) of
-        {ok, Summary1} ->
-            bulk_ensure_loans_loop(ProductId, AllParties, Rest, N + 1, Remaining - 1, Summary1);
-        {error, _} = Err ->
-            Err
-    end.
-
 ensure_loan_pending(ProductId, PartyId, AccountId, Principal, Currency, TermMonths, InterestRate, Summary0) ->
     case find_loan(ProductId, PartyId, AccountId, Principal, Currency, TermMonths) of
         {ok, _Loan} ->
@@ -308,14 +223,6 @@ ensure_loan_pending(ProductId, PartyId, AccountId, Principal, Currency, TermMont
                 {error, Reason} ->
                     {error, Reason}
             end
-    end.
-
-pad3(N) when is_integer(N), N >= 0 ->
-    Bin = integer_to_binary(N),
-    case byte_size(Bin) of
-        1 -> <<"00", Bin/binary>>;
-        2 -> <<"0", Bin/binary>>;
-        _ -> Bin
     end.
 
 with_import_lock(Fun) ->
@@ -423,93 +330,6 @@ ensure_payment_txn(IdempotencyKey, Fun, Summary0) ->
                 {error, Reason} ->
                     {error, Reason}
             end
-    end.
-
-ensure_hold(AccountId, Amount, Reason, Summary0) ->
-    case cb_account_holds:list_holds(AccountId) of
-        {ok, Holds} ->
-            case lists:any(fun(H) ->
-                H#account_hold.status =:= active andalso
-                H#account_hold.amount =:= Amount andalso
-                H#account_hold.reason =:= Reason
-            end, Holds) of
-                true ->
-                    {ok, inc(holds_existing, Summary0)};
-                false ->
-                    case cb_account_holds:place_hold(AccountId, Amount, Reason, undefined) of
-                        {ok, _Hold} ->
-                            {ok, inc(holds_created, Summary0)};
-                        {error, ReasonAtom} ->
-                            {error, ReasonAtom}
-                    end
-            end;
-        {error, ReasonAtom} ->
-            {error, ReasonAtom}
-    end.
-
-ensure_loan_with_repayment(ProductId, PartyId, AccountId, Principal, Currency, TermMonths, InterestRate, RepaymentAmount, Summary0) ->
-    case find_loan(ProductId, PartyId, AccountId, Principal, Currency, TermMonths) of
-        {ok, Loan} ->
-            ensure_loan_state_and_repayment(Loan#loan_account.loan_id, Loan, RepaymentAmount, inc(loans_existing, Summary0));
-        not_found ->
-            case cb_loan_accounts:create_loan(ProductId, PartyId, AccountId, Principal, Currency, TermMonths, InterestRate) of
-                {ok, LoanId} ->
-                    case cb_loan_accounts:get_loan(LoanId) of
-                        {ok, Loan} ->
-                            ensure_loan_state_and_repayment(LoanId, Loan, RepaymentAmount, inc(loans_created, Summary0));
-                        {error, Reason} ->
-                            {error, Reason}
-                    end;
-                {error, Reason} ->
-                    {error, Reason}
-            end
-    end.
-
-ensure_loan_state_and_repayment(LoanId, Loan, RepaymentAmount, Summary0) ->
-    case ensure_loan_disbursed(LoanId, Loan) of
-        {ok, _UpdatedLoan} ->
-            ensure_loan_repayment(LoanId, RepaymentAmount, Summary0);
-        {error, Reason} ->
-            {error, Reason}
-    end.
-
-ensure_loan_disbursed(LoanId, Loan) ->
-    case Loan#loan_account.status of
-        pending ->
-            case cb_loan_accounts:approve_loan(LoanId) of
-                {ok, ApprovedLoan} ->
-                    ensure_loan_disbursed(LoanId, ApprovedLoan);
-                {error, Reason} ->
-                    {error, Reason}
-            end;
-        approved ->
-            case cb_loan_accounts:disburse_loan(LoanId) of
-                {ok, DisbursedLoan} ->
-                    {ok, DisbursedLoan};
-                {error, Reason} ->
-                    {error, Reason}
-            end;
-        disbursed ->
-            {ok, Loan};
-        repaid ->
-            {ok, Loan};
-        _Other ->
-            {error, invalid_status}
-    end.
-
-ensure_loan_repayment(LoanId, RepaymentAmount, Summary0) ->
-    case cb_loan_accounts:get_loan(LoanId) of
-        {ok, Loan} when Loan#loan_account.outstanding_balance < Loan#loan_account.principal ->
-            {ok, inc(loan_repayments_existing, Summary0)};
-        {ok, _Loan} ->
-            case cb_loan_accounts:make_repayment(LoanId, RepaymentAmount) of
-                {ok, _UpdatedLoan, _Outstanding} ->
-                    {ok, inc(loan_repayments_created, Summary0)};
-                {error, Reason} ->
-                    {error, Reason}
-            end;
-        {error, Reason} ->
-            {error, Reason}
     end.
 
 find_party_by_email(Email) ->

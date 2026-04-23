@@ -100,7 +100,7 @@ export function Sidebar() {
         <Group justify="space-between" wrap="nowrap">
           <Box>
             <Text fw={700} size="md" lh={1.1}>
-              Kinetic Core
+              Menu
             </Text>
             <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
               Banking Solution

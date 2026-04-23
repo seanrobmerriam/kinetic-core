@@ -76,7 +76,10 @@
     get_entries_for_transaction/1,
     get_entries_for_account/3,
     get_latest_entries/1,
+    get_general_ledger_entries/4,
     create_chart_account/4,
+    get_chart_accounts/0,
+    get_chart_account/1,
     get_trial_balance/1,
     create_balance_snapshot/1,
     get_balance_snapshots/3
@@ -261,6 +264,98 @@ get_latest_entries(Limit) when is_integer(Limit), Limit >= 1, Limit =< 500 ->
     end;
 get_latest_entries(_) ->
     {error, invalid_limit}.
+
+%% @doc Returns paginated ledger entries across all accounts with optional filters.
+%%
+%% Filters is a map that may contain any of:
+%% - `account_id' (binary): restrict to entries for one account
+%% - `entry_type' (debit | credit): restrict to one direction
+%% - `currency' (currency()): restrict by currency
+%% - `from_ms' (integer): lower bound on posted_at (inclusive)
+%% - `to_ms' (integer): upper bound on posted_at (inclusive)
+%%
+%% Results are sorted newest-first and paginated.
+-spec get_general_ledger_entries(map(), pos_integer(), pos_integer(), pos_integer()) ->
+    {ok, #{items => [#ledger_entry{}], total => non_neg_integer(),
+           page => pos_integer(), page_size => pos_integer()}} |
+    {error, atom()}.
+get_general_ledger_entries(Filters, Page, PageSize, _MaxLimit)
+        when Page >= 1, PageSize >= 1, PageSize =< 100 ->
+    F = fun() ->
+        All = case maps:get(account_id, Filters, undefined) of
+            undefined ->
+                mnesia:foldl(fun(E, Acc) -> [E | Acc] end, [], ledger_entry);
+            AccId ->
+                mnesia:index_read(ledger_entry, AccId, account_id)
+        end,
+        Filtered = lists:filter(
+            fun(E) -> matches_gl_filters(E, Filters) end,
+            All
+        ),
+        Sorted = lists:sort(
+            fun(A, B) -> A#ledger_entry.posted_at >= B#ledger_entry.posted_at end,
+            Filtered
+        ),
+        Total = length(Sorted),
+        Offset = (Page - 1) * PageSize,
+        Items = lists:sublist(Sorted, Offset + 1, PageSize),
+        #{items => Items, total => Total, page => Page, page_size => PageSize}
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> {ok, Result};
+        {aborted, Reason} -> {error, Reason}
+    end;
+get_general_ledger_entries(_, _, _, _) ->
+    {error, invalid_pagination}.
+
+%% @private Apply per-entry filter predicates for general ledger queries.
+-spec matches_gl_filters(#ledger_entry{}, map()) -> boolean().
+matches_gl_filters(E, Filters) ->
+    EntryTypeOk = case maps:get(entry_type, Filters, undefined) of
+        undefined -> true;
+        ET -> E#ledger_entry.entry_type =:= ET
+    end,
+    CurrencyOk = case maps:get(currency, Filters, undefined) of
+        undefined -> true;
+        C -> E#ledger_entry.currency =:= C
+    end,
+    FromOk = case maps:get(from_ms, Filters, undefined) of
+        undefined -> true;
+        From -> E#ledger_entry.posted_at >= From
+    end,
+    ToOk = case maps:get(to_ms, Filters, undefined) of
+        undefined -> true;
+        To -> E#ledger_entry.posted_at =< To
+    end,
+    EntryTypeOk andalso CurrencyOk andalso FromOk andalso ToOk.
+
+%% @doc Lists all active chart-of-accounts nodes, sorted by code.
+-spec get_chart_accounts() -> {ok, [#chart_account{}]} | {error, atom()}.
+get_chart_accounts() ->
+    F = fun() ->
+        mnesia:foldl(fun(A, Acc) -> [A | Acc] end, [], chart_account)
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Accounts} ->
+            Sorted = lists:sort(
+                fun(A, B) -> A#chart_account.code =< B#chart_account.code end,
+                Accounts
+            ),
+            {ok, Sorted};
+        {aborted, Reason} -> {error, Reason}
+    end.
+
+%% @doc Retrieves a single chart-of-accounts node by its code.
+-spec get_chart_account(binary()) -> {ok, #chart_account{}} | {error, atom()}.
+get_chart_account(Code) ->
+    F = fun() ->
+        mnesia:read(chart_account, Code)
+    end,
+    case mnesia:transaction(F) of
+        {atomic, [Account]} -> {ok, Account};
+        {atomic, []} -> {error, chart_account_not_found};
+        {aborted, Reason} -> {error, Reason}
+    end.
 
 %% @doc Creates a chart-of-accounts node.
 -spec create_chart_account(binary(), binary(), gl_account_type(), binary() | undefined) ->

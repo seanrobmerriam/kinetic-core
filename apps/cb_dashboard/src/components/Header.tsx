@@ -95,10 +95,10 @@ export function Header({
       <Group flex={1} px="lg" justify="space-between" wrap="nowrap">
         <div>
           <Title order={3} fw={600}>
-            Kinetic Core
+            Kinetic
           </Title>
           <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-            Banking Solution
+            Core Bank
           </Text>
         </div>
 

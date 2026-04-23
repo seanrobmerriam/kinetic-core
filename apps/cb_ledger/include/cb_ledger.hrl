@@ -292,6 +292,27 @@
     posted_at   :: timestamp_ms()
 }).
 
+%% @doc Categorization and free-form tags attached to a transaction.
+%%
+%% Stored in a separate table so the immutable #transaction{} record
+%% never needs to be modified.  One record per transaction; upsert via PUT.
+%%
+%% Fields:
+%% - tag_id: Unique UUID for this tag record
+%% - txn_id: Foreign key → transaction.txn_id
+%% - category: A single top-level category string (e.g. <<"payroll">>)
+%% - tags: Zero or more free-form tag strings
+%% - created_at: Millisecond timestamp of first write
+%% - updated_at: Millisecond timestamp of last write
+-record(transaction_tag, {
+    tag_id     :: uuid(),
+    txn_id     :: uuid(),
+    category   :: binary() | undefined,
+    tags       :: [binary()],
+    created_at :: timestamp_ms(),
+    updated_at :: timestamp_ms()
+}).
+
 %% @doc Status of a funds hold on an account.
 %% - active: Hold is in effect; reduces available balance
 %% - released: Hold was manually released before expiry

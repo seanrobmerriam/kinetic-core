@@ -336,74 +336,99 @@ deposit(IdempotencyKey, DestId, Amount, Currency, Description) ->
 deposit(IdempotencyKey, DestId, Amount, Currency, Description, Channel) ->
     case validate_amount(Amount) of
         ok ->
-            F = fun() ->
-                %% Idempotency check
-                case mnesia:index_read(transaction, IdempotencyKey, idempotency_key) of
-                    [Existing] ->
-                        {ok, Existing};
-                    [] ->
-                        case mnesia:read(account, DestId, write) of
+            case maybe_check_channel_limits(Channel, Currency, Amount) of
+                ok ->
+                    F = fun() ->
+                        case mnesia:index_read(transaction, IdempotencyKey, idempotency_key) of
+                            [Existing] ->
+                                {ok, Existing};
                             [] ->
-                                {error, account_not_found};
-                            [Dest] ->
-                                case validate_account_for_deposit(Dest, Currency) of
-                                    ok ->
-                                        Now = erlang:system_time(millisecond),
-                                        mnesia:write(Dest#account{
-                                            balance = Dest#account.balance + Amount,
-                                            updated_at = Now
-                                        }),
+                                case mnesia:read(account, DestId, write) of
+                                    [] ->
+                                        {error, account_not_found};
+                                    [Dest] ->
+                                        case validate_account_for_deposit(Dest, Currency) of
+                                            ok ->
+                                                Now = erlang:system_time(millisecond),
+                                                mnesia:write(Dest#account{
+                                                    balance = Dest#account.balance + Amount,
+                                                    updated_at = Now
+                                                }),
 
-                                        TxnId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
-                                        Txn = #transaction{
-                                            txn_id = TxnId,
-                                            idempotency_key = IdempotencyKey,
-                                            txn_type = deposit,
-                                            status = posted,
-                                            amount = Amount,
-                                            currency = Currency,
-                                            source_account_id = undefined,
-                                            dest_account_id = DestId,
-                                            description = Description,
-                                            channel = Channel,
-                                            created_at = Now,
-                                            posted_at = Now
-                                        },
-                                        mnesia:write(Txn),
+                                                TxnId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
+                                                Txn = #transaction{
+                                                    txn_id = TxnId,
+                                                    idempotency_key = IdempotencyKey,
+                                                    txn_type = deposit,
+                                                    status = posted,
+                                                    amount = Amount,
+                                                    currency = Currency,
+                                                    source_account_id = undefined,
+                                                    dest_account_id = DestId,
+                                                    description = Description,
+                                                    channel = Channel,
+                                                    created_at = Now,
+                                                    posted_at = Now
+                                                },
+                                                mnesia:write(Txn),
 
-                                        EntryId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
-                                        mnesia:write(#ledger_entry{
-                                            entry_id = EntryId,
-                                            txn_id = TxnId,
-                                            account_id = DestId,
-                                            entry_type = credit,
-                                            amount = Amount,
-                                            currency = Currency,
-                                            description = Description,
-                                            posted_at = Now
-                                        }),
+                                                EntryId = uuid:uuid_to_string(uuid:get_v4(), binary_standard),
+                                                mnesia:write(#ledger_entry{
+                                                    entry_id = EntryId,
+                                                    txn_id = TxnId,
+                                                    account_id = DestId,
+                                                    entry_type = credit,
+                                                    amount = Amount,
+                                                    currency = Currency,
+                                                    description = Description,
+                                                    posted_at = Now
+                                                }),
 
-                                        _ = cb_events:write_outbox(<<"transaction.posted">>, #{
-                                            txn_id          => TxnId,
-                                            txn_type        => deposit,
-                                            amount          => Amount,
-                                            currency        => Currency,
-                                            dest_account_id => DestId
-                                        }),
+                                                _ = cb_events:write_outbox(<<"transaction.posted">>, #{
+                                                    txn_id          => TxnId,
+                                                    txn_type        => deposit,
+                                                    amount          => Amount,
+                                                    currency        => Currency,
+                                                    dest_account_id => DestId
+                                                }),
 
-                                        {ok, Txn};
-                                    Error ->
-                                        Error
+                                                {ok, Txn};
+                                            DepositError ->
+                                                DepositError
+                                        end
                                 end
                         end
-                end
-            end,
-            case mnesia:transaction(F) of
-                {atomic, Result} -> Result;
-                {aborted, _Reason} -> {error, database_error}
+                    end,
+                    case mnesia:transaction(F) of
+                        {atomic, Result} -> Result;
+                        {aborted, _Reason} -> {error, database_error}
+                    end;
+                LimitError ->
+                    LimitError
             end;
-        Error ->
-            Error
+        AmountError ->
+            AmountError
+    end.
+
+%% @private Check per-txn and daily channel limits when a channel is provided.
+-spec maybe_check_channel_limits(binary() | atom() | undefined, currency(), pos_integer()) ->
+    ok | {error, atom()}.
+maybe_check_channel_limits(undefined, _Currency, _Amount) ->
+    ok;
+maybe_check_channel_limits(ChannelBin, Currency, Amount) when is_binary(ChannelBin) ->
+    try binary_to_existing_atom(ChannelBin, utf8) of
+        Channel ->
+            case cb_channel_limits:validate_amount(Channel, Currency, Amount) of
+                ok    -> cb_channel_limits:validate_daily_volume(Channel, Currency, Amount);
+                Error -> Error
+            end
+    catch
+        error:badarg -> ok  % unknown channel — skip limit check
+    end;
+maybe_check_channel_limits(Channel, Currency, Amount) when is_atom(Channel) ->
+    case cb_channel_limits:validate_amount(Channel, Currency, Amount) of
+        ok    -> cb_channel_limits:validate_daily_volume(Channel, Currency, Amount);
+        Error -> Error
     end.
 
 %% @private

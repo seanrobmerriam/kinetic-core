@@ -130,6 +130,12 @@ to_response(same_account_transfer) ->
     {422, <<"same_account_transfer">>, <<"Source and destination accounts are the same">>};
 to_response(withdrawal_limit_exceeded) ->
     {422, <<"withdrawal_limit_exceeded">>, <<"Amount exceeds the per-transaction withdrawal limit">>};
+to_response(per_txn_limit_exceeded) ->
+    {422, <<"per_txn_limit_exceeded">>, <<"Amount exceeds the per-transaction channel limit">>};
+to_response(daily_limit_exceeded) ->
+    {422, <<"daily_limit_exceeded">>, <<"Daily transaction volume limit exceeded for this channel">>};
+to_response(transaction_tag_not_found) ->
+    {404, <<"transaction_tag_not_found">>, <<"Transaction tags not found">>};
 to_response(forbidden) ->
     {403, <<"forbidden">>, <<"Insufficient permissions for this operation">>};
 to_response(rate_limit_exceeded) ->

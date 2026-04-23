@@ -13,6 +13,7 @@
     get_limits/2,
     set_limits/4,
     validate_amount/3,
+    validate_daily_volume/3,
     list_all/0
 ]).
 
@@ -74,6 +75,42 @@ validate_amount(Channel, Currency, Amount) ->
     case PerTxn > 0 andalso Amount > PerTxn of
         true  -> {error, per_txn_limit_exceeded};
         false -> ok
+    end.
+
+%% @doc Validate that a new transaction amount does not exceed the rolling
+%% 24-hour daily volume limit for the given channel and currency.
+%%
+%% A daily_limit of 0 means unlimited and the check is skipped.
+%% The rolling window is the 24 hours prior to the current time.
+-dialyzer({nowarn_function, validate_daily_volume/3}).
+-spec validate_daily_volume(channel_type(), currency(), pos_integer()) ->
+    ok | {error, daily_limit_exceeded}.
+validate_daily_volume(Channel, Currency, NewAmount) ->
+    {ok, Limit} = get_limits(Channel, Currency),
+    DailyLimit = Limit#channel_limit.daily_limit,
+    case DailyLimit > 0 of
+        false ->
+            ok;
+        true ->
+            ChannelBin   = atom_to_binary(Channel, utf8),
+            WindowStart  = erlang:system_time(millisecond) - (24 * 3600 * 1000),
+            All          = mnesia:dirty_match_object(#transaction{_ = '_'}),
+            Volume = lists:foldl(fun(T, Acc) ->
+                Matches =
+                    (T#transaction.currency =:= Currency) andalso
+                    (T#transaction.status =/= failed) andalso
+                    (T#transaction.created_at >= WindowStart) andalso
+                    (T#transaction.channel =:= ChannelBin orelse
+                     T#transaction.channel =:= Channel),
+                case Matches of
+                    true  -> Acc + T#transaction.amount;
+                    false -> Acc
+                end
+            end, 0, All),
+            case Volume + NewAmount > DailyLimit of
+                true  -> {error, daily_limit_exceeded};
+                false -> ok
+            end
     end.
 
 %% @doc List all configured channel limits.

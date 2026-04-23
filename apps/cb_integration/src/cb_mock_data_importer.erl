@@ -180,8 +180,10 @@ load_names() ->
                     Parts = binary:split(Trimmed, <<"\t">>),
                     case Parts of
                         [Name | _] when byte_size(Name) > 0 ->
-                            Capitalized = capitalize(Name),
-                            {true, Capitalized};
+                            case capitalize(Name) of
+                                skip -> false;
+                                Capitalized -> {true, Capitalized}
+                            end;
                         _ -> false
                     end
             end
@@ -189,12 +191,23 @@ load_names() ->
         Lines
     ).
 
-capitalize(<<First, Rest/binary>>) ->
-    Upper = string:to_upper([First]),
-    Lower = string:to_lower(binary_to_list(Rest)),
-    list_to_binary(Upper ++ Lower);
 capitalize(<<>>) ->
-    <<>>.
+    skip;
+capitalize(Bin) ->
+    case unicode:characters_to_list(Bin, utf8) of
+        {error, _, _} -> skip;
+        {incomplete, _, _} -> skip;
+        Chars when is_list(Chars) ->
+            case string:titlecase(Chars) of
+                [] -> skip;
+                Title ->
+                    case unicode:characters_to_binary(Title, utf8, utf8) of
+                        {error, _, _} -> skip;
+                        {incomplete, _, _} -> skip;
+                        Out when is_binary(Out) -> Out
+                    end
+            end
+    end.
 
 mock_address(N) ->
     Streets = [<<"Main St">>, <<"Oak Ave">>, <<"Elm St">>, <<"Park Blvd">>,

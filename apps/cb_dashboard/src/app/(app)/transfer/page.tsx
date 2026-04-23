@@ -12,7 +12,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { parseAmount } from "@/lib/format";

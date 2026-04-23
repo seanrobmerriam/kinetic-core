@@ -20,7 +20,7 @@ import {
 import {
   IconAlertTriangle,
   IconArrowLeft,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";

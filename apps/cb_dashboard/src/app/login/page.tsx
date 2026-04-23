@@ -17,7 +17,7 @@ import {
   Title,
   Group,
 } from "@mantine/core";
-import { IconAlertCircle, IconBuildingBank } from "@tabler/icons-react";
+import { IconAlertCircle, IconBuildingBank } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
 
 export default function LoginPage() {

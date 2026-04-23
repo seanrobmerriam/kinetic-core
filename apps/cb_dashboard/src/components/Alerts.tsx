@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Loader, Group, Text } from "@mantine/core";
-import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck } from "@/components/icons";
 import { useNotify } from "@/lib/notify";
 
 export function Alerts() {

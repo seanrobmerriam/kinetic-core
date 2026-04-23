@@ -27,7 +27,7 @@ import {
   IconUsers,
   IconWallet,
   type Icon,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import { useAuth } from "@/lib/auth";
 import { NavLinksGroup } from "./NavLinksGroup";
 

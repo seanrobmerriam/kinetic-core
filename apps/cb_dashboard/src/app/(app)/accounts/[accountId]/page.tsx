@@ -36,6 +36,7 @@ import {
 import type { Account, AccountHold, Party, Transaction } from "@/lib/types";
 import { SortableTable } from "@/components/SortableTable";
 import type { ColumnDef } from "@/components/SortableTable";
+import { StatementDownload } from "@/components/StatementDownload";
 
 interface ListResponse<T> {
   items: T[];
@@ -237,9 +238,15 @@ export default function AccountDetailPage({
               Account ID: {account.account_id}
             </Text>
           </div>
-          <Badge size="lg" variant="light" color={statusColor(account.status)}>
-            {capitalize(account.status)}
-          </Badge>
+          <Group gap="sm" align="center">
+            <StatementDownload
+              accountId={account.account_id}
+              accountName={account.name}
+            />
+            <Badge size="lg" variant="light" color={statusColor(account.status)}>
+              {capitalize(account.status)}
+            </Badge>
+          </Group>
         </Group>
       </Card>
 

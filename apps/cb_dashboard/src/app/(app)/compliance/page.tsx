@@ -293,7 +293,8 @@ function KycManagement() {
     return "gray";
   }
 
-  function tierColor() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function tierColor(_status: string) {
     return "gray";
   }
 

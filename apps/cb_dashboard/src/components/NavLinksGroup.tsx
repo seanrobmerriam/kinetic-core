@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Box, Collapse, Group, Text, ThemeIcon, UnstyledButton } from "@mantine/core";
-import { IconChevronRight, type Icon } from "@tabler/icons-react";
+import { IconChevronRight, type Icon } from "@/components/icons";
 import classes from "./NavLinksGroup.module.css";
 
 interface NavLinkItem {

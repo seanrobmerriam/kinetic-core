@@ -11,7 +11,7 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { IconDownload } from "@tabler/icons-react";
+import { IconDownload } from "@/components/icons";
 import { api, ApiError } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import {

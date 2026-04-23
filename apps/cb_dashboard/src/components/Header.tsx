@@ -18,7 +18,7 @@ import {
   IconRefresh,
   IconSun,
   IconUpload,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import { useAuth } from "@/lib/auth";
 import { useNotify } from "@/lib/notify";
 import { useTheme } from "@/lib/theme";

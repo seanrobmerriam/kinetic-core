@@ -15,7 +15,7 @@ import {
   IconChevronUp,
   IconSearch,
   IconSelector,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import classes from "./SortableTable.module.css";
 
 export interface ColumnDef<T> {

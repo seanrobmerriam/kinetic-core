@@ -1,15 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Badge,
   Button,
-  Card,
   Group,
   Paper,
   Stack,
-  TextInput,
   Title,
 } from "@mantine/core";
 import { api } from "@/lib/api";
@@ -32,13 +30,9 @@ function statusColor(s: string) {
 }
 
 export default function CustomersPage() {
-  const router = useRouter();
   const { setError, setSuccess } = useNotify();
   const { tick, bump } = useRefresh();
   const [parties, setParties] = useState<Party[]>([]);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,22 +48,6 @@ export default function CustomersPage() {
       cancelled = true;
     };
   }, [tick, setError]);
-
-  const create = async () => {
-    if (!name || !email || submitting) return;
-    setSubmitting(true);
-    try {
-      await api("POST", "/parties", { full_name: name, email });
-      setSuccess("Customer created");
-      setName("");
-      setEmail("");
-      bump();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const suspend = async (id: string) => {
     try {
@@ -117,9 +95,10 @@ export default function CustomersPage() {
       render: (party) => (
         <Group gap="xs">
           <Button
+            component={Link}
+            href={`/customers/${party.party_id}`}
             size="xs"
             variant="subtle"
-            onClick={() => router.push(`/customers/${party.party_id}`)}
           >
             View
           </Button>
@@ -148,40 +127,12 @@ export default function CustomersPage() {
 
   return (
     <Stack gap="lg">
-      <Card withBorder shadow="sm" radius="md" padding="lg">
-        <Title order={4} mb="md">
-          New Customer
-        </Title>
-        <Stack>
-          <Group grow>
-            <TextInput
-              id="customer-name"
-              label="Full Name"
-              placeholder="Full name"
-              value={name}
-              onChange={(e) => setName(e.currentTarget.value)}
-            />
-            <TextInput
-              id="customer-email"
-              label="Email"
-              placeholder="user@example.com"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
-            />
-          </Group>
-          <Group>
-            <Button
-              id="create-customer-button"
-              onClick={create}
-              disabled={submitting}
-              loading={submitting}
-            >
-              Create Customer
-            </Button>
-          </Group>
-        </Stack>
-      </Card>
+      <Group justify="space-between" align="center">
+        <Title order={3}>Customers</Title>
+        <Button component={Link} href="/customers/create">
+          Create Customer
+        </Button>
+      </Group>
 
       <Paper withBorder radius="md" shadow="sm">
         <SortableTable

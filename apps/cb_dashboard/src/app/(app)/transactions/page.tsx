@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Badge,
   Button,
   Group,
+  Pagination,
   Paper,
-  SegmentedControl,
+  Select,
   Stack,
+  Text,
   TextInput,
 } from "@mantine/core";
 import { IconSearch } from "@/components/icons";
@@ -21,25 +23,41 @@ import {
   formatTimestamp,
   truncateID,
 } from "@/lib/format";
-import type { Account, Party, Transaction } from "@/lib/types";
+import type { Transaction } from "@/lib/types";
 import { SortableTable } from "@/components/SortableTable";
 import type { ColumnDef } from "@/components/SortableTable";
 
-interface ListResponse<T> {
-  items: T[];
+interface SearchResponse {
+  items: Transaction[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
-const STATUSES = [
-  { label: "All", value: "all" },
-  { label: "Pending", value: "pending" },
+const PAGE_SIZE = 50;
+
+const STATUS_OPTIONS = [
+  { label: "All statuses", value: "" },
   { label: "Posted", value: "posted" },
+  { label: "Pending", value: "pending" },
   { label: "Failed", value: "failed" },
+  { label: "Reversed", value: "reversed" },
+];
+
+const TYPE_OPTIONS = [
+  { label: "All types", value: "" },
+  { label: "Deposit", value: "deposit" },
+  { label: "Withdrawal", value: "withdrawal" },
+  { label: "Transfer", value: "transfer" },
+  { label: "Adjustment", value: "adjustment" },
+  { label: "Reversal", value: "reversal" },
 ];
 
 function statusColor(s: string) {
   if (s === "posted") return "teal";
   if (s === "pending") return "yellow";
   if (s === "failed") return "red";
+  if (s === "reversed") return "gray";
   return "gray";
 }
 
@@ -47,46 +65,30 @@ export default function TransactionsPage() {
   const { setError, setSuccess } = useNotify();
   const { tick, bump } = useRefresh();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterType, setFilterType] = useState("");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const partyResp = await api<ListResponse<Party>>("GET", "/parties");
-        const parties = partyResp.items ?? [];
-        let allAccounts: Account[] = [];
-        for (const p of parties) {
-          try {
-            const accResp = await api<ListResponse<Account>>(
-              "GET",
-              `/parties/${p.party_id}/accounts`,
-            );
-            if (accResp.items) allAccounts = allAccounts.concat(accResp.items);
-          } catch {
-            /* skip */
-          }
+        const params = new URLSearchParams({
+          page: String(page),
+          page_size: String(PAGE_SIZE),
+        });
+        if (filterStatus) params.set("status", filterStatus);
+        if (filterType) params.set("type", filterType);
+        const resp = await api<SearchResponse>(
+          "GET",
+          `/transactions?${params.toString()}`,
+        );
+        if (!cancelled) {
+          setTransactions(resp.items ?? []);
+          setTotal(resp.total ?? 0);
         }
-        const seen = new Set<string>();
-        const allTxns: Transaction[] = [];
-        for (const acc of allAccounts) {
-          try {
-            const txResp = await api<ListResponse<Transaction>>(
-              "GET",
-              `/accounts/${acc.account_id}/transactions`,
-            );
-            for (const t of txResp.items ?? []) {
-              if (!seen.has(t.txn_id)) {
-                seen.add(t.txn_id);
-                allTxns.push(t);
-              }
-            }
-          } catch {
-            /* skip */
-          }
-        }
-        if (!cancelled) setTransactions(allTxns);
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
       }
@@ -94,14 +96,7 @@ export default function TransactionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [tick, setError]);
-
-  const filtered = useMemo(() => {
-    let list = transactions;
-    if (filterStatus && filterStatus !== "all")
-      list = list.filter((t) => t.status === filterStatus);
-    return list;
-  }, [transactions, filterStatus]);
+  }, [tick, page, filterStatus, filterType, setError]);
 
   const reverse = async (id: string) => {
     try {
@@ -112,6 +107,8 @@ export default function TransactionsPage() {
       setError((err as Error).message);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const txColumns: ColumnDef<Transaction>[] = [
     {
@@ -188,22 +185,38 @@ export default function TransactionsPage() {
 
   return (
     <Stack gap="lg">
-      <TextInput
-        leftSection={<IconSearch size={16} stroke={1.5} />}
-        placeholder="Search transactions..."
-        value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
-        maw={400}
-      />
-      <SegmentedControl
-        value={filterStatus}
-        onChange={setFilterStatus}
-        data={STATUSES}
-      />
+      <Group align="flex-end" gap="sm" wrap="wrap">
+        <TextInput
+          leftSection={<IconSearch size={16} stroke={1.5} />}
+          placeholder="Search transactions..."
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          style={{ flex: 1, minWidth: 200 }}
+          aria-label="Search transactions"
+        />
+        <Select
+          data={STATUS_OPTIONS}
+          value={filterStatus}
+          onChange={(v) => { setFilterStatus(v ?? ""); setPage(1); }}
+          placeholder="All statuses"
+          w={160}
+          aria-label="Filter by status"
+          clearable
+        />
+        <Select
+          data={TYPE_OPTIONS}
+          value={filterType}
+          onChange={(v) => { setFilterType(v ?? ""); setPage(1); }}
+          placeholder="All types"
+          w={160}
+          aria-label="Filter by type"
+          clearable
+        />
+      </Group>
 
       <Paper withBorder radius="md" shadow="sm">
         <SortableTable
-          data={filtered}
+          data={transactions}
           columns={txColumns}
           rowKey={(t) => t.txn_id}
           searchPlaceholder="Search transactions..."
@@ -213,6 +226,18 @@ export default function TransactionsPage() {
           onSearchChange={setSearch}
         />
       </Paper>
+
+      <Group justify="space-between" align="center">
+        <Text size="sm" c="dimmed">
+          {total} transaction{total !== 1 ? "s" : ""}
+        </Text>
+        <Pagination
+          value={page}
+          onChange={setPage}
+          total={totalPages}
+          size="sm"
+        />
+      </Group>
     </Stack>
   );
 }

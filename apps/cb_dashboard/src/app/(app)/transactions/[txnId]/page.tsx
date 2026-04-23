@@ -14,7 +14,10 @@ import {
   Paper,
   SimpleGrid,
   Stack,
+  Table,
+  TagsInput,
   Text,
+  TextInput,
   Title,
 } from "@mantine/core";
 import {
@@ -34,7 +37,7 @@ import {
   entriesAreBalanced,
   isReversed,
 } from "@/lib/transaction";
-import type { LedgerEntry, Transaction } from "@/lib/types";
+import type { LedgerEntry, Transaction, TransactionReceipt, TransactionTag } from "@/lib/types";
 import { SortableTable } from "@/components/SortableTable";
 import type { ColumnDef } from "@/components/SortableTable";
 
@@ -87,10 +90,24 @@ export default function TransactionDetailPage({
   const { tick, bump } = useRefresh();
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const [tags, setTags] = useState<TransactionTag | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Reverse modal
   const [reverseOpen, setReverseOpen] = useState(false);
   const [reverseBusy, setReverseBusy] = useState(false);
+
+  // Receipt modal
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receipt, setReceipt] = useState<TransactionReceipt | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+
+  // Tags edit modal
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [tagsBusy, setTagsBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,17 +127,15 @@ export default function TransactionDetailPage({
         }
         return;
       }
-      try {
-        const resp = await api<EntriesResponse>(
-          "GET",
-          `/transactions/${txnId}/entries`,
-        );
-        if (!cancelled) setEntries(resp.items ?? []);
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      await Promise.allSettled([
+        api<EntriesResponse>("GET", `/transactions/${txnId}/entries`).then((r) => {
+          if (!cancelled) setEntries(r.items ?? []);
+        }),
+        api<TransactionTag>("GET", `/transactions/${txnId}/tags`).then((r) => {
+          if (!cancelled) setTags(r);
+        }),
+      ]);
+      if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -141,6 +156,47 @@ export default function TransactionDetailPage({
       setError((err as Error).message);
     } finally {
       setReverseBusy(false);
+    }
+  };
+
+  const openReceipt = async () => {
+    setReceiptLoading(true);
+    setReceiptOpen(true);
+    try {
+      const r = await api<TransactionReceipt>(
+        "GET",
+        `/transactions/${txnId}/receipt`,
+      );
+      setReceipt(r);
+    } catch (err) {
+      setError((err as Error).message);
+      setReceiptOpen(false);
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const openTagsEdit = () => {
+    setEditCategory(tags?.category ?? "");
+    setEditTags(tags?.tags ?? []);
+    setTagsOpen(true);
+  };
+
+  const saveTags = async () => {
+    setTagsBusy(true);
+    try {
+      const updated = await api<TransactionTag>(
+        "PUT",
+        `/transactions/${txnId}/tags`,
+        { category: editCategory || undefined, tags: editTags },
+      );
+      setTags(updated);
+      setSuccess("Tags saved");
+      setTagsOpen(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setTagsBusy(false);
     }
   };
 
@@ -226,6 +282,7 @@ export default function TransactionDetailPage({
     <Stack gap="lg">
       <BackLink />
 
+      {/* Header */}
       <Card withBorder shadow="sm" radius="md" padding="lg">
         <Group justify="space-between" align="flex-start" wrap="nowrap">
           <div>
@@ -246,6 +303,13 @@ export default function TransactionDetailPage({
             >
               {capitalize(txn.status)}
             </Badge>
+            <Button
+              variant="light"
+              size="sm"
+              onClick={openReceipt}
+            >
+              Receipt
+            </Button>
             {reversible && (
               <Button
                 color="yellow"
@@ -260,6 +324,7 @@ export default function TransactionDetailPage({
         </Group>
       </Card>
 
+      {/* Details */}
       <Card withBorder shadow="sm" radius="md" padding="lg">
         <Title order={5} mb="md">
           Transaction Details
@@ -317,6 +382,43 @@ export default function TransactionDetailPage({
         </SimpleGrid>
       </Card>
 
+      {/* Tags & Category */}
+      <Card withBorder shadow="sm" radius="md" padding="lg">
+        <Group justify="space-between" mb="md">
+          <Title order={5}>Tags &amp; Category</Title>
+          <Button size="xs" variant="light" onClick={openTagsEdit}>
+            {tags ? "Edit tags" : "Add tags"}
+          </Button>
+        </Group>
+        <Divider mb="md" />
+        {tags ? (
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+            <InfoField label="Category" value={tags.category ?? "—"} />
+            <InfoField
+              label="Tags"
+              value={
+                tags.tags.length > 0 ? (
+                  <Group gap={4} mt={2}>
+                    {tags.tags.map((tag) => (
+                      <Badge key={tag} variant="outline" radius="sm" size="sm">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </Group>
+                ) : (
+                  "—"
+                )
+              }
+            />
+          </SimpleGrid>
+        ) : (
+          <Text size="sm" c="dimmed">
+            No tags set. Click &ldquo;Add tags&rdquo; to categorise this
+            transaction.
+          </Text>
+        )}
+      </Card>
+
       {reversed && (
         <Alert color="gray" title="This transaction has been reversed">
           A reversing transaction has already been posted. The Reverse action is
@@ -340,6 +442,7 @@ export default function TransactionDetailPage({
         </Alert>
       )}
 
+      {/* Ledger Entries */}
       <div>
         <Title order={4} mb="sm">
           Ledger Entries
@@ -356,6 +459,7 @@ export default function TransactionDetailPage({
         </Paper>
       </div>
 
+      {/* Reverse modal */}
       <Modal
         opened={reverseOpen}
         onClose={() => (reverseBusy ? undefined : setReverseOpen(false))}
@@ -380,6 +484,121 @@ export default function TransactionDetailPage({
             </Button>
             <Button color="yellow" onClick={reverse} loading={reverseBusy}>
               Reverse
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Receipt modal */}
+      <Modal
+        opened={receiptOpen}
+        onClose={() => setReceiptOpen(false)}
+        title="Transaction Receipt"
+        size="lg"
+        centered
+      >
+        {receiptLoading || !receipt ? (
+          <Text c="dimmed" size="sm">Loading receipt…</Text>
+        ) : (
+          <Stack gap="md">
+            <SimpleGrid cols={2} spacing="sm">
+              <InfoField label="Transaction ID" value={receipt.txn_id} mono />
+              <InfoField label="Type" value={capitalize(receipt.txn_type)} />
+              <InfoField
+                label="Status"
+                value={
+                  <Badge variant="light" color={statusColor(receipt.status)} radius="sm">
+                    {capitalize(receipt.status)}
+                  </Badge>
+                }
+              />
+              <InfoField
+                label="Amount"
+                value={formatAmount(receipt.amount, receipt.currency)}
+                mono
+              />
+              <InfoField label="Currency" value={receipt.currency} />
+              <InfoField label="Channel" value={receipt.channel ?? "—"} />
+              <InfoField label="Description" value={receipt.description ?? "—"} />
+              <InfoField label="Created" value={formatTimestamp(receipt.created_at)} />
+              <InfoField label="Posted" value={formatTimestamp(receipt.posted_at ?? 0)} />
+              <InfoField label="Source Account" value={receipt.source_account_id ?? "—"} mono />
+              <InfoField label="Destination Account" value={receipt.dest_account_id ?? "—"} mono />
+            </SimpleGrid>
+
+            {receipt.ledger_entries.length > 0 && (
+              <>
+                <Divider label="Ledger Entries" labelPosition="left" />
+                <Table striped withTableBorder fz="sm">
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Account</Table.Th>
+                      <Table.Th>Type</Table.Th>
+                      <Table.Th ta="right">Amount</Table.Th>
+                      <Table.Th>Posted</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {receipt.ledger_entries.map((e) => (
+                      <Table.Tr key={e.entry_id}>
+                        <Table.Td ff="monospace">{e.account_id}</Table.Td>
+                        <Table.Td>
+                          <Badge
+                            variant="light"
+                            color={entryTypeColor(e.entry_type)}
+                            radius="sm"
+                            size="sm"
+                          >
+                            {capitalize(e.entry_type)}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td ta="right" ff="monospace">
+                          {formatAmount(e.amount, e.currency)}
+                        </Table.Td>
+                        <Table.Td>{formatTimestamp(e.posted_at)}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </>
+            )}
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Tags edit modal */}
+      <Modal
+        opened={tagsOpen}
+        onClose={() => (tagsBusy ? undefined : setTagsOpen(false))}
+        title="Edit Tags &amp; Category"
+        centered
+        withCloseButton={!tagsBusy}
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Category"
+            placeholder="e.g. payroll, utilities, transfer"
+            value={editCategory}
+            onChange={(e) => setEditCategory(e.currentTarget.value)}
+            aria-label="Transaction category"
+          />
+          <TagsInput
+            label="Tags"
+            placeholder="Type a tag and press Enter"
+            value={editTags}
+            onChange={setEditTags}
+            aria-label="Transaction tags"
+          />
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              onClick={() => setTagsOpen(false)}
+              disabled={tagsBusy}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveTags} loading={tagsBusy}>
+              Save
             </Button>
           </Group>
         </Stack>

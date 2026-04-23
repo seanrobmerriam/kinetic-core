@@ -76,6 +76,7 @@
 -spec create_tables() -> ok.
 create_tables() ->
     Tables = [party, party_audit, account, transaction, ledger_entry,
+              transaction_tag,
               chart_account, balance_snapshot, account_hold,
               currency_config, exchange_rate, payment_order, exception_item,
               channel_limit, channel_activity, notification_preference,
@@ -371,4 +372,10 @@ table_spec(api_usage_event) ->
         {ram_copies, [node()]},
         {attributes, [event_id, key_id, method, path, recorded_at]},
         {index, [key_id, recorded_at]}
+    ];
+table_spec(transaction_tag) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, transaction_tag)},
+        {index, [txn_id]}
     ].

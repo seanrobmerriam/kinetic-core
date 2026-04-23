@@ -266,6 +266,21 @@ dispatch() ->
             {<<"/api/v1/stp/exceptions/overdue">>, cb_stp_exceptions_handler, []},
             {<<"/api/v1/stp/exceptions/:item_id/:action">>, cb_stp_exceptions_handler, []},
 
+            %% Marketplace: connector registry (P3-S2)
+            {<<"/api/v1/marketplace/connectors">>, cb_connectors_handler, []},
+            {<<"/api/v1/marketplace/connectors/:connector_id">>, cb_connectors_handler, []},
+            {<<"/api/v1/marketplace/connectors/:connector_id/:action">>, cb_connectors_handler, []},
+
+            %% Marketplace: connector versioning (P3-S2)
+            {<<"/api/v1/marketplace/connectors/:connector_id/versions">>, cb_connector_versions_handler, []},
+            {<<"/api/v1/marketplace/connectors/:connector_id/versions/:version_id">>, cb_connector_versions_handler, []},
+            {<<"/api/v1/marketplace/connectors/:connector_id/versions/:version_id/:action">>, cb_connector_versions_handler, []},
+
+            %% Marketplace: partner onboarding (P3-S2)
+            {<<"/api/v1/marketplace/partners">>, cb_partner_onboarding_handler, []},
+            {<<"/api/v1/marketplace/partners/:application_id">>, cb_partner_onboarding_handler, []},
+            {<<"/api/v1/marketplace/partners/:application_id/:action">>, cb_partner_onboarding_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

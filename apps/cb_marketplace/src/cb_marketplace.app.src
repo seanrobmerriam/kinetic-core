@@ -1,0 +1,18 @@
+{application, cb_marketplace,
+ [
+  {description, "IronLedger Marketplace and Connector Registry"},
+  {vsn, "0.1.0"},
+  {registered, [cb_marketplace_sup]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  uuid,
+                  cb_ledger
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_marketplace_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

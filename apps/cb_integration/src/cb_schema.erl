@@ -92,7 +92,8 @@ create_tables() ->
               kyc_workflow, kyc_step,
               idv_check,
               aml_rule, suspicious_activity, aml_case,
-              sar_report, stp_routing_rule],
+              sar_report, stp_routing_rule,
+              connector_definition, connector_version, partner_application],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -467,4 +468,22 @@ table_spec(stp_routing_rule) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, stp_routing_rule)},
         {index, [priority, condition_type, enabled]}
+    ];
+table_spec(connector_definition) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, connector_definition)},
+        {index, [type, status]}
+    ];
+table_spec(connector_version) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, connector_version)},
+        {index, [connector_id, is_active]}
+    ];
+table_spec(partner_application) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, partner_application)},
+        {index, [partner_id, status]}
     ].

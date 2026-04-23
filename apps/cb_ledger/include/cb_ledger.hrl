@@ -679,6 +679,74 @@
     updated_at      :: timestamp_ms()
 }).
 
+%% ---------------------------------------------------------------------------
+%% Marketplace / Connector types (P3-S2)
+%% ---------------------------------------------------------------------------
+
+%% @doc Connector provider type.
+-type connector_type() :: aws | azure | stripe | custom.
+
+%% @doc Connector lifecycle status.
+-type connector_status() :: registered | enabled | disabled | deprecated.
+
+%% @doc Partner application workflow status.
+-type partner_application_status() :: pending | approved | rejected.
+
+%% ---------------------------------------------------------------------------
+
+%% @doc A registered connector definition in the marketplace.
+%%
+%% Connectors describe external service integrations. Each connector implements
+%% the cb_connector_behaviour callbacks and is registered here before use.
+-record(connector_definition, {
+    connector_id    :: uuid(),
+    name            :: binary(),
+    type            :: connector_type(),
+    module          :: module(),
+    status          :: connector_status(),
+    version         :: binary(),
+    capabilities    :: [binary()],
+    config_schema   :: map(),
+    description     :: binary(),
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).
+
+%% @doc An immutable snapshot of a connector's state at a point in time.
+%%
+%% Created before each update so the connector can be rolled back to
+%% any prior configuration. Only one version is marked active at a time.
+-record(connector_version, {
+    version_id          :: uuid(),
+    connector_id        :: uuid(),
+    version             :: binary(),
+    module              :: module(),
+    capabilities        :: [binary()],
+    config_snapshot     :: map(),
+    is_active           :: boolean(),
+    created_at          :: timestamp_ms(),
+    rolled_back_at      :: timestamp_ms() | undefined
+}).
+
+%% @doc A partner application requesting access to marketplace connectors.
+%%
+%% Partners submit applications that are reviewed by operations staff.
+%% The compatibility check validates that all requested connectors are
+%% registered and enabled before approval is permitted.
+-record(partner_application, {
+    application_id          :: uuid(),
+    partner_id              :: uuid(),
+    name                    :: binary(),
+    contact_email           :: binary(),
+    requested_connectors    :: [uuid()],
+    status                  :: partner_application_status(),
+    reviewed_by             :: uuid() | undefined,
+    reviewed_at             :: timestamp_ms() | undefined,
+    rejection_reason        :: binary() | undefined,
+    created_at              :: timestamp_ms(),
+    updated_at              :: timestamp_ms()
+}).
+
 %% @doc A Suspicious Activity Report filed with a regulatory body.
 %%
 %% SARs are generated from escalated compliance cases. The report progresses

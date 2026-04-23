@@ -1,7 +1,7 @@
 %% @doc ETS-backed token bucket rate limiter.
 %%
 %% Tracks request counts per client key (typically IP address) within a
-%% fixed 60-second sliding window.  The default limit is 200 requests
+%% fixed 60-second sliding window.  The default limit is 1000 requests
 %% per window and can be overridden via the `cb_integration` application
 %% environment key `rate_limit`.
 %%
@@ -21,7 +21,7 @@
 
 -define(TABLE,        cb_rate_limiter_ets).
 -define(WINDOW_MS,    60_000).
--define(DEFAULT_LIMIT, 200).
+-define(DEFAULT_LIMIT, 1000).
 
 %%% ============================================================
 %%% Public API

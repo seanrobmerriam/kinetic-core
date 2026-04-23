@@ -95,7 +95,9 @@ create_tables() ->
               sar_report, stp_routing_rule,
               connector_definition, connector_version, partner_application,
               event_schema_version, consumer_cursor,
-              swift_message, settlement_run, reconciliation_entry],
+              swift_message, settlement_run, reconciliation_entry,
+              cluster_node, version_token, scaling_rule,
+              capacity_sample, recovery_checkpoint],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -122,7 +124,9 @@ create_tables() ->
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
     aml_rule | suspicious_activity | aml_case | sar_report |
-    stp_routing_rule
+    stp_routing_rule |
+    cluster_node | version_token | scaling_rule |
+    capacity_sample | recovery_checkpoint
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -518,4 +522,35 @@ table_spec(reconciliation_entry) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, reconciliation_entry)},
         {index, [run_id, payment_id, match_status]}
+    ];
+%% P4-S2 tables
+table_spec(cluster_node) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, cluster_node)},
+        {index, [erlang_node, status, role]}
+    ];
+table_spec(version_token) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, version_token)},
+        {index, [resource_type, resource_id]}
+    ];
+table_spec(scaling_rule) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, scaling_rule)},
+        {index, [metric_name, enabled]}
+    ];
+table_spec(capacity_sample) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, capacity_sample)},
+        {index, [metric_name, recorded_at]}
+    ];
+table_spec(recovery_checkpoint) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, recovery_checkpoint)},
+        {index, [resource_type, resource_id, status]}
     ].

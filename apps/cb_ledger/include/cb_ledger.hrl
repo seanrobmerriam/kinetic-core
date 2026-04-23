@@ -785,6 +785,16 @@
 -type reconciliation_match_status() :: matched | unmatched | disputed.
 
 %%====================================================================
+%% P4-S2: Real-Time Processing Scale Types
+
+-type cluster_node_status() :: active | inactive | unreachable.
+-type cluster_node_role()   :: primary | secondary | observer.
+
+-type scaling_direction() :: scale_out | scale_in.
+-type scaling_rule_status() :: triggered | idle.
+
+-type recovery_status() :: pending | active | completed | aborted.
+
 %% P3-S3: Streaming and Advanced Payments Records
 %%====================================================================
 
@@ -868,4 +878,76 @@
     match_status    :: reconciliation_match_status(),
     created_at      :: timestamp_ms(),
     updated_at      :: timestamp_ms()
+}).
+
+%% P4-S2: Real-Time Processing Scale Records
+
+%% @doc Registered member of the distributed processing cluster.
+%%
+%% erlang_node is the Erlang node atom (e.g. 'kinetic@host1').
+%% role identifies whether this node accepts primary write traffic.
+%% last_heartbeat_at is updated on each health probe.
+-record(cluster_node, {
+    node_id          :: uuid(),
+    erlang_node      :: atom(),
+    host             :: binary(),
+    port             :: pos_integer(),
+    role             :: cluster_node_role(),
+    status           :: cluster_node_status(),
+    registered_at    :: timestamp_ms(),
+    last_heartbeat_at :: timestamp_ms()
+}).
+
+%% @doc Optimistic concurrency version token for a tracked resource.
+%%
+%% version is a monotonically increasing integer incremented on each write.
+%% resource_type identifies the record type (e.g. account, payment_order).
+-record(version_token, {
+    token_id      :: uuid(),
+    resource_type :: binary(),
+    resource_id   :: uuid(),
+    version       :: non_neg_integer(),
+    created_at    :: timestamp_ms(),
+    updated_at    :: timestamp_ms()
+}).
+
+%% @doc Autoscaling rule evaluated against live capacity samples.
+%%
+%% metric_name is the key used in capacity_sample records.
+%% threshold is the numeric boundary that triggers scaling action.
+%% cooldown_seconds prevents rapid re-triggering after an event.
+-record(scaling_rule, {
+    rule_id          :: uuid(),
+    name             :: binary(),
+    metric_name      :: binary(),
+    threshold        :: number(),
+    direction        :: scaling_direction(),
+    cooldown_seconds :: non_neg_integer(),
+    enabled          :: boolean(),
+    last_triggered_at :: timestamp_ms() | undefined,
+    created_at       :: timestamp_ms(),
+    updated_at       :: timestamp_ms()
+}).
+
+%% @doc A single capacity metric observation used by autoscaling rules.
+-record(capacity_sample, {
+    sample_id   :: uuid(),
+    metric_name :: binary(),
+    value       :: number(),
+    node_id     :: uuid() | undefined,
+    recorded_at :: timestamp_ms()
+}).
+
+%% @doc Snapshot checkpoint for failover and state recovery.
+%%
+%% state_snapshot holds the serialised state binary captured at checkpoint time.
+%% completed_at is set when recovery using this checkpoint finishes.
+-record(recovery_checkpoint, {
+    checkpoint_id :: uuid(),
+    resource_type :: binary(),
+    resource_id   :: uuid(),
+    state_snapshot :: binary(),
+    status        :: recovery_status(),
+    created_at    :: timestamp_ms(),
+    completed_at  :: timestamp_ms() | undefined
 }).

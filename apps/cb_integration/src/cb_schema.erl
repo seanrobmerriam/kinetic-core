@@ -80,6 +80,7 @@ create_tables() ->
               chart_account, balance_snapshot, account_hold,
               currency_config, exchange_rate, payment_order, exception_item,
               channel_limit, channel_activity, notification_preference,
+              channel_session, channel_feature_flag,
               api_keys,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
@@ -108,6 +109,7 @@ create_tables() ->
     chart_account | balance_snapshot | account_hold |
     currency_config | exchange_rate | payment_order | exception_item |
     channel_limit | channel_activity | notification_preference |
+    channel_session | channel_feature_flag |
     api_keys |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
@@ -144,6 +146,7 @@ create_if_not_exists(TableName) ->
     chart_account | balance_snapshot | account_hold |
     currency_config | exchange_rate | payment_order | exception_item |
     channel_limit | channel_activity | notification_preference |
+    channel_session | channel_feature_flag |
     api_keys |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
@@ -255,6 +258,18 @@ table_spec(notification_preference) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, notification_preference)},
         {index, [party_id, channel]}
+    ];
+table_spec(channel_session) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, channel_session)},
+        {index, [party_id, channel, status]}
+    ];
+table_spec(channel_feature_flag) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, channel_feature_flag)},
+        {index, [channel, feature]}
     ];
 table_spec(api_keys) ->
     [

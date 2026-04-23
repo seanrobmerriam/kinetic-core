@@ -190,6 +190,22 @@ dispatch() ->
             %% Omnichannel — notification preferences
             {<<"/api/v1/parties/:party_id/notification-preferences">>, cb_notification_prefs_handler, []},
 
+            %% Omnichannel — channel context (TASK-042)
+            {<<"/api/v1/parties/:party_id/channel-context/:channel">>, cb_channel_context_handler, []},
+
+            %% Omnichannel — channel sessions (TASK-043)
+            %% Note: literal 'invalidate-all' route MUST precede the :session_id wildcard
+            {<<"/api/v1/parties/:party_id/channel-sessions">>, cb_channel_sessions_handler, []},
+            {<<"/api/v1/parties/:party_id/channel-sessions/invalidate-all">>, cb_channel_sessions_invalidate_handler, []},
+            {<<"/api/v1/parties/:party_id/channel-sessions/:session_id">>, cb_channel_sessions_handler, []},
+
+            %% Omnichannel — channel feature flags (TASK-044)
+            {<<"/api/v1/channel-features/:channel">>, cb_channel_features_handler, []},
+            {<<"/api/v1/channel-features/:channel/:feature">>, cb_channel_features_handler, []},
+
+            %% Omnichannel — notification dispatch (TASK-045)
+            {<<"/api/v1/parties/:party_id/notifications/dispatch">>, cb_notification_dispatch_handler, []},
+
             %% Partner API keys
             {<<"/api/v1/api-keys">>, cb_api_keys_handler, []},
             {<<"/api/v1/api-keys/:key_id">>, cb_api_keys_handler, []},

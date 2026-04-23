@@ -443,11 +443,26 @@ export default function AccountDetailPage({
                   </Badge>
                 ),
               },
+              {
+                key: "actions",
+                label: "Actions",
+                sortable: false,
+                render: (t) => (
+                  <Button
+                    component={Link}
+                    href={`/transactions/${t.txn_id}`}
+                    size="xs"
+                    variant="light"
+                  >
+                    View
+                  </Button>
+                ),
+              },
             ] satisfies ColumnDef<Transaction>[]}
             rowKey={(t) => t.txn_id}
             searchPlaceholder="Search transactions..."
             emptyMessage="No transactions yet"
-            minWidth={700}
+            minWidth={800}
           />
         </Paper>
       </div>

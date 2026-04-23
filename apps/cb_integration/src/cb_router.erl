@@ -101,12 +101,15 @@ dispatch() ->
             {<<"/api/v1/parties/:party_id/accounts">>, cb_party_accounts_handler, []},
 
             %% Transactions
+            {<<"/api/v1/transactions">>, cb_transactions_search_handler, []},
             {<<"/api/v1/transactions/transfer">>, cb_transaction_transfer_handler, []},
             {<<"/api/v1/transactions/deposit">>, cb_transaction_deposit_handler, []},
             {<<"/api/v1/transactions/withdraw">>, cb_transaction_withdraw_handler, []},
             {<<"/api/v1/transactions/adjustment">>, cb_transaction_adjustment_handler, []},
             {<<"/api/v1/transactions/:txn_id">>, cb_transaction_handler, []},
             {<<"/api/v1/transactions/:txn_id/reverse">>, cb_transaction_reverse_handler, []},
+            {<<"/api/v1/transactions/:txn_id/receipt">>, cb_transaction_receipt_handler, []},
+            {<<"/api/v1/transactions/:txn_id/tags">>, cb_transaction_tags_handler, []},
 
             %% Ledger entries
             {<<"/api/v1/ledger/entries/latest">>, cb_ledger_latest_handler, []},

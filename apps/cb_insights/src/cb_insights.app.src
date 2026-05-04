@@ -1,0 +1,17 @@
+{application, cb_insights,
+ [{description, "Conversational query gateway, governed insights, and BYOK encryption (P5-S2)"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {cb_insights_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    crypto,
+    mnesia,
+    cb_ledger,
+    cb_analytics]},
+  {env, []},
+  {modules, []},
+  {licenses, ["Proprietary"]},
+  {links, []}
+ ]}.

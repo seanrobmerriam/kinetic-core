@@ -99,11 +99,11 @@ create_tables() ->
               propagation_target, propagation_event,
               recon_run, divergence_alert,
               replay_session, replay_event,
-              audit_chain_link],
+              audit_chain_link,
               treasury_position, cash_forecast,
               trade_instrument, trade_document,
               risk_metric, capital_buffer,
-              federation_report],
+              federation_report,
               cluster_node, version_token, scaling_rule,
               capacity_sample, recovery_checkpoint],
     lists:foreach(fun create_if_not_exists/1, Tables),
@@ -139,7 +139,11 @@ create_tables() ->
     propagation_target | propagation_event |
     recon_run | divergence_alert |
     replay_session | replay_event |
-    audit_chain_link
+    audit_chain_link |
+    treasury_position | cash_forecast |
+    trade_instrument | trade_document |
+    risk_metric | capital_buffer |
+    federation_report |
     cluster_node | version_token | scaling_rule |
     capacity_sample | recovery_checkpoint
 ) -> ok.
@@ -580,6 +584,7 @@ table_spec(audit_chain_link) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, audit_chain_link)},
         {index, [sequence, entry_id]}
+    ];
 
 %% P4-S1: Enterprise Product Expansion tables
 table_spec(treasury_position) ->
@@ -623,6 +628,7 @@ table_spec(federation_report) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, federation_report)},
         {index, [report_type, status, requested_by]}
+    ];
 %% P4-S2 tables
 table_spec(cluster_node) ->
     [

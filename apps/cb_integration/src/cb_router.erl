@@ -302,6 +302,24 @@ dispatch() ->
             {<<"/api/v1/settlements/:run_id">>, cb_settlement_handler, []},
             {<<"/api/v1/settlements/:run_id/:action">>, cb_settlement_handler, []},
 
+            %% Ledger propagation tracking (P4-S3, TASK-070)
+            {<<"/api/v1/ledger/propagation/:resource">>, cb_ledger_propagation_handler, []},
+            {<<"/api/v1/ledger/propagation/:resource/:id/:action">>, cb_ledger_propagation_handler, []},
+
+            %% Reconciliation automation (P4-S3, TASK-071)
+            {<<"/api/v1/recon/:resource">>, cb_recon_automation_handler, []},
+            {<<"/api/v1/recon/:resource/:id">>, cb_recon_automation_handler, []},
+            {<<"/api/v1/recon/:resource/:id/:action">>, cb_recon_automation_handler, []},
+
+            %% Ledger replay sessions (P4-S3, TASK-072)
+            {<<"/api/v1/ledger/replay/sessions">>, cb_ledger_replay_handler, []},
+            {<<"/api/v1/ledger/replay/sessions/:session_id">>, cb_ledger_replay_handler, []},
+            {<<"/api/v1/ledger/replay/sessions/:session_id/:action">>, cb_ledger_replay_handler, []},
+
+            %% Cryptographic audit chain (P4-S3, TASK-073)
+            {<<"/api/v1/audit/chain/:resource">>, cb_audit_chain_handler, []},
+            {<<"/api/v1/audit/chain/:resource/:id">>, cb_audit_chain_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

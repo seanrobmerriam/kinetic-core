@@ -95,7 +95,11 @@ create_tables() ->
               sar_report, stp_routing_rule,
               connector_definition, connector_version, partner_application,
               event_schema_version, consumer_cursor,
-              swift_message, settlement_run, reconciliation_entry],
+              swift_message, settlement_run, reconciliation_entry,
+              propagation_target, propagation_event,
+              recon_run, divergence_alert,
+              replay_session, replay_event,
+              audit_chain_link],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -122,7 +126,14 @@ create_tables() ->
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
     aml_rule | suspicious_activity | aml_case | sar_report |
-    stp_routing_rule
+    stp_routing_rule |
+    connector_definition | connector_version | partner_application |
+    event_schema_version | consumer_cursor |
+    swift_message | settlement_run | reconciliation_entry |
+    propagation_target | propagation_event |
+    recon_run | divergence_alert |
+    replay_session | replay_event |
+    audit_chain_link
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -518,4 +529,47 @@ table_spec(reconciliation_entry) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, reconciliation_entry)},
         {index, [run_id, payment_id, match_status]}
+    ];
+%% P4-S3 tables
+table_spec(propagation_target) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, propagation_target)},
+        {index, [target_name, enabled]}
+    ];
+table_spec(propagation_event) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, propagation_event)},
+        {index, [entry_id, target_name]}
+    ];
+table_spec(recon_run) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, recon_run)},
+        {index, [scope, status]}
+    ];
+table_spec(divergence_alert) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, divergence_alert)},
+        {index, [run_id, severity, status]}
+    ];
+table_spec(replay_session) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, replay_session)},
+        {index, [scope, status]}
+    ];
+table_spec(replay_event) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, replay_event)},
+        {index, [session_id, entry_id]}
+    ];
+table_spec(audit_chain_link) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, audit_chain_link)},
+        {index, [sequence, entry_id]}
     ].

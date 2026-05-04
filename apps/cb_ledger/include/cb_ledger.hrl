@@ -869,3 +869,111 @@
     created_at      :: timestamp_ms(),
     updated_at      :: timestamp_ms()
 }).
+
+%%====================================================================
+%% P4-S3: Real-Time Ledger Hardening Types and Records
+%%====================================================================
+
+%% @doc Lifecycle status of a recon automation run.
+-type recon_run_status() :: pending | running | completed | failed.
+
+%% @doc Severity level for divergence alerts emitted by recon automation.
+-type alert_severity() :: info | warning | critical.
+
+%% @doc Lifecycle status of a divergence alert.
+-type alert_status() :: open | acknowledged | resolved.
+
+%% @doc Lifecycle status of a ledger replay session.
+-type replay_status() :: pending | running | completed | failed | aborted.
+
+%% @doc A propagation target (read replica) registered for freshness tracking.
+%%
+%% target_name uniquely identifies the replica (e.g. <<"replica-eu-west-1">>).
+%% sla_ms is the maximum acceptable propagation latency for this target.
+-record(propagation_target, {
+    target_id   :: uuid(),
+    target_name :: binary(),
+    sla_ms      :: non_neg_integer(),
+    enabled     :: boolean(),
+    created_at  :: timestamp_ms()
+}).
+
+%% @doc A single propagation event for a posted ledger entry.
+%%
+%% latency_ms is propagated_at - posted_at and is used to evaluate SLA.
+-record(propagation_event, {
+    event_id      :: uuid(),
+    entry_id      :: uuid(),
+    target_name   :: binary(),
+    posted_at     :: timestamp_ms(),
+    propagated_at :: timestamp_ms(),
+    latency_ms    :: non_neg_integer()
+}).
+
+%% @doc A scheduled or ad-hoc reconciliation automation run.
+%%
+%% scope describes the data set being reconciled (e.g. <<"ledger_vs_accounts">>).
+%% divergences_count is the number of divergence_alert records this run produced.
+-record(recon_run, {
+    run_id            :: uuid(),
+    scope             :: binary(),
+    status            :: recon_run_status(),
+    started_at        :: timestamp_ms(),
+    completed_at      :: timestamp_ms() | undefined,
+    divergences_count :: non_neg_integer()
+}).
+
+%% @doc A divergence alert emitted by a recon run.
+%%
+%% details holds a free-form map describing the divergence
+%% (e.g. expected vs actual amounts, account ids).
+-record(divergence_alert, {
+    alert_id      :: uuid(),
+    run_id        :: uuid(),
+    severity      :: alert_severity(),
+    status        :: alert_status(),
+    details       :: map(),
+    created_at    :: timestamp_ms(),
+    acknowledged_at :: timestamp_ms() | undefined,
+    acknowledged_by :: binary() | undefined
+}).
+
+%% @doc An event-replay session used to rebuild ledger state.
+%%
+%% from_ms / to_ms scope the time window of entries to replay.
+%% applied_count is incremented as each replay event is recorded.
+-record(replay_session, {
+    session_id     :: uuid(),
+    scope          :: binary(),
+    from_ms        :: timestamp_ms(),
+    to_ms          :: timestamp_ms(),
+    status         :: replay_status(),
+    applied_count  :: non_neg_integer(),
+    started_at     :: timestamp_ms(),
+    completed_at   :: timestamp_ms() | undefined,
+    last_error     :: binary() | undefined
+}).
+
+%% @doc One ledger entry replayed under a replay_session.
+-record(replay_event, {
+    event_id    :: uuid(),
+    session_id  :: uuid(),
+    entry_id    :: uuid(),
+    applied_at  :: timestamp_ms(),
+    outcome     :: ok | skipped | error,
+    note        :: binary() | undefined
+}).
+
+%% @doc One link in the cryptographic audit chain over ledger history.
+%%
+%% sequence is monotonically increasing starting at 1 for the first link.
+%% prev_hash is the link_hash of the prior link (or all-zero hex for genesis).
+%% link_hash = sha256(prev_hash || sequence || entry_id || posted_at || amount).
+-record(audit_chain_link, {
+    link_id    :: uuid(),
+    sequence   :: pos_integer(),
+    entry_id   :: uuid(),
+    prev_hash  :: binary(),
+    link_hash  :: binary(),
+    created_at :: timestamp_ms()
+}).

@@ -319,6 +319,50 @@ dispatch() ->
             %% Cryptographic audit chain (P4-S3, TASK-073)
             {<<"/api/v1/audit/chain/:resource">>, cb_audit_chain_handler, []},
             {<<"/api/v1/audit/chain/:resource/:id">>, cb_audit_chain_handler, []},
+            %% Treasury liquidity and cash management (P4-S1, TASK-062)
+            {<<"/api/v1/treasury/positions">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/positions/:id">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/positions/:id/:action">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/forecasts">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/placements">>, cb_treasury_handler, []},
+            {<<"/api/v1/treasury/placements/:id">>, cb_treasury_handler, []},
+
+            %% Trade finance instruments (P4-S1, TASK-063)
+            {<<"/api/v1/trade/instruments">>, cb_trade_finance_handler, []},
+            {<<"/api/v1/trade/instruments/:id">>, cb_trade_finance_handler, []},
+            {<<"/api/v1/trade/instruments/:id/:action">>, cb_trade_finance_handler, []},
+            {<<"/api/v1/trade/documents/:id/:action">>, cb_trade_finance_handler, []},
+
+            %% Risk metrics and capital buffers (P4-S1, TASK-064)
+            {<<"/api/v1/risk/metrics">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/risk/metrics/:id">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/risk/breaches">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/risk/check">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/capital/buffers">>, cb_risk_capital_handler, []},
+            {<<"/api/v1/capital/buffers/:id">>, cb_risk_capital_handler, []},
+
+            %% Federated cross-module reporting (P4-S1, TASK-065)
+            {<<"/api/v1/reports/federation">>, cb_federation_report_handler, []},
+            {<<"/api/v1/reports/federation/:id">>, cb_federation_report_handler, []},
+            {<<"/api/v1/reports/federation/:id/:action">>, cb_federation_report_handler, []},
+            %% Cluster management (P4-S2 TASK-066)
+            {<<"/api/v1/cluster/nodes">>, cb_cluster_handler, []},
+            {<<"/api/v1/cluster/nodes/active">>, cb_cluster_handler, []},
+            {<<"/api/v1/cluster/nodes/:node_id">>, cb_cluster_handler, []},
+            {<<"/api/v1/cluster/nodes/:node_id/:action">>, cb_cluster_handler, []},
+
+            %% Scaling rules and metrics (P4-S2 TASK-068)
+            {<<"/api/v1/scaling/rules">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/metrics">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/evaluate">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/rules/:rule_id">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/rules/:rule_id/:action">>, cb_scaling_handler, []},
+
+            %% Recovery checkpoints (P4-S2 TASK-069)
+            {<<"/api/v1/recovery/checkpoints">>, cb_recovery_handler, []},
+            {<<"/api/v1/recovery/checkpoints/:checkpoint_id">>, cb_recovery_handler, []},
+            {<<"/api/v1/recovery/checkpoints/:checkpoint_id/:action">>, cb_recovery_handler, []},
+            {<<"/api/v1/recovery/:resource_type/:resource_id/:action">>, cb_recovery_handler, []},
 
             %% 404 fallback
             {'_', cb_not_found_handler, []}

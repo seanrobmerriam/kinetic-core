@@ -100,6 +100,12 @@ create_tables() ->
               recon_run, divergence_alert,
               replay_session, replay_event,
               audit_chain_link],
+              treasury_position, cash_forecast,
+              trade_instrument, trade_document,
+              risk_metric, capital_buffer,
+              federation_report],
+              cluster_node, version_token, scaling_rule,
+              capacity_sample, recovery_checkpoint],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -134,6 +140,8 @@ create_tables() ->
     recon_run | divergence_alert |
     replay_session | replay_event |
     audit_chain_link
+    cluster_node | version_token | scaling_rule |
+    capacity_sample | recovery_checkpoint
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -572,4 +580,77 @@ table_spec(audit_chain_link) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, audit_chain_link)},
         {index, [sequence, entry_id]}
+
+%% P4-S1: Enterprise Product Expansion tables
+table_spec(treasury_position) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, treasury_position)},
+        {index, [account_id, currency, status]}
+    ];
+table_spec(cash_forecast) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, cash_forecast)},
+        {index, [account_id, currency]}
+    ];
+table_spec(trade_instrument) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, trade_instrument)},
+        {index, [account_id, instrument_type, status]}
+    ];
+table_spec(trade_document) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, trade_document)},
+        {index, [instrument_id, status]}
+    ];
+table_spec(risk_metric) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, risk_metric)},
+        {index, [account_id, metric_type, breached]}
+    ];
+table_spec(capital_buffer) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, capital_buffer)},
+        {index, [buffer_type]}
+    ];
+table_spec(federation_report) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, federation_report)},
+        {index, [report_type, status, requested_by]}
+%% P4-S2 tables
+table_spec(cluster_node) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, cluster_node)},
+        {index, [erlang_node, status, role]}
+    ];
+table_spec(version_token) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, version_token)},
+        {index, [resource_type, resource_id]}
+    ];
+table_spec(scaling_rule) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, scaling_rule)},
+        {index, [metric_name, enabled]}
+    ];
+table_spec(capacity_sample) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, capacity_sample)},
+        {index, [metric_name, recorded_at]}
+    ];
+table_spec(recovery_checkpoint) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, recovery_checkpoint)},
+        {index, [resource_type, resource_id, status]}
     ].

@@ -1,0 +1,18 @@
+{application, cb_analytics,
+ [
+  {description, "IronLedger Analytics Platform"},
+  {vsn, "0.1.0"},
+  {registered, [cb_analytics_sup]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia,
+                  uuid,
+                  cb_ledger
+                 ]},
+  {env, []},
+  {modules, []},
+  {mod, {cb_analytics_app, []}},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

@@ -96,6 +96,10 @@ create_tables() ->
               connector_definition, connector_version, partner_application,
               event_schema_version, consumer_cursor,
               swift_message, settlement_run, reconciliation_entry,
+              treasury_position, cash_forecast,
+              trade_instrument, trade_document,
+              risk_metric, capital_buffer,
+              federation_report],
               cluster_node, version_token, scaling_rule,
               capacity_sample, recovery_checkpoint],
     lists:foreach(fun create_if_not_exists/1, Tables),
@@ -523,6 +527,49 @@ table_spec(reconciliation_entry) ->
         {attributes, record_info(fields, reconciliation_entry)},
         {index, [run_id, payment_id, match_status]}
     ];
+
+%% P4-S1: Enterprise Product Expansion tables
+table_spec(treasury_position) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, treasury_position)},
+        {index, [account_id, currency, status]}
+    ];
+table_spec(cash_forecast) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, cash_forecast)},
+        {index, [account_id, currency]}
+    ];
+table_spec(trade_instrument) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, trade_instrument)},
+        {index, [account_id, instrument_type, status]}
+    ];
+table_spec(trade_document) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, trade_document)},
+        {index, [instrument_id, status]}
+    ];
+table_spec(risk_metric) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, risk_metric)},
+        {index, [account_id, metric_type, breached]}
+    ];
+table_spec(capital_buffer) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, capital_buffer)},
+        {index, [buffer_type]}
+    ];
+table_spec(federation_report) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, federation_report)},
+        {index, [report_type, status, requested_by]}
 %% P4-S2 tables
 table_spec(cluster_node) ->
     [

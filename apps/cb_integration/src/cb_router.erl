@@ -364,6 +364,32 @@ dispatch() ->
             {<<"/api/v1/recovery/checkpoints/:checkpoint_id/:action">>, cb_recovery_handler, []},
             {<<"/api/v1/recovery/:resource_type/:resource_id/:action">>, cb_recovery_handler, []},
 
+            %% Analytics platform (P5-S1, TASK-074..077)
+            %% Feature store + pipelines (TASK-074)
+            {<<"/api/v1/analytics/features">>, cb_feature_store_handler, [{resource, <<"features">>}]},
+            {<<"/api/v1/analytics/features/:id">>, cb_feature_store_handler, [{resource, <<"features">>}]},
+            {<<"/api/v1/analytics/features/:id/:action">>, cb_feature_store_handler, [{resource, <<"features">>}]},
+            {<<"/api/v1/analytics/pipelines">>, cb_feature_store_handler, [{resource, <<"pipelines">>}]},
+            {<<"/api/v1/analytics/pipelines/:id">>, cb_feature_store_handler, [{resource, <<"pipelines">>}]},
+            {<<"/api/v1/analytics/pipelines/:id/:action">>, cb_feature_store_handler, [{resource, <<"pipelines">>}]},
+            %% Segmentation + recommendations (TASK-075)
+            {<<"/api/v1/analytics/segments">>, cb_segmentation_handler, [{resource, <<"segments">>}]},
+            {<<"/api/v1/analytics/segments/:id">>, cb_segmentation_handler, [{resource, <<"segments">>}]},
+            {<<"/api/v1/analytics/segments/:id/:action">>, cb_segmentation_handler, [{resource, <<"segments">>}]},
+            {<<"/api/v1/analytics/recommendations">>, cb_segmentation_handler, [{resource, <<"recommendations">>}]},
+            {<<"/api/v1/analytics/recommendations/:id">>, cb_segmentation_handler, [{resource, <<"recommendations">>}]},
+            {<<"/api/v1/analytics/recommendations/:id/:action">>, cb_segmentation_handler, [{resource, <<"recommendations">>}]},
+            %% Predictions (TASK-076) — :resource is churn|anomaly|by-entity
+            {<<"/api/v1/analytics/predictions/:resource">>, cb_predictions_handler, []},
+            {<<"/api/v1/analytics/predictions/:resource/:id">>, cb_predictions_handler, []},
+            %% Model monitoring + retraining triggers (TASK-077)
+            {<<"/api/v1/analytics/monitors">>, cb_model_monitor_handler, [{resource, <<"monitors">>}]},
+            {<<"/api/v1/analytics/monitors/:id">>, cb_model_monitor_handler, [{resource, <<"monitors">>}]},
+            {<<"/api/v1/analytics/monitors/:id/:action">>, cb_model_monitor_handler, [{resource, <<"monitors">>}]},
+            {<<"/api/v1/analytics/triggers">>, cb_model_monitor_handler, [{resource, <<"triggers">>}]},
+            {<<"/api/v1/analytics/triggers/:id">>, cb_model_monitor_handler, [{resource, <<"triggers">>}]},
+            {<<"/api/v1/analytics/triggers/:id/:action">>, cb_model_monitor_handler, [{resource, <<"triggers">>}]},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

@@ -19,7 +19,8 @@
                   cb_auth,
                   cb_channels,
                   cb_compliance,
-                  cb_marketplace
+                  cb_marketplace,
+                  cb_analytics
                  ]},
   {env, []},
   {modules, []},

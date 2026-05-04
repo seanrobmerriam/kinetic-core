@@ -41,6 +41,7 @@
 -module(cb_schema).
 
 -include_lib("cb_ledger/include/cb_ledger.hrl").
+-include_lib("cb_analytics/include/cb_analytics.hrl").
 
 -export([create_tables/0]).
 
@@ -105,7 +106,11 @@ create_tables() ->
               risk_metric, capital_buffer,
               federation_report,
               cluster_node, version_token, scaling_rule,
-              capacity_sample, recovery_checkpoint],
+              capacity_sample, recovery_checkpoint,
+              feature_definition, feature_value, feature_pipeline,
+              customer_segment, segment_membership, product_recommendation,
+              prediction_score,
+              model_monitor, drift_alert, retraining_trigger],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -145,7 +150,11 @@ create_tables() ->
     risk_metric | capital_buffer |
     federation_report |
     cluster_node | version_token | scaling_rule |
-    capacity_sample | recovery_checkpoint
+    capacity_sample | recovery_checkpoint |
+    feature_definition | feature_value | feature_pipeline |
+    customer_segment | segment_membership | product_recommendation |
+    prediction_score |
+    model_monitor | drift_alert | retraining_trigger
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -659,4 +668,66 @@ table_spec(recovery_checkpoint) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, recovery_checkpoint)},
         {index, [resource_type, resource_id, status]}
+    ];
+
+%% P5-S1: Analytics Platform tables
+table_spec(feature_definition) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, feature_definition)},
+        {index, [feature_key, pipeline_id]}
+    ];
+table_spec(feature_value) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, feature_value)},
+        {index, [feature_key, entity_id]}
+    ];
+table_spec(feature_pipeline) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, feature_pipeline)},
+        {index, [name, status]}
+    ];
+table_spec(customer_segment) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, customer_segment)},
+        {index, [name, status]}
+    ];
+table_spec(segment_membership) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, segment_membership)},
+        {index, [segment_id, party_id]}
+    ];
+table_spec(product_recommendation) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, product_recommendation)},
+        {index, [party_id, product_code, status]}
+    ];
+table_spec(prediction_score) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, prediction_score)},
+        {index, [kind, entity_id]}
+    ];
+table_spec(model_monitor) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, model_monitor)},
+        {index, [model_name, feature_key, status]}
+    ];
+table_spec(drift_alert) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, drift_alert)},
+        {index, [monitor_id, severity]}
+    ];
+table_spec(retraining_trigger) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, retraining_trigger)},
+        {index, [model_name, status]}
     ].

@@ -986,6 +986,9 @@
     prev_hash  :: binary(),
     link_hash  :: binary(),
     created_at :: timestamp_ms()
+}).
+
+%%====================================================================
 %% P4-S1: Enterprise Product Expansion Types
 %%====================================================================
 
@@ -1098,7 +1101,11 @@
     requested_by :: uuid(),
     requested_at :: timestamp_ms(),
     completed_at :: timestamp_ms() | undefined
+}).
+
+%%====================================================================
 %% P4-S2: Real-Time Processing Scale Records
+%%====================================================================
 
 %% @doc Registered member of the distributed processing cluster.
 %%

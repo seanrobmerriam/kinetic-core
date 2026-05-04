@@ -23,10 +23,14 @@ handle(<<"POST">>, undefined, undefined, Req, State) ->
     case jsone:try_decode(Body, [{keys, atom}]) of
         {ok, #{kind := K, generated_by := Who, audience := A}, _}
                 when is_binary(K), is_binary(Who), is_list(A) ->
-            Audience = [binary_to_role(R) || R <- A],
-            case cb_insight_gov:generate(binary_to_kind(K), Who, Audience) of
-                {ok, Id}        -> reply(201, #{insight_id => Id}, Req2, State);
-                {error, Reason} -> error_reply(400, Reason, Req2, State)
+            case parse_roles(A) of
+                {error, invalid_role} ->
+                    error_reply(400, <<"Invalid role in audience">>, Req2, State);
+                {ok, Audience} ->
+                    case cb_insight_gov:generate(binary_to_kind(K), Who, Audience) of
+                        {ok, Id}        -> reply(201, #{insight_id => Id}, Req2, State);
+                        {error, Reason} -> error_reply(400, Reason, Req2, State)
+                    end
             end;
         _ ->
             error_reply(400, <<"Missing required fields">>, Req2, State)
@@ -38,10 +42,15 @@ handle(<<"GET">>, undefined, undefined, Req, State) ->
         undefined ->
             error_reply(400, <<"Missing role query parameter">>, Req, State);
         RoleBin ->
-            Insights = cb_insight_gov:list_for_role(binary_to_role(RoleBin)),
-            reply(200,
-                  #{insights => [insight_to_map(I) || I <- Insights]},
-                  Req, State)
+            case binary_to_role(RoleBin) of
+                {error, _} ->
+                    error_reply(400, <<"Invalid role">>, Req, State);
+                Role ->
+                    Insights = cb_insight_gov:list_for_role(Role),
+                    reply(200,
+                          #{insights => [insight_to_map(I) || I <- Insights]},
+                          Req, State)
+            end
     end;
 
 handle(<<"GET">>, Id, undefined, Req, State) ->
@@ -53,13 +62,18 @@ handle(<<"GET">>, Id, undefined, Req, State) ->
         {_, undefined} ->
             error_reply(400, <<"Missing role query parameter">>, Req, State);
         {Accessor, RoleBin} ->
-            case cb_insight_gov:get(Id, Accessor, binary_to_role(RoleBin)) of
-                {ok, I} ->
-                    reply(200, insight_to_map(I), Req, State);
-                {error, not_found} ->
-                    error_reply(404, <<"Insight not found">>, Req, State);
-                {error, Reason} ->
-                    error_reply(403, Reason, Req, State)
+            case binary_to_role(RoleBin) of
+                {error, _} ->
+                    error_reply(400, <<"Invalid role">>, Req, State);
+                Role ->
+                    case cb_insight_gov:get(Id, Accessor, Role) of
+                        {ok, I} ->
+                            reply(200, insight_to_map(I), Req, State);
+                        {error, not_found} ->
+                            error_reply(404, <<"Insight not found">>, Req, State);
+                        {error, Reason} ->
+                            error_reply(403, Reason, Req, State)
+                    end
             end
     end;
 
@@ -73,7 +87,22 @@ handle(_, _, _, Req, State) ->
 binary_to_role(<<"analyst">>)      -> analyst;
 binary_to_role(<<"operator">>)     -> operator;
 binary_to_role(<<"risk_officer">>) -> risk_officer;
-binary_to_role(<<"admin">>)        -> admin.
+binary_to_role(<<"admin">>)        -> admin;
+binary_to_role(_)                  -> {error, invalid_role}.
+
+-spec parse_roles([binary()]) -> {ok, [atom()]} | {error, invalid_role}.
+parse_roles(Bins) ->
+    lists:foldr(
+        fun(_, {error, _} = Err) -> Err;
+           (R, {ok, Acc}) ->
+               case binary_to_role(R) of
+                   {error, _} = Err -> Err;
+                   Role             -> {ok, [Role | Acc]}
+               end
+        end,
+        {ok, []},
+        Bins
+    ).
 
 binary_to_kind(<<"segment_overview">>)       -> segment_overview;
 binary_to_kind(<<"recommendation_summary">>) -> recommendation_summary;

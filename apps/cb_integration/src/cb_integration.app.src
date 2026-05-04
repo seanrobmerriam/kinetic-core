@@ -20,7 +20,8 @@
                   cb_channels,
                   cb_compliance,
                   cb_marketplace,
-                  cb_analytics
+                  cb_analytics,
+                  cb_insights
                  ]},
   {env, []},
   {modules, []},

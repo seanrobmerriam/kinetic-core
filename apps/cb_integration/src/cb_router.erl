@@ -390,6 +390,21 @@ dispatch() ->
             {<<"/api/v1/analytics/triggers/:id">>, cb_model_monitor_handler, [{resource, <<"triggers">>}]},
             {<<"/api/v1/analytics/triggers/:id/:action">>, cb_model_monitor_handler, [{resource, <<"triggers">>}]},
 
+            %% Insights / NL query gateway (TASK-078)
+            {<<"/api/v1/insights/queries">>, cb_nl_query_handler, []},
+            {<<"/api/v1/insights/queries/:id">>, cb_nl_query_handler, []},
+            {<<"/api/v1/insights/queries/:id/:action">>, cb_nl_query_handler, []},
+
+            %% Insights / governed insights (TASK-079)
+            {<<"/api/v1/insights/insights">>, cb_insight_gov_handler, []},
+            {<<"/api/v1/insights/insights/:id">>, cb_insight_gov_handler, []},
+            {<<"/api/v1/insights/insights/:id/:action">>, cb_insight_gov_handler, []},
+
+            %% Insights / BYOK key management + crypto (TASK-080)
+            {<<"/api/v1/insights/byok/keys">>, cb_byok_handler, []},
+            {<<"/api/v1/insights/byok/keys/:id">>, cb_byok_handler, []},
+            {<<"/api/v1/insights/byok/keys/:id/:action">>, cb_byok_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

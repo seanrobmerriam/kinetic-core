@@ -42,6 +42,7 @@
 
 -include_lib("cb_ledger/include/cb_ledger.hrl").
 -include_lib("cb_analytics/include/cb_analytics.hrl").
+-include_lib("cb_insights/include/cb_insights.hrl").
 
 -export([create_tables/0]).
 
@@ -110,7 +111,9 @@ create_tables() ->
               feature_definition, feature_value, feature_pipeline,
               customer_segment, segment_membership, product_recommendation,
               prediction_score,
-              model_monitor, drift_alert, retraining_trigger],
+              model_monitor, drift_alert, retraining_trigger,
+              nl_query, insight, insight_access_log,
+              byok_key, byok_access_log],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -154,7 +157,9 @@ create_tables() ->
     feature_definition | feature_value | feature_pipeline |
     customer_segment | segment_membership | product_recommendation |
     prediction_score |
-    model_monitor | drift_alert | retraining_trigger
+    model_monitor | drift_alert | retraining_trigger |
+    nl_query | insight | insight_access_log |
+    byok_key | byok_access_log
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -730,4 +735,34 @@ table_spec(retraining_trigger) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, retraining_trigger)},
         {index, [model_name, status]}
+    ];
+table_spec(nl_query) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, nl_query)},
+        {index, [submitted_by, intent, status]}
+    ];
+table_spec(insight) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, insight)},
+        {index, [kind, sensitivity]}
+    ];
+table_spec(insight_access_log) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, insight_access_log)},
+        {index, [insight_id, accessor, decision]}
+    ];
+table_spec(byok_key) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, byok_key)},
+        {index, [owner, status]}
+    ];
+table_spec(byok_access_log) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, byok_access_log)},
+        {index, [key_id, accessor, decision]}
     ].

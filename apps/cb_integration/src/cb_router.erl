@@ -302,6 +302,25 @@ dispatch() ->
             {<<"/api/v1/settlements/:run_id">>, cb_settlement_handler, []},
             {<<"/api/v1/settlements/:run_id/:action">>, cb_settlement_handler, []},
 
+            %% Cluster management (P4-S2 TASK-066)
+            {<<"/api/v1/cluster/nodes">>, cb_cluster_handler, []},
+            {<<"/api/v1/cluster/nodes/active">>, cb_cluster_handler, []},
+            {<<"/api/v1/cluster/nodes/:node_id">>, cb_cluster_handler, []},
+            {<<"/api/v1/cluster/nodes/:node_id/:action">>, cb_cluster_handler, []},
+
+            %% Scaling rules and metrics (P4-S2 TASK-068)
+            {<<"/api/v1/scaling/rules">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/metrics">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/evaluate">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/rules/:rule_id">>, cb_scaling_handler, []},
+            {<<"/api/v1/scaling/rules/:rule_id/:action">>, cb_scaling_handler, []},
+
+            %% Recovery checkpoints (P4-S2 TASK-069)
+            {<<"/api/v1/recovery/checkpoints">>, cb_recovery_handler, []},
+            {<<"/api/v1/recovery/checkpoints/:checkpoint_id">>, cb_recovery_handler, []},
+            {<<"/api/v1/recovery/checkpoints/:checkpoint_id/:action">>, cb_recovery_handler, []},
+            {<<"/api/v1/recovery/:resource_type/:resource_id/:action">>, cb_recovery_handler, []},
+
             %% 404 fallback
             {'_', cb_not_found_handler, []}
         ]}

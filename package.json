@@ -6,6 +6,8 @@
     "test:chaos": "node test/chaos.js",
     "test:contracts": "node test/contracts.js",
     "test:mutation": "node test/mutation-test.js",
+    "ci:gate": "bash scripts/ci-gate.sh",
+    "ci:gate:fast": "bash scripts/ci-gate.sh --skip-integration",
     "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {

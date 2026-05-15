@@ -4,6 +4,7 @@
 -module(cb_contracts_execute_SUITE).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 -include("../include/cb_contracts.hrl").
 
 -compile(export_all).
@@ -68,8 +69,8 @@ test_execute_happy_path(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{account_status => <<"active">>},
-                then => #{action => set, decision => approve}
+                'when' => #{account_status => <<"active">>},
+                'then' => #{action => set, decision => approve}
             }
         ]
     },
@@ -92,8 +93,8 @@ test_execute_with_authz_capabilities(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{},
-                then => #{action => emit, event => payment_review_requested}
+                'when' => #{},
+                'then' => #{action => emit, event => payment_review_requested}
             }
         ]
     },
@@ -117,8 +118,8 @@ test_execute_timeout(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{},
-                then => #{
+                'when' => #{},
+                'then' => #{
                     action => set,
                     decision => {max, [1, 2, 3]}  %% Nested evaluation
                 }
@@ -137,7 +138,7 @@ test_execute_timeout(_Config) ->
     }),
     
     %% With extremely tight timeout, should timeout
-    ?assertMatch({error, execution_budget_exceeded} | {ok, _}, Result).
+    ?assert(Result =:= {error, execution_budget_exceeded} orelse element(1, Result) =:= ok).
 
 %% Test: Invalid contract schema causes validation error
 test_execute_validation_error(_Config) ->
@@ -146,8 +147,8 @@ test_execute_validation_error(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{forbidden_op => {1, 2}},
-                then => #{action => set, decision => approve}
+                'when' => #{forbidden_op => {1, 2}},
+                'then' => #{action => set, decision => approve}
             }
         ]
     },
@@ -170,12 +171,12 @@ test_execute_reject_decision(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{account_status => <<"active">>},
-                then => #{action => set, decision => approve}
+                'when' => #{account_status => <<"active">>},
+                'then' => #{action => set, decision => approve}
             },
             #{
-                when => #{},
-                then => #{action => set, decision => reject}
+                'when' => #{},
+                'then' => #{action => set, decision => reject}
             }
         ]
     },
@@ -198,8 +199,8 @@ test_execute_context_snapshot(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{},
-                then => #{action => set, decision => approve}
+                'when' => #{},
+                'then' => #{action => set, decision => approve}
             }
         ]
     },
@@ -227,8 +228,8 @@ test_execute_decision_snapshot(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{},
-                then => #{action => set, decision => approve}
+                'when' => #{},
+                'then' => #{action => set, decision => approve}
             }
         ]
     },
@@ -252,8 +253,8 @@ test_execute_trace_persistence(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{},
-                then => #{action => set, decision => approve}
+                'when' => #{},
+                'then' => #{action => set, decision => approve}
             }
         ]
     },
@@ -281,8 +282,8 @@ test_execute_trace_with_events(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{},
-                then => #{
+                'when' => #{},
+                'then' => #{
                     action => emit,
                     event => payment_review_requested
                 }
@@ -309,16 +310,16 @@ test_execute_multiple_rules(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{amount => {in, [1000, 2000, 5000]}},
-                then => #{action => enqueue_review, status => low_risk}
+                'when' => #{amount => {in, [1000, 2000, 5000]}},
+                'then' => #{action => enqueue_review, status => low_risk}
             },
             #{
-                when => #{amount => {in, [10000, 50000]}},
-                then => #{action => enqueue_review, status => medium_risk}
+                'when' => #{amount => {in, [10000, 50000]}},
+                'then' => #{action => enqueue_review, status => medium_risk}
             },
             #{
-                when => #{},
-                then => #{action => set, decision => reject}
+                'when' => #{},
+                'then' => #{action => set, decision => reject}
             }
         ]
     },
@@ -341,12 +342,12 @@ test_execute_rule_ordering(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{amount => {>, 0}},
-                then => #{action => set, decision => approve}
+                'when' => #{amount => {'>', 0}},
+                'then' => #{action => set, decision => approve}
             },
             #{
-                when => #{amount => {>, 5000}},  %% This would also match but shouldn't be reached
-                then => #{action => set, decision => reject}
+                'when' => #{amount => {'>', 5000}},  %% This would also match but shouldn't be reached
+                'then' => #{action => set, decision => reject}
             }
         ]
     },
@@ -370,8 +371,8 @@ test_execute_unknown_variable_error(_Config) ->
     Payload = #{
         rules => [
             #{
-                when => #{unknown_field => <<"value">>},
-                then => #{action => set, decision => approve}
+                'when' => #{unknown_field => <<"value">>},
+                'then' => #{action => set, decision => approve}
             }
         ]
     },
@@ -387,4 +388,4 @@ test_execute_unknown_variable_error(_Config) ->
     }),
     
     %% Unknown field should either be treated as nil or return error
-    ?assertMatch({ok, _} | {error, _}, Result).
+    ?assert(element(1, Result) =:= ok orelse element(1, Result) =:= error).

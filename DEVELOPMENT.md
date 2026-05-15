@@ -244,12 +244,12 @@ This section breaks each phase into smaller execution units that can be schedule
 
 #### P6-S2: Security Hardening
 
-- TASK-092: Conduct threat model review for all exposed API surfaces and document mitigations.
-- TASK-093: Enforce least-privilege RBAC across all service and handler boundaries.
+- TASK-092: Conduct threat model review for all exposed API surfaces and document mitigations. [DONE 2026-05-15] — `audit/threat-model-review.md`.
+- TASK-093: Enforce least-privilege RBAC across all service and handler boundaries. [DONE 2026-05-15] — centralized RBAC policy in `apps/cb_integration/src/cb_auth_middleware.erl`; regression checks in `apps/cb_integration/test/cb_api_baseline_SUITE.erl`.
 - TASK-094: Implement secrets management with automated key rotation and audit trail.
 - TASK-095: Build regulatory evidence capture and signed audit log export pipeline.
 - TASK-096: Enforce input sanitization and injection prevention across all API entry points.
-- TASK-097: Add security regression test suite with OWASP Top 10 coverage.
+- TASK-097: Add security regression test suite with OWASP Top 10 coverage. [DONE 2026-05-15] — planning artifact: `audit/security-regression-plan.md`; runnable CT suite: `apps/cb_integration/test/cb_security_regression_SUITE.erl` (4 tests, all passing); Node.js black-box script: `test/security-regression.js`; run via `npm run test:security:ct`.
 
 #### P6-S3: Observability and Operations
 

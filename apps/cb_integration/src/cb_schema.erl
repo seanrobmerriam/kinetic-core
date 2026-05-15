@@ -411,7 +411,7 @@ table_spec(audit_log) ->
 table_spec(audit_retention_policy) ->
     [
         {ram_copies, [node()]},
-        {attributes, record_info(fields, audit_retention_policy)},
+        {attributes, [resource, retention_days, created_at, updated_at]},
         {index, [resource]}
     ];
 table_spec(approval_request) ->

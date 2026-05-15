@@ -101,7 +101,7 @@ apply_retention_policy(Resource) ->
                 %% For transaction table - delete old records
                 TableName = resource_to_table(Resource),
                 MatchSpec = [{#transaction{_ = '_', created_at = '$1'}, [{'<', '$1', Threshold}], ['$_']}],
-                Deleted = mnesia:select(TableName, MatchSpec, write),
+                _Deleted = mnesia:select(TableName, MatchSpec, write),
                 {deleted_count, Count} = mnesia:select(TableName, MatchSpec, [write]),
                 Count;
             _ ->

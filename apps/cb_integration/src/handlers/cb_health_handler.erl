@@ -32,7 +32,9 @@ handle(<<"GET">>, Req, State) ->
     OverallStatus = aggregate_status(Checks),
     Response = #{
         status => OverallStatus,
-        checks => [#{service => C#service, status => C#status, latency_ms => C#latency_ms}
+        checks => [#{service => maps:get(service, C),
+                     status => maps:get(status, C),
+                     latency_ms => maps:get(latency_ms, C)}
                    || C <- Checks]
     },
 
@@ -67,9 +69,9 @@ check_mnesia() ->
         _ ->
             unhealthy
     end,
-    #service = <<"mnesia">>,
-    #status = Result,
-    #latency_ms = os:system_time(millisecond) - Start.
+    #{service => <<"mnesia">>,
+      status => Result,
+      latency_ms => os:system_time(millisecond) - Start}.
 
 %% @private Perform a cb_ledger health check
 check_ledger() ->
@@ -84,9 +86,9 @@ check_ledger() ->
     catch
         _:_ -> unhealthy
     end,
-    #service = <<"cb_ledger">>,
-    #status = Result,
-    #latency_ms = os:system_time(millisecond) - Start.
+    #{service => <<"cb_ledger">>,
+      status => Result,
+      latency_ms => os:system_time(millisecond) - Start}.
 
 %% @private Perform a cb_payments health check
 check_payments() ->
@@ -101,9 +103,9 @@ check_payments() ->
     catch
         _:_ -> unhealthy
     end,
-    #service = <<"cb_payments">>,
-    #status = Result,
-    #latency_ms = os:system_time(millisecond) - Start.
+    #{service => <<"cb_payments">>,
+      status => Result,
+      latency_ms => os:system_time(millisecond) - Start}.
 
 %% @private Perform a cb_auth health check
 check_auth() ->
@@ -115,9 +117,9 @@ check_auth() ->
     catch
         _:_ -> unhealthy
     end,
-    #service = <<"cb_auth">>,
-    #status = Result,
-    #latency_ms = os:system_time(millisecond) - Start.
+    #{service => <<"cb_auth">>,
+      status => Result,
+      latency_ms => os:system_time(millisecond) - Start}.
 
 %% @private Perform a cb_events health check
 check_events() ->
@@ -129,13 +131,13 @@ check_events() ->
     catch
         _:_ -> unhealthy
     end,
-    #service = <<"cb_events">>,
-    #status = Result,
-    #latency_ms = os:system_time(millisecond) - Start.
+    #{service => <<"cb_events">>,
+      status => Result,
+      latency_ms => os:system_time(millisecond) - Start}.
 
 %% @private Aggregate individual check statuses into an overall status
 aggregate_status(Checks) ->
-    Statuses = [C#status || C <- Checks],
+    Statuses = [maps:get(status, C) || C <- Checks],
     case lists:member(unhealthy, Statuses) of
         true -> unhealthy;
         false ->

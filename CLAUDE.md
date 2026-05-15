@@ -1,6 +1,6 @@
 # AGENTS.md
 
-### Current Development Phase: P6-S1 (Quality and Test Coverage)
+### Current Development Phase: P6-S2 (Security Hardening)
 
 ## Purpose
 

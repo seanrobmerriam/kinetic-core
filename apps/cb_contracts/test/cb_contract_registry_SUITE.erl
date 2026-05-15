@@ -4,6 +4,7 @@
 -module(cb_contract_registry_SUITE).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 -include("../include/cb_contracts.hrl").
 
 -compile(export_all).
@@ -90,8 +91,8 @@ test_deploy_version_basic(_Config) ->
     }),
     Payload = #{
         rules => [
-            #{when => #{account_status => <<"active">>},
-              then => #{action => set, decision => approve}}
+            #{'when' => #{account_status => <<"active">>},
+              'then' => #{action => set, decision => approve}}
         ]
     },
     {ok, Version} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload, <<"test_user">>),
@@ -111,7 +112,7 @@ test_deploy_version_invalid_schema(_Config) ->
     }),
     Payload = #{
         rules => [
-            #{when => #{bad_operator => {foo, bar}}}
+            #{'when' => #{bad_operator => {foo, bar}}}
         ]
     },
     Result = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload, <<"test_user">>),
@@ -129,8 +130,8 @@ test_deploy_version_too_large(_Config) ->
     %% Generate a payload larger than 128 KB
     LargePayload = #{
         rules => [
-            #{when => #{field => binary:copy(<<"x">>, 150000)},
-              then => #{action => set, decision => approve}}
+            #{'when' => #{field => binary:copy(<<"x">>, 150000)},
+              'then' => #{action => set, decision => approve}}
         ]
     },
     Result = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, LargePayload, <<"test_user">>),
@@ -145,7 +146,7 @@ test_activate_version_basic(_Config) ->
         domain => <<"payments">>,
         owner_role => <<"admin">>
     }),
-    Payload = #{rules => [#{when => #{}, then => #{action => set, decision => approve}}]},
+    Payload = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => approve}}]},
     {ok, Version1} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload, <<"user">>),
     {ok, Contract} = cb_contract_registry:activate_version(ContractId, Version1#contract_version.version_id),
     ?assertEqual(Version1#contract_version.version_id, Contract#contract_definition.active_version).
@@ -164,8 +165,8 @@ test_activate_version_deactivates_others(_Config) ->
         domain => <<"payments">>,
         owner_role => <<"admin">>
     }),
-    Payload1 = #{rules => [#{when => #{}, then => #{action => set, decision => approve}}]},
-    Payload2 = #{rules => [#{when => #{}, then => #{action => set, decision => reject}}]},
+    Payload1 = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => approve}}]},
+    Payload2 = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => reject}}]},
     {ok, Version1} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload1, <<"user">>),
     {ok, Version2} = cb_contract_registry:deploy_version(ContractId, <<"2.0">>, Payload2, <<"user">>),
     {ok, _} = cb_contract_registry:activate_version(ContractId, Version1#contract_version.version_id),
@@ -181,8 +182,8 @@ test_create_migration_basic(_Config) ->
         domain => <<"payments">>,
         owner_role => <<"admin">>
     }),
-    Payload1 = #{rules => [#{when => #{}, then => #{action => set, decision => approve}}]},
-    Payload2 = #{rules => [#{when => #{}, then => #{action => set, decision => reject}}]},
+    Payload1 = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => approve}}]},
+    Payload2 = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => reject}}]},
     {ok, V1} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload1, <<"user">>),
     {ok, V2} = cb_contract_registry:deploy_version(ContractId, <<"2.0">>, Payload2, <<"user">>),
     {ok, Migration} = cb_contract_registry:create_migration(
@@ -217,8 +218,8 @@ test_list_versions_sorted(_Config) ->
         domain => <<"payments">>,
         owner_role => <<"admin">>
     }),
-    Payload = #{rules => [#{when => #{}, then => #{action => set, decision => approve}}]},
-    {ok, V1} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload, <<"user">>),
+    Payload = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => approve}}]},
+    {ok, _V1} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload, <<"user">>),
     timer:sleep(100),
     {ok, V2} = cb_contract_registry:deploy_version(ContractId, <<"2.0">>, Payload, <<"user">>),
     Versions = cb_contract_registry:list_versions(ContractId),
@@ -235,11 +236,11 @@ test_list_migrations_sorted(_Config) ->
         domain => <<"payments">>,
         owner_role => <<"admin">>
     }),
-    Payload = #{rules => [#{when => #{}, then => #{action => set, decision => approve}}]},
+    Payload = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => approve}}]},
     {ok, V1} = cb_contract_registry:deploy_version(ContractId, <<"1.0">>, Payload, <<"user">>),
     {ok, V2} = cb_contract_registry:deploy_version(ContractId, <<"2.0">>, Payload, <<"user">>),
     {ok, V3} = cb_contract_registry:deploy_version(ContractId, <<"3.0">>, Payload, <<"user">>),
-    {ok, M1} = cb_contract_registry:create_migration(ContractId, V1#contract_version.version_id, 
+    {ok, _M1} = cb_contract_registry:create_migration(ContractId, V1#contract_version.version_id, 
                                                        V2#contract_version.version_id, compatible, <<"test">>),
     timer:sleep(100),
     {ok, M2} = cb_contract_registry:create_migration(ContractId, V2#contract_version.version_id, 

@@ -14,9 +14,6 @@
 
 -define(ISO8601_DATE_FORMAT, "~4.0B-~2.0B-~2.0B").
 
--type settlement_line() :: {TxnId :: binary(), Amount :: integer(), Currency :: atom(),
-                             SourceAccount :: binary(), DestAccount :: binary(),
-                             BeneficiaryName :: binary(), Status :: atom()}.
 -type file_content() :: binary().
 -type file_name() :: binary().
 

@@ -9,7 +9,7 @@
 %%   <li><b>OPTIONS</b> — CORS preflight</li>
 %% </ul>
 %%
--module(cb_settlement_currency_handler).
+-module(cb_settlement_file_handler).
 
 -include_lib("cb_ledger/include/cb_ledger.hrl").
 

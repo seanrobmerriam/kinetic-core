@@ -152,7 +152,7 @@ export_resource(Resource, Filters) ->
         {error, _} = Err    -> Err
     end.
 
--export_parties_csv() ->
+export_parties_csv() ->
     F = fun() ->
         mnesia:select(party, [{#party{_ = '_'}, [], ['$_']}])
     end,

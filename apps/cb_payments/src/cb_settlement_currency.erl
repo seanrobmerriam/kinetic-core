@@ -33,8 +33,7 @@ assign_settlement_currency(TxnId, SettlementCurrency) when is_binary(TxnId) ->
             [#transaction{} = Txn] when Txn#transaction.status =:= pending;
                                         Txn#transaction.status =:= posted ->
                 UpdatedTxn = Txn#transaction{
-                    settlement_currency = SettlementCurrency,
-                    updated_at = erlang:system_time(millisecond)
+                    settlement_currency = SettlementCurrency
                 },
                 mnesia:write(UpdatedTxn),
                 {ok, UpdatedTxn};

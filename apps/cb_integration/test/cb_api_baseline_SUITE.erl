@@ -27,7 +27,9 @@
 
 %% TASK-018: Role-aware auth
 -export([read_only_cannot_post_transactions/1, operations_can_post_transactions/1,
-         unauthenticated_returns_401/1, admin_can_access_all/1]).
+         unauthenticated_returns_401/1, admin_can_access_all/1,
+         operations_cannot_list_api_keys/1, read_only_cannot_list_channel_limits/1,
+         admin_can_list_api_keys/1]).
 
 %% TASK-019: Metrics and rate limiter
 -export([metrics_endpoint_returns_200/1, metrics_contains_vm_keys/1,
@@ -53,7 +55,9 @@ groups() ->
              deposit_channel_field_forwarded, withdrawal_limit_error_returns_422]},
         {role_auth, [sequence],
             [unauthenticated_returns_401, read_only_cannot_post_transactions,
-             operations_can_post_transactions, admin_can_access_all]},
+             operations_can_post_transactions, admin_can_access_all,
+             operations_cannot_list_api_keys, read_only_cannot_list_channel_limits,
+             admin_can_list_api_keys]},
         {metrics, [sequence],
             [metrics_endpoint_returns_200, metrics_contains_vm_keys,
              rate_limiter_allows_under_limit, rate_limiter_blocks_over_limit,
@@ -240,6 +244,36 @@ admin_can_access_all(_Config) ->
         get, "/api/v1/accounts", <<>>, auth_headers(SessionId)
     ),
     ?assertEqual(200, GetStatus),
+    ok.
+
+operations_cannot_list_api_keys(_Config) ->
+    {ok, Session} = create_ops_session(),
+    {ok, {{_, Status, _}, _Headers, Body}} = request(
+        get, "/api/v1/api-keys", <<>>, auth_headers(Session)
+    ),
+    ?assertEqual(403, Status),
+    {ok, Json, _} = jsone:try_decode(list_to_binary(Body)),
+    ?assertEqual(<<"forbidden">>, maps:get(<<"error">>, Json)),
+    ok.
+
+read_only_cannot_list_channel_limits(_Config) ->
+    {ok, _} = cb_auth:create_user(<<"ro_limits@example.com">>, <<"pass">>, read_only),
+    {ok, {session_id, SessionId}} = login(<<"ro_limits@example.com">>, <<"pass">>),
+    {ok, {{_, Status, _}, _Headers, Body}} = request(
+        get, "/api/v1/channel-limits", <<>>, auth_headers(SessionId)
+    ),
+    ?assertEqual(403, Status),
+    {ok, Json, _} = jsone:try_decode(list_to_binary(Body)),
+    ?assertEqual(<<"forbidden">>, maps:get(<<"error">>, Json)),
+    ok.
+
+admin_can_list_api_keys(_Config) ->
+    {ok, _} = cb_auth:create_user(<<"admin_keys@example.com">>, <<"pass">>, admin),
+    {ok, {session_id, SessionId}} = login(<<"admin_keys@example.com">>, <<"pass">>),
+    {ok, {{_, Status, _}, _Headers, _Body}} = request(
+        get, "/api/v1/api-keys", <<>>, auth_headers(SessionId)
+    ),
+    ?assertEqual(200, Status),
     ok.
 
 %%% ============================================================

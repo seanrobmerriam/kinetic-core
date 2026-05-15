@@ -20,11 +20,7 @@ execute(Req, Env) ->
                             erlang:put(auth_session, Session),
                             erlang:put(auth_user, session_user(Session)),
                             Role = maps:get(role, Session),
-                            Method = cowboy_req:method(Req),
-                            case is_write_method(Method) andalso Role =:= read_only of
-                                true  -> forbidden(Req);
-                                false -> {ok, Req, Env}
-                            end;
+                            authorize_role(Role, Req, Env);
                         {error, _} ->
                             case cb_api_keys:authenticate_key(Token) of
                                 {ok, KeyMeta} ->
@@ -38,22 +34,14 @@ execute(Req, Env) ->
                                         cowboy_req:path(Req)
                                     ),
                                     Role = maps:get(role, KeyMeta),
-                                    Method = cowboy_req:method(Req),
-                                    case is_write_method(Method) andalso Role =:= read_only of
-                                        true  -> forbidden(Req);
-                                        false -> {ok, Req, Env}
-                                    end;
+                                    authorize_role(Role, Req, Env);
                                 {error, _} ->
                                     case cb_oauth:validate_token(Token) of
                                         {ok, OAuthCtx} ->
                                             erlang:put(auth_session, OAuthCtx),
                                             erlang:put(auth_user, oauth_user(OAuthCtx)),
                                             Role = maps:get(role, OAuthCtx),
-                                            Method = cowboy_req:method(Req),
-                                            case is_write_method(Method) andalso Role =:= read_only of
-                                                true  -> forbidden(Req);
-                                                false -> {ok, Req, Env}
-                                            end;
+                                            authorize_role(Role, Req, Env);
                                         {error, _} ->
                                             unauthorized(Req)
                                     end
@@ -74,6 +62,66 @@ is_write_method(<<"PUT">>)    -> true;
 is_write_method(<<"PATCH">>)  -> true;
 is_write_method(<<"DELETE">>) -> true;
 is_write_method(_)            -> false.
+
+authorize_role(Role, Req, Env) ->
+    Method = cowboy_req:method(Req),
+    Path = cowboy_req:path(Req),
+    case role_allows(Role, Method, Path) of
+        true -> {ok, Req, Env};
+        false -> forbidden(Req)
+    end.
+
+role_allows(Role, Method, Path) ->
+    case required_role(Method, Path) of
+        admin_only ->
+            role_rank(Role) >= role_rank(admin);
+        write ->
+            role_rank(Role) >= role_rank(operations);
+        read ->
+            role_rank(Role) >= role_rank(read_only)
+    end.
+
+required_role(Method, Path) ->
+    case is_admin_only_boundary(Method, Path) of
+        true -> admin_only;
+        false ->
+            case is_write_method(Method) of
+                true -> write;
+                false -> read
+            end
+    end.
+
+is_admin_only_boundary(_Method, <<"/api/v1/api-keys">>) -> true;
+is_admin_only_boundary(<<"GET">>, <<"/api/v1/channel-limits">>) -> true;
+is_admin_only_boundary(_Method, <<"/api/v1/audit/retention-policies">>) -> true;
+is_admin_only_boundary(_Method, <<"/api/v1/audit/apply-retention">>) -> true;
+is_admin_only_boundary(Method, Path) ->
+    case has_prefix(Path, <<"/api/v1/api-keys/">>) of
+        true -> true;
+        false ->
+            case has_prefix(Path, <<"/api/v1/channel-limits/">>) orelse
+                 has_prefix(Path, <<"/api/v1/channel-features/">>) of
+                true ->
+                    Method =:= <<"PUT">> orelse Method =:= <<"PATCH">> orelse Method =:= <<"DELETE">>;
+                false ->
+                    has_prefix(Path, <<"/api/v1/cluster/">>) orelse
+                    has_prefix(Path, <<"/api/v1/scaling/">>) orelse
+                    has_prefix(Path, <<"/api/v1/recovery/">>)
+            end
+    end.
+
+role_rank(admin) -> 3;
+role_rank(operations) -> 2;
+role_rank(read_only) -> 1;
+role_rank(_) -> 0.
+
+has_prefix(Bin, Prefix) when is_binary(Bin), is_binary(Prefix) ->
+    PrefixSize = byte_size(Prefix),
+    BinSize = byte_size(Bin),
+    case BinSize >= PrefixSize of
+        true -> binary:part(Bin, 0, PrefixSize) =:= Prefix;
+        false -> false
+    end.
 
 authorization_token(Req) ->
     case cowboy_req:header(<<"authorization">>, Req) of

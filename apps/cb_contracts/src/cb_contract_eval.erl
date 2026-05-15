@@ -19,16 +19,16 @@ evaluate(Contract, Context, Authz, Trace0) ->
 eval_rules([], State) ->
     {ok, maps:get(decision, State), maps:get(trace, State)};
 eval_rules([Rule | Rest], State0) ->
-    CondExpr = map_get_any(Rule, when, true),
+    CondExpr = map_get_any(Rule, 'when', true),
     case eval_expr(CondExpr, State0) of
         {ok, true} ->
-            Actions = map_get_any(Rule, then, []),
+            Actions = map_get_any(Rule, 'then', []),
             case apply_actions(Actions, State0) of
                 {ok, State1} -> eval_rules(Rest, State1);
                 {error, Reason, State1} -> {error, Reason, maps:get(trace, State1)}
             end;
         {ok, false} ->
-            Actions = map_get_any(Rule, else, []),
+            Actions = map_get_any(Rule, 'else', []),
             case apply_actions(Actions, State0) of
                 {ok, State1} -> eval_rules(Rest, State1);
                 {error, Reason, State1} -> {error, Reason, maps:get(trace, State1)}
@@ -109,7 +109,7 @@ require_capability(Capability, State) ->
         false -> {error, capability_denied}
     end.
 
-eval_expr(Expr, State) when is_boolean(Expr); is_integer(Expr); is_binary(Expr) ->
+eval_expr(Expr, _State) when is_boolean(Expr); is_integer(Expr); is_binary(Expr) ->
     {ok, Expr};
 eval_expr(Expr, _State) when is_list(Expr), Expr =:= [] ->
     {ok, Expr};
@@ -132,11 +132,11 @@ eval_operator_map(Expr, State) when map_size(Expr) =:= 1 ->
 eval_operator_map(_Expr, _State) ->
     {error, invalid_contract_schema}.
 
-eval_operator(and, Args, State) when is_list(Args) ->
+eval_operator('and', Args, State) when is_list(Args) ->
     eval_bool_fold(Args, true, fun(A, B) -> A andalso B end, State);
-eval_operator(or, Args, State) when is_list(Args) ->
+eval_operator('or', Args, State) when is_list(Args) ->
     eval_bool_fold(Args, false, fun(A, B) -> A orelse B end, State);
-eval_operator(not, Arg, State) ->
+eval_operator('not', Arg, State) ->
     case eval_expr(Arg, State) of
         {ok, B} when is_boolean(B) -> {ok, not B};
         _ -> {error, type_mismatch}
@@ -150,19 +150,19 @@ eval_operator('>=', Args, State) -> eval_compare(Args, fun(A, B) -> A >= B end, 
 eval_operator('+', Args, State) -> eval_arith(Args, fun(A, B) -> A + B end, State);
 eval_operator('-', Args, State) -> eval_arith(Args, fun(A, B) -> A - B end, State);
 eval_operator('*', Args, State) -> eval_arith(Args, fun(A, B) -> A * B end, State);
-eval_operator(div, Args, State) ->
+eval_operator('div', Args, State) ->
     eval_arith(Args,
                fun(_A, 0) -> error(badarith);
                   (A, B) -> A div B
                end,
                State);
-eval_operator(mod, Args, State) ->
+eval_operator('mod', Args, State) ->
     eval_arith(Args,
                fun(_A, 0) -> error(badarith);
                   (A, B) -> A rem B
                end,
                State);
-eval_operator(in, Args, State) when is_list(Args), length(Args) =:= 2 ->
+eval_operator('in', Args, State) when is_list(Args), length(Args) =:= 2 ->
     [NeedleExpr, HayExpr] = Args,
     case {eval_expr(NeedleExpr, State), eval_expr(HayExpr, State)} of
         {{ok, Needle}, {ok, Hay}} when is_list(Hay) -> {ok, lists:member(Needle, Hay)};
@@ -266,9 +266,9 @@ maybe_existing_atom(KeyBin) ->
 norm_key(K) when is_atom(K) -> K;
 norm_key(K) when is_binary(K) ->
     case K of
-        <<"and">> -> and;
-        <<"or">> -> or;
-        <<"not">> -> not;
+        <<"and">> -> 'and';
+        <<"or">> -> 'or';
+        <<"not">> -> 'not';
         <<"==">> -> '==';
         <<"!=">> -> '!=';
         <<"<">> -> '<';
@@ -278,9 +278,9 @@ norm_key(K) when is_binary(K) ->
         <<"+">> -> '+';
         <<"-">> -> '-';
         <<"*">> -> '*';
-        <<"div">> -> div;
-        <<"mod">> -> mod;
-        <<"in">> -> in;
+        <<"div">> -> 'div';
+        <<"mod">> -> 'mod';
+        <<"in">> -> 'in';
         <<"set">> -> set;
         <<"reject">> -> reject;
         <<"emit">> -> emit;

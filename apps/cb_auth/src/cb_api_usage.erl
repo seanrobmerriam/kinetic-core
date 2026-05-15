@@ -18,7 +18,7 @@
 %% @param Path    The request path (e.g. `<<"/api/v1/accounts">>').
 -spec record_request(binary(), binary(), binary()) -> ok.
 record_request(KeyId, Method, Path) ->
-    EventId = list_to_binary(uuid:get_v4_urandom()),
+    EventId = uuid:uuid_to_string(uuid:get_v4_urandom(), binary_standard),
     Now     = erlang:system_time(millisecond),
     Event   = #api_usage_event{
         event_id    = EventId,

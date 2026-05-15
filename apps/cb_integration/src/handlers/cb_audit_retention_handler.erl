@@ -24,50 +24,6 @@ init(Req, State) ->
 
 %% POST /api/v1/audit/retention-policies — set policy
 handle(<<"POST">>, Req, State) ->
-    case jsone:decode(Req) of
-        {ok, Body, Req1} ->
-            Resource = binary_to_atom(maps:get(<<"resource">>, Body), utf8),
-            RetentionDays = maps:get(<<"retention_days">>, Body),
-            case cb_audit_retention:set_retention_policy(Resource, RetentionDays) of
-                ok ->
-                    Resp = #{
-                        resource => Resource,
-                        retention_days => RetentionDays,
-                        message => <<"Retention policy set successfully">>
-                    },
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req1),
-                    {ok, Req2, State};
-                {error, Reason} ->
-                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                    Resp = #{error => ErrorAtom, message => Message},
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
-                    {ok, Req2, State}
-            end;
-        {error, _} ->
-            {Code, Hdrs, Body} = cb_http_errors:to_response_with_metrics(bad_request),
-            Req2 = cowboy_req:reply(Code, Hdrs, Body, Req),
-            {ok, Req2, State}
-    end;
-
-%% GET /api/v1/audit/retention-policies — list all policies
-handle(<<"GET">>, Req, State) ->
-    F = fun() -> mnesia:all_keys(audit_retention_policy) end,
-    case mnesia:transaction(F) of
-        {atomic, Keys} ->
-            Policies = lists:map(fun(K) -> get_policy_json(K) end, Keys),
-            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Policies), Req),
-            {ok, Req2, State};
-        {aborted, _} ->
-            {Code, Hdrs, Body} = cb_http_errors:to_response_with_metrics(internal_error),
-            Req2 = cowboy_req:reply(Code, Hdrs, Body, Req),
-            {ok, Req2, State}
-    end;
-
-%% POST /api/v1/audit/apply-retention — trigger retention enforcement
-handle(<<"POST">>, Req, State) ->
     case cowboy_req:path(Req) of
         <<"/api/v1/audit/apply-retention">> ->
             case cb_audit_retention:apply_retention_policies() of
@@ -86,17 +42,60 @@ handle(<<"POST">>, Req, State) ->
                     Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req),
                     {ok, Req2, State}
             end;
+        <<"/api/v1/audit/retention-policies">> ->
+            {ok, BodyBin, Req1} = cowboy_req:read_body(Req),
+            case jsone:try_decode(BodyBin) of
+                {ok, Body, _} ->
+                    Resource = binary_to_atom(maps:get(<<"resource">>, Body), utf8),
+                    RetentionDays = maps:get(<<"retention_days">>, Body),
+                    case cb_audit_retention:set_retention_policy(Resource, RetentionDays) of
+                        ok ->
+                            Resp = #{
+                                resource => Resource,
+                                retention_days => RetentionDays,
+                                message => <<"Retention policy set successfully">>
+                            },
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State};
+                        {error, Reason} ->
+                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                            Resp = #{error => ErrorAtom, message => Message},
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State}
+                    end;
+                _ ->
+                    {Code, Hdrs, Body} = cb_http_errors:to_response_with_metrics(invalid_json),
+                    Req2 = cowboy_req:reply(Code, Hdrs, Body, Req1),
+                    {ok, Req2, State}
+            end;
         _ ->
             {Code405, Hdrs405, Body405} = cb_http_errors:to_response_with_metrics(method_not_allowed),
             Req2 = cowboy_req:reply(Code405, Hdrs405, Body405, Req),
             {ok, Req2, State}
     end;
 
-handle(<<"OPTIONS">>, _TxnId, Req, State) ->
+%% GET /api/v1/audit/retention-policies — list all policies
+handle(<<"GET">>, Req, State) ->
+    F = fun() -> mnesia:all_keys(audit_retention_policy) end,
+    case mnesia:transaction(F) of
+        {atomic, Keys} ->
+            Policies = lists:map(fun(K) -> get_policy_json(K) end, Keys),
+            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Policies), Req),
+            {ok, Req2, State};
+        {aborted, _} ->
+            {Code, Hdrs, Body} = cb_http_errors:to_response_with_metrics(internal_error),
+            Req2 = cowboy_req:reply(Code, Hdrs, Body, Req),
+            {ok, Req2, State}
+    end;
+
+handle(<<"OPTIONS">>, Req, State) ->
     Req2 = cb_cors:reply_preflight(Req),
     {ok, Req2, State};
 
-handle(_, _TxnId, Req, State) ->
+handle(_, Req, State) ->
     {Code405, Hdrs405, Body405} = cb_http_errors:to_response_with_metrics(method_not_allowed),
     Req2 = cowboy_req:reply(Code405, Hdrs405, Body405, Req),
     {ok, Req2, State}.

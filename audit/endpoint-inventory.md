@@ -1,248 +1,268 @@
 # Endpoint Inventory
 
-**Source of truth:** `apps/cb_integration/src/cb_router.erl` (lines 70–200) cross-referenced with
-each handler module under `apps/cb_integration/src/handlers/`.
+Date: 2026-05-15
+Source of truth: `apps/cb_integration/src/cb_router.erl`
 
-**Discovery method:** Read every `{Path, Handler, []}` entry in `cb_router:dispatch/0`, then for
-each handler module enumerated the `handle(<<"METHOD">>, ...)` clauses to determine which HTTP
-verbs the handler actually services. `OPTIONS` (CORS preflight) is excluded from the table — it is
-implemented by every handler and not relevant to coverage.
+## Summary
 
-**Authentication:** Auth is enforced by `cb_auth_middleware` based on path; only `/health`,
-`/api/v1/auth/login`, `/metrics`, `/api/v1/openapi.json`, and `/api/graphql` (introspection) are
-unauthenticated. All other endpoints require a Bearer session token. Role-based authorization is
-not yet enforced at the handler level.
+- Total route entries discovered: 243
+- API v1 route entries: 240
+- Public unauthenticated paths: `/health`, `/api/v1/auth/login`, `/api/v1/oauth/token`, `/api/v1/openapi.json`, `/metrics`
+- Auth middleware expectation: all non-public routes require Bearer auth
 
-**Total endpoints discovered:** 78 (counting each verb on each path as one endpoint).
+## Router Route Catalog
 
----
+Method column notes:
+- `ANY`: Cowboy route matches path and dispatches to handler; handler enforces supported verbs.
+- Explicit method (`GET`, `POST`, etc): Cowboy route is method-scoped.
 
-## Health & Auth
-
-| Method | Path | Handler | File:Line | Auth | Notes |
-|---|---|---|---|---|---|
-| GET    | `/health`                  | `cb_health_handler`  | router.erl:74 | no  | Liveness probe |
-| POST   | `/api/v1/auth/login`       | `cb_login_handler`   | router.erl:77 | no  | Returns `session_id` + `user` |
-| POST   | `/api/v1/auth/logout`      | `cb_logout_handler`  | router.erl:78 | yes | Invalidates session |
-| GET    | `/api/v1/auth/me`          | `cb_me_handler`      | router.erl:79 | yes | Current user profile |
-
-## Parties (customers)
-
-| Method | Path | Handler | Notes |
+| Method | Path | Handler | Auth |
 |---|---|---|---|
-| GET    | `/api/v1/parties`                                  | `cb_parties_handler`           | List all parties |
-| POST   | `/api/v1/parties`                                  | `cb_parties_handler`           | Create party |
-| GET    | `/api/v1/parties/:party_id`                        | `cb_party_handler`             | Party detail |
-| POST   | `/api/v1/parties/:party_id/suspend`                | `cb_party_suspend_handler`     | Suspend party |
-| POST   | `/api/v1/parties/:party_id/reactivate`             | `cb_party_reactivate_handler`  | Reactivate suspended party |
-| POST   | `/api/v1/parties/:party_id/close`                  | `cb_party_close_handler`       | Close party |
-| GET    | `/api/v1/parties/:party_id/kyc`                    | `cb_party_kyc_handler`         | Get KYC state |
-| PATCH  | `/api/v1/parties/:party_id/kyc`                    | `cb_party_kyc_handler`         | Update KYC status / notes |
-| POST   | `/api/v1/parties/:party_id/kyc`                    | `cb_party_kyc_handler`         | Add KYC `doc_ref` |
-| GET    | `/api/v1/parties/:party_id/accounts`               | `cb_party_accounts_handler`    | Accounts owned by party |
-| GET    | `/api/v1/parties/:party_id/profile`                | `cb_party_profile_handler`     | Unified omnichannel profile |
-| GET    | `/api/v1/parties/:party_id/notification-preferences` | `cb_notification_prefs_handler` | Read prefs |
-| PUT    | `/api/v1/parties/:party_id/notification-preferences` | `cb_notification_prefs_handler` | Replace prefs |
+| ANY | `/health` | `cb_health_handler` | no |
+| ANY | `/api/v1/auth/login` | `cb_login_handler` | no |
+| ANY | `/api/v1/auth/logout` | `cb_logout_handler` | yes |
+| ANY | `/api/v1/auth/me` | `cb_me_handler` | yes |
+| ANY | `/api/v1/parties` | `cb_parties_handler` | yes |
+| ANY | `/api/v1/parties/:party_id` | `cb_party_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/suspend` | `cb_party_suspend_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/reactivate` | `cb_party_reactivate_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/close` | `cb_party_close_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/kyc` | `cb_party_kyc_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/merge` | `cb_party_merge_handler` | yes |
+| ANY | `/api/v1/parties/duplicates` | `cb_party_merge_handler` | yes |
+| ANY | `/api/v1/accounts` | `cb_accounts_list_handler` | yes |
+| ANY | `/api/v1/stats` | `cb_stats_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id` | `cb_account_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/transactions` | `cb_account_transactions_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/balance` | `cb_account_balance_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/summary` | `cb_account_summary_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/holds` | `cb_account_holds_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/holds/:hold_id` | `cb_account_holds_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/freeze` | `cb_account_freeze_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/unfreeze` | `cb_account_unfreeze_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/close` | `cb_account_close_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/accounts` | `cb_party_accounts_handler` | yes |
+| ANY | `/api/v1/transactions` | `cb_transactions_search_handler` | yes |
+| ANY | `/api/v1/transactions/transfer` | `cb_transaction_transfer_handler` | yes |
+| ANY | `/api/v1/transactions/deposit` | `cb_transaction_deposit_handler` | yes |
+| ANY | `/api/v1/transactions/withdraw` | `cb_transaction_withdraw_handler` | yes |
+| ANY | `/api/v1/transactions/adjustment` | `cb_transaction_adjustment_handler` | yes |
+| ANY | `/api/v1/transactions/:txn_id` | `cb_transaction_handler` | yes |
+| ANY | `/api/v1/transactions/:txn_id/reverse` | `cb_transaction_reverse_handler` | yes |
+| ANY | `/api/v1/transactions/:txn_id/receipt` | `cb_transaction_receipt_handler` | yes |
+| ANY | `/api/v1/transactions/:txn_id/tags` | `cb_transaction_tags_handler` | yes |
+| ANY | `/api/v1/transactions/:txn_id/settlement-currency` | `cb_settlement_currency_handler` | yes |
+| ANY | `/api/v1/settlements/files` | `cb_settlement_file_handler` | yes |
+| ANY | `/api/v1/audit/retention-policies` | `cb_audit_retention_handler` | yes |
+| ANY | `/api/v1/audit/apply-retention` | `cb_audit_retention_handler` | yes |
+| ANY | `/api/v1/ledger/entries/latest` | `cb_ledger_latest_handler` | yes |
+| ANY | `/api/v1/ledger/trial-balance` | `cb_ledger_trial_balance_handler` | yes |
+| ANY | `/api/v1/ledger/general-ledger` | `cb_general_ledger_handler` | yes |
+| ANY | `/api/v1/ledger/chart-of-accounts` | `cb_chart_accounts_handler` | yes |
+| ANY | `/api/v1/ledger/chart-of-accounts/:code` | `cb_chart_accounts_handler` | yes |
+| ANY | `/api/v1/transactions/:txn_id/entries` | `cb_transaction_entries_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/entries` | `cb_account_entries_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/snapshots` | `cb_account_snapshots_handler` | yes |
+| ANY | `/api/v1/savings-products` | `cb_savings_products_handler` | yes |
+| ANY | `/api/v1/savings-products/:product_id` | `cb_savings_products_handler` | yes |
+| ANY | `/api/v1/savings-products/:product_id/activate` | `cb_savings_products_handler` | yes |
+| ANY | `/api/v1/savings-products/:product_id/deactivate` | `cb_savings_products_handler` | yes |
+| ANY | `/api/v1/savings-products/:product_id/launch` | `cb_savings_products_handler` | yes |
+| ANY | `/api/v1/savings-products/:product_id/sunset` | `cb_savings_products_handler` | yes |
+| ANY | `/api/v1/loan-products` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id/activate` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id/deactivate` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id/launch` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id/sunset` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id/set-eligibility` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loan-products/:product_id/set-fees` | `cb_loan_products_handler` | yes |
+| ANY | `/api/v1/loans` | `cb_loans_handler` | yes |
+| ANY | `/api/v1/loans/:loan_id` | `cb_loans_handler` | yes |
+| ANY | `/api/v1/loans/:loan_id/approve` | `cb_loans_handler` | yes |
+| ANY | `/api/v1/loans/:loan_id/disburse` | `cb_loans_handler` | yes |
+| ANY | `/api/v1/loans/:loan_id/repayments` | `cb_loan_repayments_handler` | yes |
+| ANY | `/api/v1/events` | `cb_events_handler` | yes |
+| ANY | `/api/v1/events/:event_id` | `cb_events_handler` | yes |
+| ANY | `/api/v1/events/:event_id/replay` | `cb_events_handler` | yes |
+| ANY | `/api/v1/webhooks` | `cb_webhooks_handler` | yes |
+| ANY | `/api/v1/webhooks/:subscription_id` | `cb_webhooks_handler` | yes |
+| ANY | `/api/v1/webhooks/:subscription_id/deliveries` | `cb_webhook_deliveries_handler` | yes |
+| ANY | `/api/v1/accounts/:account_id/statement` | `cb_statements_handler` | yes |
+| ANY | `/api/v1/export/:resource` | `cb_export_handler` | yes |
+| POST | `/api/v1/currency-pairs` | `cb_currency_pair_handler` | yes |
+| GET | `/api/v1/currency-pairs` | `cb_currency_pair_handler` | yes |
+| GET | `/api/v1/currency-pairs/:pair_id` | `cb_currency_pair_handler` | yes |
+| PATCH | `/api/v1/currency-pairs/:pair_id` | `cb_currency_pair_handler` | yes |
+| ANY | `/api/v1/fx/providers` | `cb_fx_provider_handler` | yes |
+| ANY | `/api/v1/fx/providers/:provider_id` | `cb_fx_provider_handler` | yes |
+| ANY | `/api/v1/fx/providers/:provider_id/:action` | `cb_fx_provider_handler` | yes |
+| ANY | `/api/v1/fx/refresh` | `cb_fx_provider_handler` | yes |
+| ANY | `/api/v1/fx/rate/:from/:to` | `cb_fx_provider_handler` | yes |
+| ANY | `/api/v1/locale/templates` | `cb_locale_templates_handler` | yes |
+| ANY | `/api/v1/locale/templates/:segment1/:segment2` | `cb_locale_templates_handler` | yes |
+| ANY | `/api/v1/locale/templates/:segment1/:segment2/:action` | `cb_locale_templates_handler` | yes |
+| ANY | `/api/v1/locale/flags/:segment1` | `cb_locale_templates_handler` | yes |
+| ANY | `/api/v1/locale/flags/:segment1/:segment2` | `cb_locale_templates_handler` | yes |
+| ANY | `/api/v1/dev/mock-import` | `cb_dev_mock_import_handler` | yes |
+| ANY | `/api/v1/openapi.json` | `cb_openapi_handler` | no |
+| ANY | `/api/v1/oauth/token` | `cb_oauth_handler` | no |
+| ANY | `/metrics` | `cb_metrics_handler` | no |
+| ANY | `/api/v1/payment-orders` | `cb_payment_orders_handler` | yes |
+| ANY | `/api/v1/payment-orders/:payment_id` | `cb_payment_orders_handler` | yes |
+| ANY | `/api/v1/payment-orders/:payment_id/cancel` | `cb_payment_cancel_handler` | yes |
+| ANY | `/api/v1/payment-orders/:payment_id/recall` | `cb_payment_recall_handler` | yes |
+| ANY | `/api/v1/payment-orders/:payment_id/retry` | `cb_payment_orders_handler` | yes |
+| ANY | `/api/v1/beneficiaries` | `cb_beneficiary_handler` | yes |
+| ANY | `/api/v1/beneficiaries/:beneficiary_id` | `cb_beneficiary_handler` | yes |
+| ANY | `/api/v1/exceptions` | `cb_exceptions_handler` | yes |
+| ANY | `/api/v1/exceptions/:item_id` | `cb_exceptions_handler` | yes |
+| ANY | `/api/v1/exceptions/:item_id/resolve` | `cb_exceptions_handler` | yes |
+| ANY | `/api/v1/channel-limits` | `cb_channel_limits_handler` | yes |
+| ANY | `/api/v1/channel-limits/:channel` | `cb_channel_limits_handler` | yes |
+| ANY | `/api/v1/channel-activity` | `cb_channel_activity_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/profile` | `cb_party_profile_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/notification-preferences` | `cb_notification_prefs_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/channel-context/:channel` | `cb_channel_context_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/channel-sessions` | `cb_channel_sessions_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/channel-sessions/invalidate-all` | `cb_channel_sessions_invalidate_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/channel-sessions/:session_id` | `cb_channel_sessions_handler` | yes |
+| ANY | `/api/v1/channel-features/:channel` | `cb_channel_features_handler` | yes |
+| ANY | `/api/v1/channel-features/:channel/:feature` | `cb_channel_features_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/notifications/dispatch` | `cb_notification_dispatch_handler` | yes |
+| ANY | `/api/v1/api-keys` | `cb_api_keys_handler` | yes |
+| ANY | `/api/v1/api-keys/:key_id` | `cb_api_keys_handler` | yes |
+| ANY | `/api/v1/api-keys/:key_id/usage` | `cb_api_usage_handler` | yes |
+| ANY | `/api/v1/deprecations` | `cb_deprecation_handler` | yes |
+| ANY | `/api/graphql` | `cb_graphql_handler` | yes |
+| ANY | `/api/v1/atm/inquiry` | `cb_atm_handler` | yes |
+| ANY | `/api/v1/atm/withdraw` | `cb_atm_handler` | yes |
+| ANY | `/api/v1/kyc/workflows` | `cb_kyc_workflows_handler` | yes |
+| ANY | `/api/v1/kyc/workflows/:workflow_id` | `cb_kyc_workflow_handler` | yes |
+| ANY | `/api/v1/kyc/workflows/:workflow_id/start` | `cb_kyc_workflow_start_handler` | yes |
+| ANY | `/api/v1/kyc/workflows/:workflow_id/advance` | `cb_kyc_workflow_advance_handler` | yes |
+| ANY | `/api/v1/kyc/workflows/:workflow_id/steps` | `cb_kyc_workflow_steps_handler` | yes |
+| ANY | `/api/v1/parties/:party_id/identity-checks` | `cb_party_idv_handler` | yes |
+| ANY | `/api/v1/identity-checks/:check_id` | `cb_idv_check_handler` | yes |
+| ANY | `/api/v1/identity-checks/:check_id/retry` | `cb_idv_retry_handler` | yes |
+| ANY | `/api/v1/aml/rules` | `cb_aml_rules_handler` | yes |
+| ANY | `/api/v1/aml/rules/:rule_id` | `cb_aml_rule_handler` | yes |
+| ANY | `/api/v1/aml/suspicious-activity` | `cb_suspicious_activity_handler` | yes |
+| ANY | `/api/v1/aml/suspicious-activity/:alert_id` | `cb_suspicious_activity_item_handler` | yes |
+| ANY | `/api/v1/aml/cases` | `cb_aml_cases_handler` | yes |
+| ANY | `/api/v1/aml/cases/:case_id` | `cb_aml_case_handler` | yes |
+| ANY | `/api/v1/compliance/sars` | `cb_sar_reports_handler` | yes |
+| ANY | `/api/v1/compliance/sars/:sar_id` | `cb_sar_report_handler` | yes |
+| ANY | `/api/v1/stp/rules` | `cb_stp_rules_handler` | yes |
+| ANY | `/api/v1/stp/rules/:rule_id` | `cb_stp_rules_handler` | yes |
+| ANY | `/api/v1/stp/metrics` | `cb_stp_metrics_handler` | yes |
+| ANY | `/api/v1/stp/exceptions/overdue` | `cb_stp_exceptions_handler` | yes |
+| ANY | `/api/v1/stp/exceptions/:item_id/:action` | `cb_stp_exceptions_handler` | yes |
+| ANY | `/api/v1/marketplace/connectors` | `cb_connectors_handler` | yes |
+| ANY | `/api/v1/marketplace/connectors/:connector_id` | `cb_connectors_handler` | yes |
+| ANY | `/api/v1/marketplace/connectors/:connector_id/:action` | `cb_connectors_handler` | yes |
+| ANY | `/api/v1/marketplace/connectors/:connector_id/versions` | `cb_connector_versions_handler` | yes |
+| ANY | `/api/v1/marketplace/connectors/:connector_id/versions/:version_id` | `cb_connector_versions_handler` | yes |
+| ANY | `/api/v1/marketplace/connectors/:connector_id/versions/:version_id/:action` | `cb_connector_versions_handler` | yes |
+| ANY | `/api/v1/marketplace/partners` | `cb_partner_onboarding_handler` | yes |
+| ANY | `/api/v1/marketplace/partners/:application_id` | `cb_partner_onboarding_handler` | yes |
+| ANY | `/api/v1/marketplace/partners/:application_id/:action` | `cb_partner_onboarding_handler` | yes |
+| ANY | `/api/v1/events/schemas` | `cb_event_schema_handler` | yes |
+| ANY | `/api/v1/events/schemas/:event_type` | `cb_event_schema_handler` | yes |
+| ANY | `/api/v1/events/schemas/:event_type/:version` | `cb_event_schema_handler` | yes |
+| ANY | `/api/v1/streams/consumers` | `cb_streaming_handler` | yes |
+| ANY | `/api/v1/streams/backfill` | `cb_streaming_handler` | yes |
+| ANY | `/api/v1/streams/consumers/:consumer_id/:action` | `cb_streaming_handler` | yes |
+| ANY | `/api/v1/payments/swift` | `cb_swift_handler` | yes |
+| ANY | `/api/v1/payments/swift/status/:action` | `cb_swift_handler` | yes |
+| ANY | `/api/v1/payments/swift/:message_id` | `cb_swift_handler` | yes |
+| ANY | `/api/v1/payments/swift/:message_id/:action` | `cb_swift_handler` | yes |
+| ANY | `/api/v1/settlements` | `cb_settlement_handler` | yes |
+| ANY | `/api/v1/settlements/:run_id` | `cb_settlement_handler` | yes |
+| ANY | `/api/v1/settlements/:run_id/:action` | `cb_settlement_handler` | yes |
+| ANY | `/api/v1/ledger/propagation/:resource` | `cb_ledger_propagation_handler` | yes |
+| ANY | `/api/v1/ledger/propagation/:resource/:id/:action` | `cb_ledger_propagation_handler` | yes |
+| ANY | `/api/v1/recon/:resource` | `cb_recon_automation_handler` | yes |
+| ANY | `/api/v1/recon/:resource/:id` | `cb_recon_automation_handler` | yes |
+| ANY | `/api/v1/recon/:resource/:id/:action` | `cb_recon_automation_handler` | yes |
+| ANY | `/api/v1/ledger/replay/sessions` | `cb_ledger_replay_handler` | yes |
+| ANY | `/api/v1/ledger/replay/sessions/:session_id` | `cb_ledger_replay_handler` | yes |
+| ANY | `/api/v1/ledger/replay/sessions/:session_id/:action` | `cb_ledger_replay_handler` | yes |
+| ANY | `/api/v1/audit/chain/:resource` | `cb_audit_chain_handler` | yes |
+| ANY | `/api/v1/audit/chain/:resource/:id` | `cb_audit_chain_handler` | yes |
+| ANY | `/api/v1/contracts` | `cb_contracts_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id` | `cb_contracts_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id/versions` | `cb_contract_versions_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id/versions/:version` | `cb_contract_versions_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id/versions/:version/:action` | `cb_contract_versions_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id/experiments` | `cb_contract_experiments_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id/experiments/:experiment_id` | `cb_contract_experiments_handler` | yes |
+| ANY | `/api/v1/contracts/:contract_id/experiments/:experiment_id/:action` | `cb_contract_experiments_handler` | yes |
+| ANY | `/api/v1/contracts/executions/:execution_id` | `cb_contract_replay_handler` | yes |
+| ANY | `/api/v1/contracts/executions/:execution_id/:action` | `cb_contract_replay_handler` | yes |
+| ANY | `/api/v1/treasury/positions` | `cb_treasury_handler` | yes |
+| ANY | `/api/v1/treasury/positions/:id` | `cb_treasury_handler` | yes |
+| ANY | `/api/v1/treasury/positions/:id/:action` | `cb_treasury_handler` | yes |
+| ANY | `/api/v1/treasury/forecasts` | `cb_treasury_handler` | yes |
+| ANY | `/api/v1/treasury/placements` | `cb_treasury_handler` | yes |
+| ANY | `/api/v1/treasury/placements/:id` | `cb_treasury_handler` | yes |
+| ANY | `/api/v1/trade/instruments` | `cb_trade_finance_handler` | yes |
+| ANY | `/api/v1/trade/instruments/:id` | `cb_trade_finance_handler` | yes |
+| ANY | `/api/v1/trade/instruments/:id/:action` | `cb_trade_finance_handler` | yes |
+| ANY | `/api/v1/trade/documents/:id/:action` | `cb_trade_finance_handler` | yes |
+| ANY | `/api/v1/risk/metrics` | `cb_risk_capital_handler` | yes |
+| ANY | `/api/v1/risk/metrics/:id` | `cb_risk_capital_handler` | yes |
+| ANY | `/api/v1/risk/breaches` | `cb_risk_capital_handler` | yes |
+| ANY | `/api/v1/risk/check` | `cb_risk_capital_handler` | yes |
+| ANY | `/api/v1/capital/buffers` | `cb_risk_capital_handler` | yes |
+| ANY | `/api/v1/capital/buffers/:id` | `cb_risk_capital_handler` | yes |
+| ANY | `/api/v1/reports/federation` | `cb_federation_report_handler` | yes |
+| ANY | `/api/v1/reports/federation/:id` | `cb_federation_report_handler` | yes |
+| ANY | `/api/v1/reports/federation/:id/:action` | `cb_federation_report_handler` | yes |
+| ANY | `/api/v1/cluster/nodes` | `cb_cluster_handler` | yes |
+| ANY | `/api/v1/cluster/nodes/active` | `cb_cluster_handler` | yes |
+| ANY | `/api/v1/cluster/nodes/:node_id` | `cb_cluster_handler` | yes |
+| ANY | `/api/v1/cluster/nodes/:node_id/:action` | `cb_cluster_handler` | yes |
+| ANY | `/api/v1/scaling/rules` | `cb_scaling_handler` | yes |
+| ANY | `/api/v1/scaling/metrics` | `cb_scaling_handler` | yes |
+| ANY | `/api/v1/scaling/evaluate` | `cb_scaling_handler` | yes |
+| ANY | `/api/v1/scaling/rules/:rule_id` | `cb_scaling_handler` | yes |
+| ANY | `/api/v1/scaling/rules/:rule_id/:action` | `cb_scaling_handler` | yes |
+| ANY | `/api/v1/recovery/checkpoints` | `cb_recovery_handler` | yes |
+| ANY | `/api/v1/recovery/checkpoints/:checkpoint_id` | `cb_recovery_handler` | yes |
+| ANY | `/api/v1/recovery/checkpoints/:checkpoint_id/:action` | `cb_recovery_handler` | yes |
+| ANY | `/api/v1/recovery/:resource_type/:resource_id/:action` | `cb_recovery_handler` | yes |
+| ANY | `/api/v1/analytics/features` | `cb_feature_store_handler` | yes |
+| ANY | `/api/v1/analytics/features/:id` | `cb_feature_store_handler` | yes |
+| ANY | `/api/v1/analytics/features/:id/:action` | `cb_feature_store_handler` | yes |
+| ANY | `/api/v1/analytics/pipelines` | `cb_feature_store_handler` | yes |
+| ANY | `/api/v1/analytics/pipelines/:id` | `cb_feature_store_handler` | yes |
+| ANY | `/api/v1/analytics/pipelines/:id/:action` | `cb_feature_store_handler` | yes |
+| ANY | `/api/v1/analytics/segments` | `cb_segmentation_handler` | yes |
+| ANY | `/api/v1/analytics/segments/:id` | `cb_segmentation_handler` | yes |
+| ANY | `/api/v1/analytics/segments/:id/:action` | `cb_segmentation_handler` | yes |
+| ANY | `/api/v1/analytics/recommendations` | `cb_segmentation_handler` | yes |
+| ANY | `/api/v1/analytics/recommendations/:id` | `cb_segmentation_handler` | yes |
+| ANY | `/api/v1/analytics/recommendations/:id/:action` | `cb_segmentation_handler` | yes |
+| ANY | `/api/v1/analytics/predictions/:resource` | `cb_predictions_handler` | yes |
+| ANY | `/api/v1/analytics/predictions/:resource/:id` | `cb_predictions_handler` | yes |
+| ANY | `/api/v1/analytics/monitors` | `cb_model_monitor_handler` | yes |
+| ANY | `/api/v1/analytics/monitors/:id` | `cb_model_monitor_handler` | yes |
+| ANY | `/api/v1/analytics/monitors/:id/:action` | `cb_model_monitor_handler` | yes |
+| ANY | `/api/v1/analytics/triggers` | `cb_model_monitor_handler` | yes |
+| ANY | `/api/v1/analytics/triggers/:id` | `cb_model_monitor_handler` | yes |
+| ANY | `/api/v1/analytics/triggers/:id/:action` | `cb_model_monitor_handler` | yes |
+| ANY | `/api/v1/insights/queries` | `cb_nl_query_handler` | yes |
+| ANY | `/api/v1/insights/queries/:id` | `cb_nl_query_handler` | yes |
+| ANY | `/api/v1/insights/queries/:id/:action` | `cb_nl_query_handler` | yes |
+| ANY | `/api/v1/insights/insights` | `cb_insight_gov_handler` | yes |
+| ANY | `/api/v1/insights/insights/:id` | `cb_insight_gov_handler` | yes |
+| ANY | `/api/v1/insights/insights/:id/:action` | `cb_insight_gov_handler` | yes |
+| ANY | `/api/v1/insights/byok/keys` | `cb_byok_handler` | yes |
+| ANY | `/api/v1/insights/byok/keys/:id` | `cb_byok_handler` | yes |
+| ANY | `/api/v1/insights/byok/keys/:id/:action` | `cb_byok_handler` | yes |
 
-## Accounts
+## Notes
 
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/accounts`                                | `cb_accounts_list_handler`        | List accounts |
-| POST   | `/api/v1/accounts`                                | `cb_accounts_list_handler`        | Create account |
-| GET    | `/api/v1/stats`                                   | `cb_stats_handler`                | Aggregate dashboard stats |
-| GET    | `/api/v1/accounts/:account_id`                    | `cb_account_handler`              | Account detail |
-| GET    | `/api/v1/accounts/:account_id/transactions`       | `cb_account_transactions_handler` | Account transactions |
-| GET    | `/api/v1/accounts/:account_id/balance`            | `cb_account_balance_handler`      | Current balance |
-| GET    | `/api/v1/accounts/:account_id/summary`            | `cb_account_summary_handler`      | Aggregate summary |
-| GET    | `/api/v1/accounts/:account_id/holds`              | `cb_account_holds_handler`        | List holds |
-| POST   | `/api/v1/accounts/:account_id/holds`              | `cb_account_holds_handler`        | Place hold |
-| DELETE | `/api/v1/accounts/:account_id/holds/:hold_id`     | `cb_account_holds_handler`        | Release hold |
-| POST   | `/api/v1/accounts/:account_id/freeze`             | `cb_account_freeze_handler`       | Freeze account |
-| POST   | `/api/v1/accounts/:account_id/unfreeze`           | `cb_account_unfreeze_handler`     | Unfreeze account |
-| POST   | `/api/v1/accounts/:account_id/close`              | `cb_account_close_handler`        | Close account |
-| GET    | `/api/v1/accounts/:account_id/entries`            | `cb_account_entries_handler`      | Ledger entries for account |
-| GET    | `/api/v1/accounts/:account_id/statement`          | `cb_statements_handler`           | Generate statement |
-
-## Transactions
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| POST   | `/api/v1/transactions/transfer`              | `cb_transaction_transfer_handler`   | Transfer between accounts |
-| POST   | `/api/v1/transactions/deposit`               | `cb_transaction_deposit_handler`    | Cash/external deposit |
-| POST   | `/api/v1/transactions/withdraw`              | `cb_transaction_withdraw_handler`   | Cash/external withdrawal |
-| POST   | `/api/v1/transactions/adjustment`            | `cb_transaction_adjustment_handler` | Manual ledger adjustment |
-| GET    | `/api/v1/transactions/:txn_id`               | `cb_transaction_handler`            | Transaction detail |
-| POST   | `/api/v1/transactions/:txn_id/reverse`       | `cb_transaction_reverse_handler`    | Reverse transaction |
-| GET    | `/api/v1/transactions/:txn_id/entries`       | `cb_transaction_entries_handler`    | Ledger entries for txn |
-
-## Ledger
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/ledger/entries/latest`              | `cb_ledger_latest_handler` | Recent entries (paginated by `limit`) |
-
-## Savings products
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/savings-products`                                | `cb_savings_products_handler` | List savings products |
-| POST   | `/api/v1/savings-products`                                | `cb_savings_products_handler` | Create savings product |
-| GET    | `/api/v1/savings-products/:product_id`                    | `cb_savings_products_handler` | Detail (handler dispatches by binding) |
-| POST   | `/api/v1/savings-products/:product_id/activate`           | `cb_savings_products_handler` | Activate product |
-| POST   | `/api/v1/savings-products/:product_id/deactivate`         | `cb_savings_products_handler` | Deactivate product |
-
-## Loan products
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/loan-products`                                   | `cb_loan_products_handler` | List loan products |
-| POST   | `/api/v1/loan-products`                                   | `cb_loan_products_handler` | Create loan product |
-| GET    | `/api/v1/loan-products/:product_id`                       | `cb_loan_products_handler` | Detail |
-| POST   | `/api/v1/loan-products/:product_id/activate`              | `cb_loan_products_handler` | Activate product |
-| POST   | `/api/v1/loan-products/:product_id/deactivate`            | `cb_loan_products_handler` | Deactivate product |
-
-## Loans
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/loans`                                | `cb_loans_handler`            | List loans (`?party_id=` filter supported) |
-| POST   | `/api/v1/loans`                                | `cb_loans_handler`            | Originate loan |
-| GET    | `/api/v1/loans/:loan_id`                       | `cb_loans_handler`            | Loan detail |
-| POST   | `/api/v1/loans/:loan_id/approve`               | `cb_loans_handler`            | Approve loan |
-| POST   | `/api/v1/loans/:loan_id/disburse`              | `cb_loans_handler`            | Disburse approved loan |
-| GET    | `/api/v1/loans/:loan_id/repayments`            | `cb_loan_repayments_handler`  | List repayments |
-| POST   | `/api/v1/loans/:loan_id/repayments`            | `cb_loan_repayments_handler`  | Record repayment |
-
-## Domain events
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/events`                                | `cb_events_handler` | List domain events |
-| POST   | `/api/v1/events`                                | `cb_events_handler` | Append event (admin / replay) |
-| GET    | `/api/v1/events/:event_id`                      | `cb_events_handler` | Event detail |
-| POST   | `/api/v1/events/:event_id/replay`               | `cb_events_handler` | Re-emit event |
-
-## Webhooks
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/webhooks`                                       | `cb_webhooks_handler`            | List subscriptions |
-| POST   | `/api/v1/webhooks`                                       | `cb_webhooks_handler`            | Create subscription |
-| PATCH  | `/api/v1/webhooks/:subscription_id`                      | `cb_webhooks_handler`            | Update subscription |
-| DELETE | `/api/v1/webhooks/:subscription_id`                      | `cb_webhooks_handler`            | Delete subscription |
-| GET    | `/api/v1/webhooks/:subscription_id/deliveries`           | `cb_webhook_deliveries_handler`  | Delivery attempts log |
-
-## Statements & Exports
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/accounts/:account_id/statement`        | `cb_statements_handler` | Statement (CSV/JSON via `?format=`) |
-| GET    | `/api/v1/export/:resource`                      | `cb_exports_handler`    | Bulk CSV export by resource name |
-
-## Payment orders
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/payment-orders`                                  | `cb_payment_orders_handler` | List orders |
-| POST   | `/api/v1/payment-orders`                                  | `cb_payment_orders_handler` | Initiate payment (idempotent) |
-| GET    | `/api/v1/payment-orders/:payment_id`                      | `cb_payment_orders_handler` | Order detail |
-| POST   | `/api/v1/payment-orders/:payment_id/cancel`               | `cb_payment_orders_handler` | Cancel order |
-| POST   | `/api/v1/payment-orders/:payment_id/retry`                | `cb_payment_orders_handler` | Retry failed order |
-
-## Exception queue
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/exceptions`                            | `cb_exceptions_handler` | List exception items |
-| POST   | `/api/v1/exceptions`                            | `cb_exceptions_handler` | Enqueue exception (system) |
-| GET    | `/api/v1/exceptions/:item_id`                   | `cb_exceptions_handler` | Detail |
-| POST   | `/api/v1/exceptions/:item_id/resolve`           | `cb_exceptions_handler` | Resolve with note |
-
-## Omnichannel
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/channel-limits`                        | `cb_channel_limits_handler`   | Limits across all channels |
-| GET    | `/api/v1/channel-limits/:channel`               | `cb_channel_limits_handler`   | Limit for one channel |
-| PUT    | `/api/v1/channel-limits/:channel`               | `cb_channel_limits_handler`   | Update channel limit |
-| GET    | `/api/v1/channel-activity`                      | `cb_channel_activity_handler` | Activity log (filterable) |
-
-## Partner API keys
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/api-keys`                              | `cb_api_keys_handler`   | List partner keys |
-| POST   | `/api/v1/api-keys`                              | `cb_api_keys_handler`   | Issue new key |
-| GET    | `/api/v1/api-keys/:key_id`                      | `cb_api_keys_handler`   | Key metadata |
-| DELETE | `/api/v1/api-keys/:key_id`                      | `cb_api_keys_handler`   | Revoke key |
-| GET    | `/api/v1/api-keys/:key_id/usage`                | `cb_api_usage_handler`  | Usage events |
-
-## API meta
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/openapi.json`                          | `cb_openapi_handler`   | OpenAPI spec |
-| GET    | `/api/v1/deprecations`                          | `cb_deprecation_handler` | Deprecation notices |
-| GET    | `/metrics`                                      | `cb_metrics_handler`   | Prometheus metrics |
-| GET    | `/api/graphql`                                  | `cb_graphql_handler`   | GraphiQL / introspection |
-| POST   | `/api/graphql`                                  | `cb_graphql_handler`   | GraphQL queries/mutations |
-
-## Dev tools
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| GET    | `/api/v1/dev/mock-import`                       | `cb_dev_mock_import_handler` | Read import flag |
-| POST   | `/api/v1/dev/mock-import`                       | `cb_dev_mock_import_handler` | Import demo data |
-
-## ATM
-
-| Method | Path | Handler | Notes |
-|---|---|---|---|
-| POST   | `/api/v1/atm/inquiry`                           | `cb_atm_handler` | Balance inquiry |
-| POST   | `/api/v1/atm/withdraw`                          | `cb_atm_handler` | ATM withdrawal |
-
----
-
-## CRUD Matrix Summary
-
-```
-Resource          C  R-list  R-one  U  Status-actions  Sub-resources
---------------------------------------------------------------------------------
-Parties           ✓  ✓       ✓      –  suspend/reactivate/close
-                                       kyc PATCH/POST
-                                       notification-prefs PUT
-                                       sub: accounts, profile
-
-Accounts          ✓  ✓       ✓      –  freeze/unfreeze/close/holds(POST/DELETE)
-                                       sub: transactions, balance, summary,
-                                            holds, entries, statement
-
-Transactions      –  –       ✓      –  reverse
-                  (writes via /transactions/{transfer,deposit,withdraw,adjustment})
-                                       sub: entries
-
-Ledger            –  ✓ (latest only)        –
-
-Savings products  ✓  ✓       ✓      –  activate/deactivate
-Loan products     ✓  ✓       ✓      –  activate/deactivate
-
-Loans             ✓  ✓       ✓      –  approve/disburse
-                                       sub: repayments (GET/POST)
-
-Events            ✓  ✓       ✓      –  replay
-Webhooks          ✓  ✓       –     PATCH/DELETE
-                                       sub: deliveries
-Payment orders    ✓  ✓       ✓      –  cancel/retry
-Exceptions        ✓  ✓       ✓      –  resolve
-
-Channel limits    –  ✓       ✓     PUT (per-channel)
-Channel activity  –  ✓ (filtered)            –
-
-API keys          ✓  ✓       ✓     DELETE  sub: usage
-Deprecations      –  ✓       –      –
-Stats             –  ✓ (single)     –
-ATM               –  –       –     POST inquiry/withdraw
-GraphQL           –  ✓ (introspection)      POST queries
-Dev mock          –  ✓       –     POST import
-```
+- This inventory is generated from router declarations and is intended for security and coverage audits.
+- Verb-level endpoint counts for `ANY` routes require handler-method introspection.

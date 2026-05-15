@@ -63,7 +63,7 @@ validate_rule_list([Rule | Rest]) ->
     end.
 
 validate_rule(Rule) when is_map(Rule) ->
-    case get_any(Rule, when) of
+    case get_any(Rule, 'when') of
         {ok, CondExpr} ->
             case expr_depth(CondExpr) =< ?MAX_EXPR_DEPTH of
                 true ->
@@ -88,7 +88,7 @@ validate_actions_field(Rule, Key) ->
             validate_actions(Actions);
         {ok, _Other} ->
             {error, invalid_contract_schema};
-        error when Key =:= else ->
+        error when Key =:= 'else' ->
             ok;
         error ->
             {error, invalid_contract_schema}
@@ -124,7 +124,7 @@ validate_expr(Expr) when is_map(Expr) ->
                 true ->
                     [{OpRaw, Args}] = maps:to_list(Expr),
                     Op = norm_key(OpRaw),
-                    case lists:member(Op, [and, or, not, '==', '!=', '<', '=<', '>', '>=', '+', '-', '*', div, mod, in]) of
+                    case lists:member(Op, ['and', 'or', 'not', '==', '!=', '<', '=<', '>', '>=', '+', '-', '*', 'div', 'mod', 'in']) of
                         true -> validate_expr_args(Args);
                         false -> {error, forbidden_operator}
                     end;
@@ -182,9 +182,9 @@ get_any(Map, Key) ->
 norm_key(K) when is_atom(K) -> K;
 norm_key(K) when is_binary(K) ->
     case K of
-        <<"and">> -> and;
-        <<"or">> -> or;
-        <<"not">> -> not;
+        <<"and">> -> 'and';
+        <<"or">> -> 'or';
+        <<"not">> -> 'not';
         <<"==">> -> '==';
         <<"!=">> -> '!=';
         <<"<">> -> '<';
@@ -194,9 +194,9 @@ norm_key(K) when is_binary(K) ->
         <<"+">> -> '+';
         <<"-">> -> '-';
         <<"*">> -> '*';
-        <<"div">> -> div;
-        <<"mod">> -> mod;
-        <<"in">> -> in;
+        <<"div">> -> 'div';
+        <<"mod">> -> 'mod';
+        <<"in">> -> 'in';
         <<"set">> -> set;
         <<"reject">> -> reject;
         <<"emit">> -> emit;

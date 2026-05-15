@@ -4,6 +4,7 @@
 -module(cb_contract_experiments_SUITE).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 -include("../include/cb_contracts.hrl").
 
 -compile(export_all).
@@ -49,7 +50,7 @@ setup_contract_and_versions(ContractId, VersionCount) ->
         domain => <<"payments">>,
         owner_role => <<"admin">>
     }),
-    Payload = #{rules => [#{when => #{}, then => #{action => set, decision => approve}}]},
+    Payload = #{rules => [#{'when' => #{}, 'then' => #{action => set, decision => approve}}]},
     Versions = [
         element(2, cb_contract_registry:deploy_version(
             ContractId,
@@ -186,7 +187,7 @@ test_assign_variant_weighted_distribution(_Config) ->
     %% Test multiple subjects to verify weight distribution
     Results = [
         {Subject, element(2, cb_contract_experiments:assign_variant(ExpId, Subject, Seed))}
-        || Subject <- [<<"s" ++ integer_to_list(N) ++ ":001">> || N <- lists:seq(1, 100)]
+        || Subject <- [iolist_to_binary(["s", integer_to_list(N), ":001"]) || N <- lists:seq(1, 100)]
     ],
     V1Count = length([ok || {_, V} <- Results, V =:= V1#contract_version.version_id]),
     
@@ -259,7 +260,7 @@ test_list_experiments(_Config) ->
         #{version => V1#contract_version.version_id, weight => 50},
         #{version => V2#contract_version.version_id, weight => 50}
     ],
-    {ok, Exp1} = cb_contract_experiments:create_experiment(
+    {ok, _Exp1} = cb_contract_experiments:create_experiment(
         ContractId,
         <<"Experiment 1">>,
         Variants,

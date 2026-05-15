@@ -166,10 +166,8 @@ dispatch() ->
             {<<"/api/v1/export/:resource">>, cb_export_handler, []},
 
             %% Currency pair management (PH1-TASK-009)
-            {<<"POST">>, <<"/api/v1/currency-pairs">>, cb_currency_pair_handler, []},
-            {<<"GET">>, <<"/api/v1/currency-pairs">>, cb_currency_pair_handler, []},
-            {<<"GET">>, <<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
-            {<<"PATCH">>, <<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
+            {<<"/api/v1/currency-pairs">>, cb_currency_pair_handler, []},
+            {<<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
 
             %% External FX provider interface (P1-S3, TASK-034)
             {<<"/api/v1/fx/providers">>, cb_fx_provider_handler, []},

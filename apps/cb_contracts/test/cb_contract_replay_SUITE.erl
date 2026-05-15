@@ -4,6 +4,7 @@
 -module(cb_contract_replay_SUITE).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 -include("../include/cb_contracts.hrl").
 
 -compile(export_all).
@@ -45,12 +46,12 @@ execute_contract(ContractId, Context) ->
     Payload = #{
         rules => [
             #{
-                when => #{account_status => <<"active">>},
-                then => #{action => set, decision => approve}
+                'when' => #{account_status => <<"active">>},
+                'then' => #{action => set, decision => approve}
             },
             #{
-                when => #{},
-                then => #{action => set, decision => reject}
+                'when' => #{},
+                'then' => #{action => set, decision => reject}
             }
         ]
     },
@@ -131,7 +132,7 @@ test_replay_execution_original_context(_Config) ->
     Context = #{account_status => <<"active">>, balance => 1000},
     ExecutionId = execute_contract(ContractId, Context),
     
-    {ok, Trace} = cb_contract_replay:get_execution_trace(ExecutionId),
+    {ok, _Trace} = cb_contract_replay:get_execution_trace(ExecutionId),
     
     {ok, Replay} = cb_contract_replay:replay_execution(ExecutionId, #{}),  %% No override
     
@@ -146,7 +147,7 @@ test_replay_execution_with_context_override(_Config) ->
     ExecutionId = execute_contract(ContractId, OriginalContext),
     
     {ok, Trace} = cb_contract_replay:get_execution_trace(ExecutionId),
-    OriginalDecisionHash = Trace#contract_execution_trace.decision_hash,
+    _OriginalDecisionHash = Trace#contract_execution_trace.decision_hash,
     
     {ok, Replay} = cb_contract_replay:replay_execution(ExecutionId, #{
         context => OverrideContext
@@ -184,7 +185,7 @@ test_replay_hash_mismatch_different_context(_Config) ->
         context => OverrideContext
     }),
     
-    #{hash_match := HashMatch, decision_snapshot := NewSnapshot} = Replay,
+    #{hash_match := _HashMatch, decision_snapshot := NewSnapshot} = Replay,
     ReplayDecision = maps:get(decision, NewSnapshot, undefined),
     
     %% With suspended status, decision should differ

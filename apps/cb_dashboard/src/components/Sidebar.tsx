@@ -16,14 +16,13 @@ import {
   IconBuildingBank,
   IconChevronRight,
   IconCode,
-  IconFiles,
-  IconKey,
   IconCoin,
+  IconDownload,
+  IconFiles,
   IconLayoutDashboard,
   IconReceipt,
   IconReportMoney,
   IconSettings,
-  IconShield,
   IconShieldCheck,
   IconSitemap,
   IconTransfer,
@@ -60,12 +59,18 @@ const BANKING_ITEMS: NavItem[] = [
   { label: "Loans", icon: IconReportMoney, href: "/loans" },
   { label: "Products", icon: IconCoin, href: "/products" },
   { label: "Compliance", icon: IconShieldCheck, href: "/compliance" },
+  {
+    label: "Reports",
+    icon: IconFiles,
+    links: [
+      { label: "General Ledger", href: "/reports/general-ledger" },
+      { label: "Trial Balance", href: "/reports/trial-balance" },
+    ],
+  },
+  { label: "Exports", icon: IconDownload, href: "/exports" },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
-  { label: "Users", icon: IconUsers, href: "/users" },
-  { label: "Roles", icon: IconShield, href: "/roles" },
-  { label: "Permissions", icon: IconKey, href: "/permissions" },
   { label: "Settings", icon: IconSettings, href: "/settings" },
   { label: "Developer", icon: IconCode, href: "/developer" },
   { label: "Channels", icon: IconSitemap, href: "/channels" },

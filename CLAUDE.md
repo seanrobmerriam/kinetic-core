@@ -1,6 +1,6 @@
 # AGENTS.md
 
-### Current Development Phase: All phases complete (P0 through P5-S3)
+### Current Development Phase: P6-S1 (Quality and Test Coverage)
 
 ## Purpose
 

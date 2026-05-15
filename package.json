@@ -5,6 +5,7 @@
     "test:perf": "node test/perf-bench.js",
     "test:chaos": "node test/chaos.js",
     "test:contracts": "node test/contracts.js",
+    "test:mutation": "node test/mutation-test.js",
     "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {

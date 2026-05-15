@@ -239,7 +239,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-087: Implement chaos engineering tests for failure injection, network partitions, and recovery. [DONE 2025-01-29] — `test/chaos.js`; run via `npm run test:chaos`.
 - TASK-088: Build contract test automation suite for all external API integrations and provider boundaries. [DONE 2025-01-29] — `test/contracts.js`; run via `npm run test:contracts`.
 - TASK-089: Expand property-based testing coverage across all financial calculation modules. [DONE 2025-05-15] — expanded `apps/cb_interest/test/prop_interest.erl` (+4 props), `apps/cb_loans/test/prop_loan_calculations.erl` (+4 props), created `apps/cb_loans/test/prop_repayment_schedule.erl` (5 props); run via `rebar3 proper`.
-- TASK-090: Implement mutation testing to validate test suite effectiveness and gap detection.
+- TASK-090: Implement mutation testing to validate test suite effectiveness and gap detection. [DONE 2025-05-15] — `test/mutation-test.js`; 10 mutations across `cb_interest.erl` and `cb_loan_calculations.erl`; run via `npm run test:mutation`; set `MUTATION_STRICT=1` to gate on 70% kill rate.
 - TASK-091: Enforce CI/CD quality gates with mandatory pass thresholds before merge.
 
 #### P6-S2: Security Hardening

@@ -43,6 +43,7 @@
 -include_lib("cb_ledger/include/cb_ledger.hrl").
 -include_lib("cb_analytics/include/cb_analytics.hrl").
 -include_lib("cb_insights/include/cb_insights.hrl").
+-include_lib("cb_contracts/include/cb_contracts.hrl").
 
 -export([create_tables/0]).
 
@@ -114,7 +115,9 @@ create_tables() ->
               prediction_score,
               model_monitor, drift_alert, retraining_trigger,
               nl_query, insight, insight_access_log,
-              byok_key, byok_access_log],
+              byok_key, byok_access_log,
+              contract_definition, contract_version, contract_migration,
+              contract_experiment, contract_execution_trace],
     lists:foreach(fun create_if_not_exists/1, Tables),
     ok.
 
@@ -162,7 +165,9 @@ create_tables() ->
     prediction_score |
     model_monitor | drift_alert | retraining_trigger |
     nl_query | insight | insight_access_log |
-    byok_key | byok_access_log
+    byok_key | byok_access_log |
+    contract_definition | contract_version | contract_migration |
+    contract_experiment | contract_execution_trace
 ) -> ok.
 create_if_not_exists(TableName) ->
     case mnesia:create_table(TableName, table_spec(TableName)) of
@@ -788,4 +793,34 @@ table_spec(byok_access_log) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, byok_access_log)},
         {index, [key_id, accessor, decision]}
+    ];
+table_spec(contract_definition) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, contract_definition)},
+        {index, [status, domain, owner_role]}
+    ];
+table_spec(contract_version) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, contract_version)},
+        {index, [contract_id, version, status, dsl_version]}
+    ];
+table_spec(contract_migration) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, contract_migration)},
+        {index, [contract_id, from_version, to_version, strategy]}
+    ];
+table_spec(contract_experiment) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, contract_experiment)},
+        {index, [contract_id, status]}
+    ];
+table_spec(contract_execution_trace) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, contract_execution_trace)},
+        {index, [contract_id, contract_version, result, created_at]}
     ].

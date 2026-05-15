@@ -1,0 +1,17 @@
+{application, cb_contracts,
+ [{description, "Smart contract runtime modules (P5-S3)"},
+  {vsn, "0.1.0"},
+  {registered, [cb_contracts_sup]},
+  {mod, {cb_contracts_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    crypto,
+    mnesia,
+    uuid,
+    cb_ledger]},
+  {env, []},
+  {modules, []},
+  {licenses, ["Proprietary"]},
+  {links, []}
+ ]}.

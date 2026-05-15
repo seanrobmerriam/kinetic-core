@@ -379,6 +379,48 @@
     recorded_at     :: timestamp_ms()
 }).
 
+%% @doc External FX rate provider registration.
+%%
+%% `priority' determines fallback order (lower = tried first).
+%% `type' selects the dispatch implementation: stub | mock_fail | http.
+%% `config' holds provider-specific connection params (url, api_key, …).
+-type provider_status() :: active | disabled.
+-record(fx_provider, {
+    provider_id :: uuid(),
+    name        :: binary(),
+    type        :: stub | mock_fail | http | atom(),
+    config      :: map(),
+    status      :: provider_status(),
+    priority    :: pos_integer(),
+    last_sync   :: timestamp_ms() | undefined,
+    created_at  :: timestamp_ms()
+}).
+
+%% @doc Locale-aware communication template.
+%%
+%% Keyed by (event_type, locale). Body uses {{variable}} placeholders.
+-record(locale_template, {
+    template_id :: uuid(),
+    event_type  :: binary(),
+    locale      :: binary(),
+    body        :: binary(),
+    created_at  :: timestamp_ms(),
+    updated_at  :: timestamp_ms()
+}).
+
+%% @doc Jurisdiction compliance flag appended to outbound communications.
+%%
+%% `flag_id' is deterministic: <<Locale/binary, "_", FlagTypeStr/binary>>.
+-type jurisdiction_flag_type() :: gdpr | ccpa | mas_notice_655 | atom().
+-record(jurisdiction_flag, {
+    flag_id    :: binary(),
+    locale     :: binary(),
+    flag_type  :: jurisdiction_flag_type(),
+    text       :: binary(),
+    active     :: boolean(),
+    updated_at :: timestamp_ms()
+}).
+
 %% @doc Domestic payment order lifecycle record.
 -record(payment_order, {
     payment_id        :: uuid(),

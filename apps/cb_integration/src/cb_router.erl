@@ -171,6 +171,20 @@ dispatch() ->
             {<<"GET">>, <<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
             {<<"PATCH">>, <<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
 
+            %% External FX provider interface (P1-S3, TASK-034)
+            {<<"/api/v1/fx/providers">>, cb_fx_provider_handler, []},
+            {<<"/api/v1/fx/providers/:provider_id">>, cb_fx_provider_handler, []},
+            {<<"/api/v1/fx/providers/:provider_id/:action">>, cb_fx_provider_handler, []},
+            {<<"/api/v1/fx/refresh">>, cb_fx_provider_handler, []},
+            {<<"/api/v1/fx/rate/:from/:to">>, cb_fx_provider_handler, []},
+
+            %% Locale templates and jurisdiction flags (P1-S3, TASK-037)
+            {<<"/api/v1/locale/templates">>, cb_locale_templates_handler, []},
+            {<<"/api/v1/locale/templates/:segment1/:segment2">>, cb_locale_templates_handler, []},
+            {<<"/api/v1/locale/templates/:segment1/:segment2/:action">>, cb_locale_templates_handler, []},
+            {<<"/api/v1/locale/flags/:segment1">>, cb_locale_templates_handler, []},
+            {<<"/api/v1/locale/flags/:segment1/:segment2">>, cb_locale_templates_handler, []},
+
             %% Development tools
             {<<"/api/v1/dev/mock-import">>, cb_dev_mock_import_handler, []},
 
@@ -335,6 +349,19 @@ dispatch() ->
             %% Cryptographic audit chain (P4-S3, TASK-073)
             {<<"/api/v1/audit/chain/:resource">>, cb_audit_chain_handler, []},
             {<<"/api/v1/audit/chain/:resource/:id">>, cb_audit_chain_handler, []},
+
+            %% Smart contracts deployment/versioning/migration (P5-S3, TASK-083)
+            {<<"/api/v1/contracts">>, cb_contracts_handler, []},
+            {<<"/api/v1/contracts/:contract_id">>, cb_contracts_handler, []},
+            {<<"/api/v1/contracts/:contract_id/versions">>, cb_contract_versions_handler, []},
+            {<<"/api/v1/contracts/:contract_id/versions/:version">>, cb_contract_versions_handler, []},
+            {<<"/api/v1/contracts/:contract_id/versions/:version/:action">>, cb_contract_versions_handler, []},
+            {<<"/api/v1/contracts/:contract_id/experiments">>, cb_contract_experiments_handler, []},
+            {<<"/api/v1/contracts/:contract_id/experiments/:experiment_id">>, cb_contract_experiments_handler, []},
+            {<<"/api/v1/contracts/:contract_id/experiments/:experiment_id/:action">>, cb_contract_experiments_handler, []},
+            {<<"/api/v1/contracts/executions/:execution_id">>, cb_contract_replay_handler, []},
+            {<<"/api/v1/contracts/executions/:execution_id/:action">>, cb_contract_replay_handler, []},
+
             %% Treasury liquidity and cash management (P4-S1, TASK-062)
             {<<"/api/v1/treasury/positions">>, cb_treasury_handler, []},
             {<<"/api/v1/treasury/positions/:id">>, cb_treasury_handler, []},

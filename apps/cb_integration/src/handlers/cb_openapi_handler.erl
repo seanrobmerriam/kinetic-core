@@ -334,6 +334,81 @@ schemas() ->
                 <<"path">>       => #{<<"type">> => <<"string">>},
                 <<"recorded_at">> => #{<<"type">> => <<"integer">>}
             }
+        },
+        <<"Contract">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"contract_id">>   => #{<<"type">> => <<"string">>},
+                <<"name">>          => #{<<"type">> => <<"string">>},
+                <<"domain">>        => #{<<"type">> => <<"string">>},
+                <<"owner_role">>    => #{<<"type">> => <<"string">>},
+                <<"status">>        => #{<<"type">> => <<"string">>, <<"enum">> => [<<"active">>, <<"inactive">>, <<"deprecated">>]},
+                <<"active_version">> => #{<<"type">> => <<"string">>},
+                <<"created_at">>    => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>    => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ContractVersion">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"version_id">>      => #{<<"type">> => <<"string">>},
+                <<"contract_id">>     => #{<<"type">> => <<"string">>},
+                <<"version">>         => #{<<"type">> => <<"string">>},
+                <<"dsl_version">>     => #{<<"type">> => <<"string">>},
+                <<"status">>          => #{<<"type">> => <<"string">>, <<"enum">> => [<<"draft">>, <<"active">>, <<"deprecated">>]},
+                <<"contract_payload">> => #{<<"type">> => <<"object">>},
+                <<"checksum">>        => #{<<"type">> => <<"string">>},
+                <<"created_by">>      => #{<<"type">> => <<"string">>},
+                <<"created_at">>      => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>      => #{<<"type">> => <<"integer">>},
+                <<"migration_from">>  => #{<<"type">> => <<"string">>}
+            }
+        },
+        <<"ContractMigration">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"migration_id">>  => #{<<"type">> => <<"string">>},
+                <<"contract_id">>   => #{<<"type">> => <<"string">>},
+                <<"from_version">>  => #{<<"type">> => <<"string">>},
+                <<"to_version">>    => #{<<"type">> => <<"string">>},
+                <<"strategy">>      => #{<<"type">> => <<"string">>, <<"enum">> => [<<"compatible">>, <<"transform">>, <<"manual">>]},
+                <<"notes">>         => #{<<"type">> => <<"string">>},
+                <<"created_by">>    => #{<<"type">> => <<"string">>},
+                <<"created_at">>    => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ContractExperiment">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"experiment_id">>   => #{<<"type">> => <<"string">>},
+                <<"contract_id">>     => #{<<"type">> => <<"string">>},
+                <<"name">>            => #{<<"type">> => <<"string">>},
+                <<"status">>          => #{<<"type">> => <<"string">>, <<"enum">> => [<<"draft">>, <<"active">>, <<"stopped">>]},
+                <<"variants">>        => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"object">>}},
+                <<"allocation_seed">> => #{<<"type">> => <<"string">>},
+                <<"created_by">>      => #{<<"type">> => <<"string">>},
+                <<"created_at">>      => #{<<"type">> => <<"integer">>},
+                <<"updated_at">>      => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"ContractExecutionTrace">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"execution_id">>     => #{<<"type">> => <<"string">>},
+                <<"contract_id">>      => #{<<"type">> => <<"string">>},
+                <<"contract_version">> => #{<<"type">> => <<"string">>},
+                <<"request_id">>       => #{<<"type">> => <<"string">>},
+                <<"input_hash">>       => #{<<"type">> => <<"string">>},
+                <<"decision_hash">>    => #{<<"type">> => <<"string">>},
+                <<"result">>           => #{<<"type">> => <<"string">>, <<"enum">> => [<<"running">>, <<"ok">>, <<"error">>]},
+                <<"reason">>           => #{<<"type">> => <<"string">>},
+                <<"started_at_us">>    => #{<<"type">> => <<"integer">>},
+                <<"finished_at_us">>   => #{<<"type">> => <<"integer">>},
+                <<"duration_us">>      => #{<<"type">> => <<"integer">>},
+                <<"context_snapshot">> => #{<<"type">> => <<"object">>},
+                <<"decision_snapshot">> => #{<<"type">> => <<"object">>},
+                <<"created_at">>       => #{<<"type">> => <<"integer">>}
+            }
         }
     }.
 
@@ -1440,6 +1515,233 @@ paths() ->
                     <<"200">> => #{<<"description">> => <<"Access token issued">>,
                                   <<"content">> => json_ref(<<"OAuthToken">>)},
                     <<"400">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List all contracts">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of contracts">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a new contract">>,
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Contract created">>,
+                                  <<"content">> => json_ref(<<"Contract">>)},
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get contract by ID">>,
+                <<"parameters">> => [path_param(<<"contract_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Contract details">>,
+                                  <<"content">> => json_ref(<<"Contract">>)},
+                    <<"404">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/versions">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List contract versions">>,
+                <<"parameters">> => [path_param(<<"contract_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of contract versions">>},
+                    <<"404">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Deploy a new contract version">>,
+                <<"parameters">> => [path_param(<<"contract_id">>)],
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Version deployed">>,
+                                  <<"content">> => json_ref(<<"ContractVersion">>)},
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/versions/:version">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get specific contract version">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"version">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Contract version">>,
+                                  <<"content">> => json_ref(<<"ContractVersion">>)},
+                    <<"404">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/versions/:version/activate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Activate a contract version">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"version">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Version activated">>,
+                                  <<"content">> => json_ref(<<"Contract">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/versions/:version/migrate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Create a migration from one version to another">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"version">>)],
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Migration created">>,
+                                  <<"content">> => json_ref(<<"ContractMigration">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/versions/:version/execute">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Execute a contract version and persist trace">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"version">>)],
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Execution completed">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/experiments">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List variant experiments for a contract">>,
+                <<"parameters">> => [path_param(<<"contract_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of experiments">>},
+                    <<"401">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create a new variant experiment">>,
+                <<"parameters">> => [path_param(<<"contract_id">>)],
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Experiment created">>,
+                                  <<"content">> => json_ref(<<"ContractExperiment">>)},
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/experiments/:experiment_id">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get experiment details">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"experiment_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Experiment details">>,
+                                  <<"content">> => json_ref(<<"ContractExperiment">>)},
+                    <<"404">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/experiments/:experiment_id/activate">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Activate an experiment">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"experiment_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Experiment activated">>,
+                                  <<"content">> => json_ref(<<"ContractExperiment">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/experiments/:experiment_id/stop">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Stop an experiment">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"experiment_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Experiment stopped">>,
+                                  <<"content">> => json_ref(<<"ContractExperiment">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/:contract_id/experiments/:experiment_id/assign">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Assign a subject to a contract variant">>,
+                <<"parameters">> => [path_param(<<"contract_id">>), path_param(<<"experiment_id">>)],
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Variant assigned">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/executions/:execution_id">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get execution trace">>,
+                <<"parameters">> => [path_param(<<"execution_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Execution trace">>,
+                                  <<"content">> => json_ref(<<"ContractExecutionTrace">>)},
+                    <<"404">> => error_response(),
+                    <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/contracts/executions/:execution_id/replay">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Replay an execution with optional context override">>,
+                <<"parameters">> => [path_param(<<"execution_id">>)],
+                <<"requestBody">> => #{
+                    <<"required">> => false,
+                    <<"content">> => json_content(<<"object">>)
+                },
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Replay result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response(),
                     <<"401">> => error_response()
                 }
             }

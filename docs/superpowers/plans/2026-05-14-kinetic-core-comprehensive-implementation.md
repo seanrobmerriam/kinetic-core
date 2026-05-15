@@ -1053,6 +1053,8 @@ scope: All phases — Release-Blocking through Phase 5 Intelligence
 ### PH7-TASK-004 — Smart contract runtime environment
 **Priority:** 🔴 LOW · **Effort:** XL
 
+**Status checkpoint (2026-05-14):** TASK-081 completed via design spec at `docs/superpowers/specs/2026-05-14-smart-contract-runtime-design.md`; TASK-082 completed via `apps/cb_contracts` scaffold + bounded evaluator runtime; TASK-083 completed via contract registry, version lifecycle, migration APIs, and integration routes; TASK-084 completed via variant experiments and persisted execution replay endpoints.
+
 **What:** Design and implement smart contract DSL and execution engine. This is Phase 5 and requires significant architecture work.
 
 **Design document first:** See `docs/superpowers/specs/` for a design spec before any implementation.
@@ -1064,9 +1066,9 @@ scope: All phases — Release-Blocking through Phase 5 Intelligence
 - Product template library
 
 **Acceptance criteria:**
-- [ ] Design spec approved before any code
-- [ ] MVP: simple if-then product rules expressible as smart contracts
-- [ ] Contract execution audited and reversible in MVP phase
+- [x] Design spec approved before any code
+- [x] MVP: simple if-then product rules expressible as smart contracts
+- [x] Contract execution audited and reversible in MVP phase
 
 ---
 

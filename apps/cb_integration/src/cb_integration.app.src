@@ -21,7 +21,8 @@
                   cb_compliance,
                   cb_marketplace,
                   cb_analytics,
-                  cb_insights
+                  cb_insights,
+                  cb_contracts
                  ]},
   {env, []},
   {modules, []},

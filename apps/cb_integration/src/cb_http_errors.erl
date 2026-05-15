@@ -260,6 +260,34 @@ to_response(invalid_sar_status) ->
 to_response(case_already_filed) ->
     {409, <<"case_already_filed">>, <<"SAR has already been filed and cannot be withdrawn">>};
 
+%% Smart contract runtime and registry errors
+to_response(contract_not_found) ->
+    {404, <<"contract_not_found">>, <<"Contract not found">>};
+to_response(contract_version_not_found) ->
+    {404, <<"contract_version_not_found">>, <<"Contract version not found">>};
+to_response(experiment_not_found) ->
+    {404, <<"experiment_not_found">>, <<"Contract experiment not found">>};
+to_response(execution_not_found) ->
+    {404, <<"execution_not_found">>, <<"Contract execution trace not found">>};
+to_response(invalid_contract_schema) ->
+    {422, <<"invalid_contract_schema">>, <<"Invalid contract schema">>};
+to_response(unsupported_dsl_version) ->
+    {422, <<"unsupported_dsl_version">>, <<"Unsupported contract DSL version">>};
+to_response(forbidden_operator) ->
+    {422, <<"forbidden_operator">>, <<"Contract contains a forbidden operator">>};
+to_response(unknown_variable_path) ->
+    {422, <<"unknown_variable_path">>, <<"Unknown variable path in contract">>};
+to_response(type_mismatch) ->
+    {422, <<"type_mismatch">>, <<"Type mismatch in contract expression">>};
+to_response(capability_denied) ->
+    {403, <<"capability_denied">>, <<"Contract capability denied">>};
+to_response(execution_budget_exceeded) ->
+    {422, <<"execution_budget_exceeded">>, <<"Contract execution budget exceeded">>};
+to_response(contract_rejected) ->
+    {422, <<"contract_rejected">>, <<"Contract rejected by business rules">>};
+to_response(side_effect_failed) ->
+    {500, <<"side_effect_failed">>, <<"Contract side effect failed">>};
+
 %% System errors
 to_response(database_error) ->
     {500, <<"database_error">>, <<"Database error">>};

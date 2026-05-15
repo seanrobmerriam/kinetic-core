@@ -235,7 +235,7 @@ This section breaks each phase into smaller execution units that can be schedule
 #### P6-S1: Quality and Test Coverage
 
 - TASK-085: Add end-to-end test suite covering all critical payment, account, and compliance journeys. [DONE 2025-01-29] — `test/e2e-journeys.js`; run via `npm run test:e2e:journeys`.
-- TASK-086: Implement performance benchmarking suite with baseline latency and throughput thresholds.
+- TASK-086: Implement performance benchmarking suite with baseline latency and throughput thresholds. [DONE 2025-01-29] — `test/perf-bench.js`; run via `npm run test:perf`.
 - TASK-087: Implement chaos engineering tests for failure injection, network partitions, and recovery.
 - TASK-088: Build contract test automation suite for all external API integrations and provider boundaries.
 - TASK-089: Expand property-based testing coverage across all financial calculation modules.

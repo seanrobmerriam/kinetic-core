@@ -18,7 +18,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconArrowLeft } from "@/components/icons";
-import { api } from "@/lib/api";
+import { api, findDuplicates, mergeParties } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatAmount, formatDate, truncateID } from "@/lib/format";
@@ -73,6 +73,10 @@ export default function CustomerDetailPage({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [reactivateOpen, setReactivateOpen] = useState(false);
   const [reactivateBusy, setReactivateBusy] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState("");
+  const [mergeReason, setMergeReason] = useState("");
+  const [mergeBusy, setMergeBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +123,27 @@ export default function CustomerDetailPage({
       setError((err as Error).message);
     } finally {
       setReactivateBusy(false);
+    }
+  };
+
+  const openMerge = () => {
+    setMergeTargetId("");
+    setMergeReason("");
+    setMergeOpen(true);
+  };
+
+  const submitMerge = async () => {
+    if (!mergeTargetId.trim() || !mergeReason.trim()) return;
+    setMergeBusy(true);
+    try {
+      await mergeParties(partyId, mergeTargetId.trim(), mergeReason.trim());
+      setSuccess("Customers merged");
+      setMergeOpen(false);
+      bump();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setMergeBusy(false);
     }
   };
 
@@ -294,6 +319,13 @@ export default function CustomerDetailPage({
             Close Customer
           </Button>
         )}
+        <Button
+          color="blue"
+          variant="light"
+          onClick={openMerge}
+        >
+          Merge Customer
+        </Button>
       </Group>
 
       <Modal
@@ -323,6 +355,54 @@ export default function CustomerDetailPage({
             </Button>
             <Button color="teal" onClick={reactivate} loading={reactivateBusy}>
               Reactivate
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={mergeOpen}
+        onClose={() => (mergeBusy ? null : setMergeOpen(false))}
+        title="Merge Customer"
+        centered
+        closeOnClickOutside={!mergeBusy}
+        closeOnEscape={!mergeBusy}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Merge <Text component="span" fw={600}>{party.full_name}</Text> into another customer.
+            This customer will be closed and all accounts transferred to the target.
+          </Text>
+          <TextInput
+            label="Target Customer ID"
+            placeholder="Paste target party ID…"
+            value={mergeTargetId}
+            onChange={(e) => setMergeTargetId(e.currentTarget.value)}
+            required
+          />
+          <Textarea
+            label="Reason"
+            placeholder="Describe why these records are being merged…"
+            value={mergeReason}
+            onChange={(e) => setMergeReason(e.currentTarget.value)}
+            rows={3}
+            required
+          />
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="default"
+              onClick={() => setMergeOpen(false)}
+              disabled={mergeBusy}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="blue"
+              onClick={submitMerge}
+              loading={mergeBusy}
+              disabled={!mergeTargetId.trim() || mergeReason.trim().length < 10}
+            >
+              Merge
             </Button>
           </Group>
         </Stack>

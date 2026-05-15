@@ -75,6 +75,7 @@
     update_ssn/2,
     detect_duplicate_parties/0,
     merge_parties/3,
+    normalize_name/1,
     set_risk_tier/2,
     get_risk_tier/1,
     retention_days_for_tier/1

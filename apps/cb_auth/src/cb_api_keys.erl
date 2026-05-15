@@ -15,6 +15,7 @@
     authenticate_key/1,
     list_keys/0,
     revoke_key/1,
+    update_key/2,
     delete_key/1
 ]).
 
@@ -143,6 +144,31 @@ revoke_key(KeyId) when is_binary(KeyId) ->
     end,
     case mnesia:transaction(F) of
         {atomic, ok}               -> ok;
+        {atomic, {error, _} = Err} -> Err;
+        {aborted, _Reason}         -> {error, database_error}
+    end.
+
+-spec update_key(binary(), map()) -> {ok, #api_key{}} | {error, not_found | database_error}.
+update_key(KeyId, Updates) when is_binary(KeyId), is_map(Updates) ->
+    Now = erlang:system_time(millisecond),
+    F = fun() ->
+        case mnesia:read(api_keys, KeyId, write) of
+            [K] ->
+                Updated = K#api_key{
+                    label              = maps:get(label, Updates, K#api_key.label),
+                    status             = maps:get(status, Updates, K#api_key.status),
+                    expires_at         = maps:get(expires_at, Updates, K#api_key.expires_at),
+                    rate_limit_per_min = maps:get(rate_limit_per_min, Updates, K#api_key.rate_limit_per_min),
+                    updated_at         = Now
+                },
+                mnesia:write(api_keys, Updated, write),
+                {ok, Updated};
+            [] ->
+                {error, not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, {ok, _} = Ok}     -> Ok;
         {atomic, {error, _} = Err} -> Err;
         {aborted, _Reason}         -> {error, database_error}
     end.

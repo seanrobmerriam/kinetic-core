@@ -99,39 +99,31 @@ export default function AccountDetailPage({
     let cancelled = false;
     (async () => {
       try {
-        const partyResp = await api<ListResponse<Party>>("GET", "/parties");
-        const parties = partyResp.items ?? [];
+        %% Fetch account directly — no party iteration needed
         let found: Account | null = null;
-        let foundParty: Party | null = null;
-        for (const p of parties) {
-          try {
-            const accResp = await api<ListResponse<Account>>(
-              "GET",
-              `/parties/${p.party_id}/accounts`,
-            );
-            const match = (accResp.items ?? []).find(
-              (a) => a.account_id === accountId,
-            );
-            if (match) {
-              found = match;
-              foundParty = p;
-              break;
-            }
-          } catch {
-            /* skip */
+        let foundPartyId: string | null = null;
+        try {
+          const acc = await api<Account>(`GET`, `/accounts/${accountId}`);
+          if (!cancelled) {
+            found = acc;
+            foundPartyId = acc.party_id;
+            setAccount(acc);
           }
+        } catch {
+          if (!cancelled) setError("Account not found");
+          return;
         }
-        if (!cancelled) setAccount(found);
 
-        if (foundParty) {
+        %% Fetch owning party separately — only when needed for display
+        if (foundPartyId) {
           try {
             const fullParty = await api<Party>(
               "GET",
-              `/parties/${foundParty.party_id}`,
+              `/parties/${foundPartyId}`,
             );
             if (!cancelled) setParty(fullParty);
           } catch {
-            if (!cancelled) setParty(foundParty);
+            %% Party fetch failed — continue without party info
           }
         }
 

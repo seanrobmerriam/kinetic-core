@@ -271,6 +271,30 @@ builtin_jobs() ->
             timer_ref   = undefined,
             last_run_at = undefined,
             last_result = undefined
+        },
+        #job{
+            name        = settlement_file,
+            handler     = {cb_settlement_file, generate_settlement_file, []},
+            schedule    = undefined,
+            timer_ref   = undefined,
+            last_run_at = undefined,
+            last_result = undefined
+        },
+        #job{
+            name        = audit_retention,
+            handler     = {cb_audit_retention, apply_retention_policies, []},
+            schedule    = undefined,
+            timer_ref   = undefined,
+            last_run_at = undefined,
+            last_result = undefined
+        },
+        #job{
+            name        = sla_monitor,
+            handler     = {cb_exception_sla, check_overdue, []},
+            schedule    = undefined,
+            timer_ref   = undefined,
+            last_run_at = undefined,
+            last_result = undefined
         }
     ].
 

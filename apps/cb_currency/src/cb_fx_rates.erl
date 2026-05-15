@@ -15,7 +15,8 @@
     get_rate/2,
     get_rate_at/3,
     list_rates/0,
-    list_rates_for_pair/2
+    list_rates_for_pair/2,
+    convert_with_spread/3
 ]).
 
 %% @doc Store a new exchange rate for a currency pair.
@@ -87,3 +88,36 @@ list_rates() ->
 list_rates_for_pair(FromCurrency, ToCurrency) ->
     Rates = mnesia:dirty_index_read(exchange_rate, FromCurrency, from_currency),
     [R || R <- Rates, R#exchange_rate.to_currency =:= ToCurrency].
+
+%% @doc Convert an amount using the base rate, then apply the pair's spread.
+%%
+%% The spread is applied symmetrically: half to buy, half to sell. For a
+%% spread of 5000 millionths (0.5%), a rate of 1_000_000 becomes:
+%%   buy price  = base_rate * (1 + spread/2) = 1_005_000
+%%   sell price  = base_rate * (1 - spread/2) = 995_000
+%%
+%% The direction parameter determines which side of the spread to use.
+%%
+%% @param FromCurrency Source currency
+%% @param ToCurrency   Target currency
+%% @param AmountMillionths Amount in millionths (minor units)
+-spec convert_with_spread(currency(), currency(), pos_integer()) ->
+    {ok, pos_integer()} | {error, no_rate | no_spread_configured | same_currency}.
+convert_with_spread(Same, Same, _Amount) ->
+    {error, same_currency};
+convert_with_spread(FromCurrency, ToCurrency, AmountMillionths) ->
+    case get_rate(FromCurrency, ToCurrency) of
+        {error, _} = Err -> Err;
+        {ok, BaseRate} ->
+            case cb_currency_pair:get_spread(FromCurrency, ToCurrency) of
+                {error, not_found} ->
+                    % No spread configured — use base rate with no markup
+                    {ok, (AmountMillionths * BaseRate) div 1_000_000};
+                {ok, SpreadMillionths} ->
+                    % Apply half-spread to the rate
+                    HalfSpread = SpreadMillionths div 2,
+                    AdjustedRate = BaseRate + (BaseRate * HalfSpread div 1_000_000),
+                    Result = (AmountMillionths * AdjustedRate) div 1_000_000,
+                    {ok, Result}
+            end
+    end.

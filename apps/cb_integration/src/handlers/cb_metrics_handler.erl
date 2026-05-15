@@ -23,15 +23,26 @@ init(Req, State) ->
 handle(<<"GET">>, Req, State) ->
     {WallMs, _} = erlang:statistics(wall_clock),
     HttpCounters = cb_metrics_counter:get_all(),
-    Metrics = #{
-        process_count       => erlang:system_info(process_count),
-        memory_total        => erlang:memory(total),
-        uptime_ms           => WallMs,
-        http_requests_total => maps:get(http_requests_total, HttpCounters, 0),
-        http_5xx_total      => maps:get(http_5xx_total, HttpCounters, 0)
-    },
-    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-    Req2 = cowboy_req:reply(200, Headers, jsone:encode(Metrics), Req),
+
+    %% Build Prometheus-style text format metrics
+    Lines = [
+        <<"# HELP erlang_process_count Current number of Erlang processes">>,
+        <<"erlang_process_count ">>, integer_to_list(erlang:system_info(process_count)), <<"\n">>,
+        <<"# HELP erlang_memory_total_bytes Total memory in bytes">>,
+        <<"erlang_memory_total_bytes ">>, integer_to_list(erlang:memory(total)), <<"\n">>,
+        <<"# HELP erlang_uptime_ms Node uptime in milliseconds">>,
+        <<"erlang_uptime_ms ">>, integer_to_list(WallMs), <<"\n">>,
+        <<"# HELP http_requests_total Total HTTP requests">>,
+        <<"http_requests_total ">>, integer_to_list(maps:get(http_requests_total, HttpCounters, 0)), <<"\n">>,
+        <<"# HELP http_5xx_total Total HTTP 5xx responses">>,
+        <<"http_5xx_total ">>, integer_to_list(maps:get(http_5xx_total, HttpCounters, 0)), <<"\n">>
+    ],
+
+    MetricsBin = iolist_to_binary(Lines),
+    Headers = maps:merge(#{
+        <<"content-type">> => <<"text/plain; version=0.0.4; charset=utf-8">>
+    }, cb_cors:headers()),
+    Req2 = cowboy_req:reply(200, Headers, MetricsBin, Req),
     {ok, Req2, State};
 handle(<<"OPTIONS">>, Req, State) ->
     Req2 = cb_cors:reply_preflight(Req),

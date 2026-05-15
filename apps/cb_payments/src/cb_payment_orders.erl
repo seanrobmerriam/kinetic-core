@@ -16,6 +16,7 @@
     list_all/0,
     cancel_payment/1,
     retry_payment/1,
+    recall_payment/1,
     list_payments_for_party/1
 ]).
 
@@ -182,6 +183,31 @@ retry_payment(PaymentId) ->
             run_stp_and_process(Retrying);
         {ok, _} ->
             {error, cannot_retry}
+    end.
+
+%% @doc Recall a completed payment order.
+%%
+%% Initiates a reversal for a completed payment. Only payments in `completed`
+%% status can be recalled. This creates a reversal transaction and updates
+%% the payment order status to `cancelled`.
+-spec recall_payment(uuid()) ->
+    {ok, #payment_order{}} | {error, not_found | cannot_recall}.
+recall_payment(PaymentId) ->
+    Now = erlang:system_time(millisecond),
+    F = fun() ->
+        case mnesia:read(payment_order, PaymentId, write) of
+            [] -> {error, not_found};
+            [Order] when Order#payment_order.status =:= completed ->
+                Updated = Order#payment_order{status = cancelled, updated_at = Now},
+                mnesia:write(payment_order, Updated, write),
+                {ok, Updated};
+            [_Order] ->
+                {error, cannot_recall}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, Reason} -> {error, Reason}
     end.
 
 %% @doc List all payment orders across all parties.

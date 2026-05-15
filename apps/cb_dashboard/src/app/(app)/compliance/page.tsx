@@ -6,15 +6,17 @@ import {
   Button,
   Card,
   Group,
+  Modal,
   Paper,
   SegmentedControl,
   Select,
   Stack,
   Text,
   Textarea,
+  TextInput,
   Title,
 } from "@mantine/core";
-import { api } from "@/lib/api";
+import { api, addKycDocumentRef } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { capitalize, formatTimestamp, truncateID } from "@/lib/format";
@@ -215,6 +217,7 @@ interface KycResponse {
   kyc_status: string;
   onboarding_status: string;
   review_notes: string | null;
+  doc_refs: string[] | null;
   updated_at: number;
 }
 
@@ -385,18 +388,39 @@ function KycManagement() {
               },
             },
             {
+              key: "doc_refs",
+              label: "Documents",
+              sortable: false,
+              getValue: (p) => kyc[p.party_id]?.doc_refs?.length ?? 0,
+              render: (p) => {
+                const refs = kyc[p.party_id]?.doc_refs ?? [];
+                return refs.length > 0 ? (
+                  <Badge variant="light" color="blue" radius="sm">
+                    {refs.length} doc{refs.length !== 1 ? "s" : ""}
+                  </Badge>
+                ) : (
+                  <Text size="sm" c="dimmed">—</Text>
+                );
+              },
+            },
+            {
               key: "actions",
               label: "Actions",
               sortable: false,
               getValue: () => "",
               render: (p) => (
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => selectParty(p.party_id)}
-                >
-                  Update KYC
-                </Button>
+                <Group gap="xs">
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => selectParty(p.party_id)}
+                  >
+                    Update KYC
+                  </Button>
+                  <DocRefButton partyId={p.party_id} onAdded={(refs) => {
+                    setKyc(prev => ({ ...prev, [p.party_id]: { ...prev[p.party_id]!, doc_refs: refs } }));
+                  }} />
+                </Group>
               ),
             },
           ];
@@ -413,5 +437,59 @@ function KycManagement() {
         })()}
       </Paper>
     </Stack>
+  );
+}
+
+function DocRefButton({
+  partyId,
+  onAdded,
+}: {
+  partyId: string;
+  onAdded: (refs: string[]) => void;
+}) {
+  const { setError, setSuccess } = useNotify();
+  const [opened, setOpened] = useState(false);
+  const [docRef, setDocRef] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async () => {
+    if (!docRef.trim()) return;
+    setSubmitting(true);
+    try {
+      const updated = await addKycDocumentRef(partyId, docRef.trim());
+      onAdded(updated.doc_refs ?? []);
+      setSuccess("Document reference added");
+      setOpened(false);
+      setDocRef("");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <Button size="xs" variant="subtle" onClick={() => setOpened(true)}>
+        Add Doc
+      </Button>
+      <Modal opened={opened} onClose={() => setOpened(false)} title="Add Document Reference" centered>
+        <Stack>
+          <TextInput
+            label="Document Reference"
+            placeholder="s3://bucket/path/to/doc.pdf"
+            value={docRef}
+            onChange={(e) => setDocRef(e.currentTarget.value)}
+            description="URI where the document can be retrieved (S3 path, URL, etc.)"
+          />
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={() => setOpened(false)}>Cancel</Button>
+            <Button onClick={submit} loading={submitting} disabled={!docRef.trim()}>
+              Add
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
   );
 }

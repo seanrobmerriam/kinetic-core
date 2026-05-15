@@ -85,6 +85,8 @@ dispatch() ->
             {<<"/api/v1/parties/:party_id/reactivate">>, cb_party_reactivate_handler, []},
             {<<"/api/v1/parties/:party_id/close">>, cb_party_close_handler, []},
             {<<"/api/v1/parties/:party_id/kyc">>, cb_party_kyc_handler, []},
+            {<<"/api/v1/parties/:party_id/merge">>, cb_party_merge_handler, []},
+            {<<"/api/v1/parties/duplicates">>, cb_party_merge_handler, []},
 
             %% Accounts
             {<<"/api/v1/accounts">>, cb_accounts_list_handler, []},
@@ -110,11 +112,14 @@ dispatch() ->
             {<<"/api/v1/transactions/:txn_id/reverse">>, cb_transaction_reverse_handler, []},
             {<<"/api/v1/transactions/:txn_id/receipt">>, cb_transaction_receipt_handler, []},
             {<<"/api/v1/transactions/:txn_id/tags">>, cb_transaction_tags_handler, []},
+            {<<"/api/v1/transactions/:txn_id/settlement-currency">>, cb_settlement_currency_handler, []},
 
-            %% Ledger entries
+            {<<"/api/v1/settlements/files">>, cb_settlement_file_handler, []},
+            {<<"/api/v1/audit/retention-policies">>, cb_audit_retention_handler, []},
+            {<<"/api/v1/audit/apply-retention">>, cb_audit_retention_handler, []},
             {<<"/api/v1/ledger/entries/latest">>, cb_ledger_latest_handler, []},
             {<<"/api/v1/ledger/trial-balance">>, cb_ledger_trial_balance_handler, []},
-            {<<"/api/v1/ledger/general-ledger">>, cb_ledger_gl_handler, []},
+            {<<"/api/v1/ledger/general-ledger">>, cb_general_ledger_handler, []},
             {<<"/api/v1/ledger/chart-of-accounts">>, cb_chart_accounts_handler, []},
             {<<"/api/v1/ledger/chart-of-accounts/:code">>, cb_chart_accounts_handler, []},
             {<<"/api/v1/transactions/:txn_id/entries">>, cb_transaction_entries_handler, []},
@@ -158,7 +163,13 @@ dispatch() ->
 
             %% Statements and CSV exports
             {<<"/api/v1/accounts/:account_id/statement">>, cb_statements_handler, []},
-            {<<"/api/v1/export/:resource">>, cb_exports_handler, []},
+            {<<"/api/v1/export/:resource">>, cb_export_handler, []},
+
+            %% Currency pair management (PH1-TASK-009)
+            {<<"POST">>, <<"/api/v1/currency-pairs">>, cb_currency_pair_handler, []},
+            {<<"GET">>, <<"/api/v1/currency-pairs">>, cb_currency_pair_handler, []},
+            {<<"GET">>, <<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
+            {<<"PATCH">>, <<"/api/v1/currency-pairs/:pair_id">>, cb_currency_pair_handler, []},
 
             %% Development tools
             {<<"/api/v1/dev/mock-import">>, cb_dev_mock_import_handler, []},
@@ -175,8 +186,13 @@ dispatch() ->
             %% Payment orders
             {<<"/api/v1/payment-orders">>, cb_payment_orders_handler, []},
             {<<"/api/v1/payment-orders/:payment_id">>, cb_payment_orders_handler, []},
-            {<<"/api/v1/payment-orders/:payment_id/cancel">>, cb_payment_orders_handler, []},
+            {<<"/api/v1/payment-orders/:payment_id/cancel">>, cb_payment_cancel_handler, []},
+            {<<"/api/v1/payment-orders/:payment_id/recall">>, cb_payment_recall_handler, []},
             {<<"/api/v1/payment-orders/:payment_id/retry">>, cb_payment_orders_handler, []},
+
+            %% Beneficiary management (PH1-TASK-012)
+            {<<"/api/v1/beneficiaries">>, cb_beneficiary_handler, []},
+            {<<"/api/v1/beneficiaries/:beneficiary_id">>, cb_beneficiary_handler, []},
 
             %% Exception queue
             {<<"/api/v1/exceptions">>, cb_exceptions_handler, []},

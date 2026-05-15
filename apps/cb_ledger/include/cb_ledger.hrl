@@ -244,18 +244,19 @@
 %% The idempotency_key ensures that if a client retries a request (due to
 %% network failure or timeout), the transaction is only executed once.
 -record(transaction, {
-    txn_id            :: uuid(),
-    idempotency_key   :: binary(),
-    txn_type          :: txn_type(),
-    status            :: txn_status(),
-    amount            :: amount(),
-    currency          :: currency(),
-    source_account_id :: uuid() | undefined,
-    dest_account_id   :: uuid() | undefined,
-    description       :: binary(),
-    channel           :: binary() | undefined,
-    created_at        :: timestamp_ms(),
-    posted_at         :: timestamp_ms() | undefined
+    txn_id             :: uuid(),
+    idempotency_key    :: binary(),
+    txn_type           :: txn_type(),
+    status             :: txn_status(),
+    amount             :: amount(),
+    currency           :: currency(),
+    settlement_currency :: currency() | undefined,
+    source_account_id  :: uuid() | undefined,
+    dest_account_id    :: uuid() | undefined,
+    description        :: binary(),
+    channel            :: binary() | undefined,
+    created_at         :: timestamp_ms(),
+    posted_at          :: timestamp_ms() | undefined
 }).
 
 %% @doc Represents a single line item in the general ledger.
@@ -355,6 +356,18 @@
     created_at       :: timestamp_ms()
 }).
 
+%% @doc Currency pair configuration with spread for FX operations.
+%% Spread is stored in millionths (basis points): 5000 = 0.5% spread.
+-record(currency_pair, {
+    pair_id              :: binary(),  % "USD/EUR" format
+    from_currency        :: currency(),
+    to_currency          :: currency(),
+    spread_millionths    :: non_neg_integer(),
+    settlement_currency  :: currency(),
+    created_at           :: timestamp_ms(),
+    updated_at           :: timestamp_ms()
+}).
+
 %% @doc Exchange rate between two currencies, stored as integer millionths.
 %% rate_millionths = 1_000_000 means 1:1 parity.
 %% Example: USD/EUR at 0.92 = 920_000.
@@ -380,6 +393,23 @@
     stp_decision      :: straight_through | exception_queued | undefined,
     failure_reason    :: binary() | undefined,
     retry_count       :: non_neg_integer(),
+    created_at        :: timestamp_ms(),
+    updated_at        :: timestamp_ms()
+}).
+
+%% @doc Beneficiary (payee) record for payment orders.
+%%
+%% Stores registered beneficiaries/payees that can be referenced
+%% when creating payment orders to avoid re-entering details.
+-record(beneficiary, {
+    beneficiary_id    :: uuid(),
+    party_id          :: uuid(),  % owner/requester
+    name              :: binary(),
+    account_number    :: binary(),
+    bank_code         :: binary(),  % SWIFT/BIC code
+    currency          :: currency(),
+    country           :: binary(),
+    is_active         :: boolean(),
     created_at        :: timestamp_ms(),
     updated_at        :: timestamp_ms()
 }).

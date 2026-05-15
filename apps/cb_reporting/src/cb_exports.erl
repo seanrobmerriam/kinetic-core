@@ -8,12 +8,8 @@
 -include_lib("cb_ledger/include/cb_ledger.hrl").
 -include_lib("cb_events/include/cb_events.hrl").
 
--export([
-    export_accounts/0,
-    export_transactions/0,
-    export_account_transactions/1,
-    export_events/0
-]).
+-export([export_accounts/0, export_transactions/0, export_account_transactions/1,
+         export_events/0, export_resource/2]).
 
 %% @doc Export all accounts as CSV.
 -dialyzer({nowarn_function, export_accounts/0}).
@@ -138,3 +134,88 @@ null_or_bin(V) -> V.
 
 null_or_int(undefined) -> <<"">>;
 null_or_int(V) -> integer_to_binary(V).
+
+%% @doc Export a named resource as CSV.
+%% Resources: parties | accounts | transactions | ledger | events
+%% Returns {ok, binary(), content_type} for streaming responses.
+-spec export_resource(atom(), map()) -> {ok, binary(), binary()} | {error, atom()}.
+export_resource(Resource, Filters) ->
+    Result = case Resource of
+        parties      -> export_parties_csv();
+        accounts     -> export_accounts();
+        transactions -> export_transactions();
+        events       -> export_events();
+        ledger       -> export_ledger_csv(Filters)
+    end,
+    case Result of
+        {ok, Bin}           -> {ok, Bin, <<"text/csv;charset=utf-8">>};
+        {error, _} = Err    -> Err
+    end.
+
+-export_parties_csv() ->
+    F = fun() ->
+        mnesia:select(party, [{#party{_ = '_'}, [], ['$_']}])
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Parties} ->
+            Header = <<"party_id,full_name,email,status,created_at,updated_at\r\n">>,
+            DataRows = [iolist_to_binary([
+                to_csv_bin(P#party.party_id), $,,
+                to_csv_bin(P#party.full_name), $,,
+                to_csv_bin(P#party.email), $,,
+                atom_to_binary(P#party.status, utf8), $,,
+                integer_to_binary(P#party.created_at), $,,
+                integer_to_binary(P#party.updated_at),
+                <<"\r\n">>
+            ]) || P <- Parties],
+            {ok, iolist_to_binary([Header | DataRows])};
+        {aborted, Reason} ->
+            {error, Reason}
+    end.
+
+to_csv_bin(V) when is_binary(V) -> <<"\"", (escape_csv(V))/binary, "\"">>;
+to_csv_bin(V) when is_atom(V)   -> atom_to_binary(V, utf8);
+to_csv_bin(V) when is_integer(V) -> integer_to_binary(V);
+to_csv_bin(null) -> <<"\"\"">>;
+to_csv_bin(undefined) -> <<"\"\"">>.
+
+%% @doc Export ledger entries as CSV (optionally filtered by account_id).
+export_ledger_csv(Filters) ->
+    F = fun() ->
+        mnesia:select(ledger_entry, [{#ledger_entry{_ = '_'}, [], ['$_']}])
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Entries} ->
+            Filtered = filter_entries(Entries, Filters),
+            Sorted = lists:sort(
+                fun(A, B) -> A#ledger_entry.posted_at =< B#ledger_entry.posted_at end,
+                Filtered
+            ),
+            Header = <<"entry_id,txn_id,account_id,entry_type,amount,currency,description,posted_at\r\n">>,
+            Rows = [ledger_row(E) || E <- Sorted],
+            {ok, iolist_to_binary([Header | Rows])};
+        {aborted, Reason} ->
+            {error, Reason}
+    end.
+
+filter_entries(Entries, Filters) ->
+    lists:filter(fun(E) ->
+        matches_filters(E, Filters)
+    end, Entries).
+
+matches_filters(E, Filters) ->
+    AccountId = maps:get(account_id, Filters, undefined),
+    (AccountId =:= undefined orelse E#ledger_entry.account_id =:= AccountId).
+
+ledger_row(E) ->
+    Row = [
+        E#ledger_entry.entry_id,
+        E#ledger_entry.txn_id,
+        E#ledger_entry.account_id,
+        atom_to_binary(E#ledger_entry.entry_type, utf8),
+        integer_to_binary(E#ledger_entry.amount),
+        atom_to_binary(E#ledger_entry.currency, utf8),
+        escape_csv(E#ledger_entry.description),
+        integer_to_binary(E#ledger_entry.posted_at)
+    ],
+    [iolist_to_binary(lists:join(",", Row)), <<"\r\n">>].

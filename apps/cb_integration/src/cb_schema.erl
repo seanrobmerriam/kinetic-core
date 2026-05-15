@@ -80,7 +80,8 @@ create_tables() ->
     Tables = [party, party_audit, account, transaction, ledger_entry,
               transaction_tag,
               chart_account, balance_snapshot, account_hold,
-              currency_config, exchange_rate, payment_order, exception_item,
+              currency_config, exchange_rate, currency_pair, payment_order, exception_item,
+              beneficiary,
               channel_limit, channel_activity, notification_preference,
               channel_session, channel_feature_flag,
               api_keys,
@@ -128,13 +129,15 @@ create_tables() ->
 -spec create_if_not_exists(
     party | party_audit | account | transaction | ledger_entry |
     chart_account | balance_snapshot | account_hold |
-    currency_config | exchange_rate | payment_order | exception_item |
+    currency_config | currency_pair | exchange_rate | payment_order | exception_item |
+    beneficiary |
     channel_limit | channel_activity | notification_preference |
     channel_session | channel_feature_flag |
     api_keys |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
+    audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
     report_export | api_usage_event |
     oauth_client | oauth_token |
@@ -185,13 +188,15 @@ create_if_not_exists(TableName) ->
 -spec table_spec(
     party | party_audit | account | transaction | ledger_entry |
     chart_account | balance_snapshot | account_hold |
-    currency_config | exchange_rate | payment_order | exception_item |
+    currency_config | currency_pair | exchange_rate | payment_order | exception_item |
+    beneficiary |
     channel_limit | channel_activity | notification_preference |
     channel_session | channel_feature_flag |
     api_keys |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
+    audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
     report_export | api_usage_event |
     oauth_client | oauth_token |
@@ -266,6 +271,12 @@ table_spec(currency_config) ->
         {attributes, record_info(fields, currency_config)},
         {index, [is_active]}
     ];
+table_spec(currency_pair) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, currency_pair)},
+        {index, [from_currency, to_currency]}
+    ];
 table_spec(exchange_rate) ->
     [
         {ram_copies, [node()]},
@@ -283,6 +294,12 @@ table_spec(exception_item) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, exception_item)},
         {index, [payment_id, status]}
+    ];
+table_spec(beneficiary) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, beneficiary)},
+        {index, [party_id, is_active, country]}
     ];
 table_spec(channel_limit) ->
     [
@@ -385,6 +402,12 @@ table_spec(audit_log) ->
         {attributes, [audit_id, actor_user_id, action, entity_type, entity_id,
                       metadata, created_at]},
         {index, [actor_user_id, entity_type]}
+    ];
+table_spec(audit_retention_policy) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, audit_retention_policy)},
+        {index, [resource]}
     ];
 table_spec(approval_request) ->
     [

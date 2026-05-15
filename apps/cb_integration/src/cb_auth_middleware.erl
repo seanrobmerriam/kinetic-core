@@ -95,6 +95,7 @@ is_admin_only_boundary(_Method, <<"/api/v1/api-keys">>) -> true;
 is_admin_only_boundary(<<"GET">>, <<"/api/v1/channel-limits">>) -> true;
 is_admin_only_boundary(_Method, <<"/api/v1/audit/retention-policies">>) -> true;
 is_admin_only_boundary(_Method, <<"/api/v1/audit/apply-retention">>) -> true;
+is_admin_only_boundary(_Method, <<"/api/v1/audit/evidence/exports">>) -> true;
 is_admin_only_boundary(Method, Path) ->
     case has_prefix(Path, <<"/api/v1/api-keys/">>) of
         true -> true;
@@ -104,6 +105,7 @@ is_admin_only_boundary(Method, Path) ->
                 true ->
                     Method =:= <<"PUT">> orelse Method =:= <<"PATCH">> orelse Method =:= <<"DELETE">>;
                 false ->
+                    has_prefix(Path, <<"/api/v1/audit/evidence/">>) orelse
                     has_prefix(Path, <<"/api/v1/cluster/">>) orelse
                     has_prefix(Path, <<"/api/v1/scaling/">>) orelse
                     has_prefix(Path, <<"/api/v1/recovery/">>)

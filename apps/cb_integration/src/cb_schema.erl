@@ -86,6 +86,7 @@ create_tables() ->
               channel_limit, channel_activity, notification_preference,
               channel_session, channel_feature_flag,
               api_keys,
+              key_rotation_events,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
@@ -136,7 +137,7 @@ create_tables() ->
     beneficiary |
     channel_limit | channel_activity | notification_preference |
     channel_session | channel_feature_flag |
-    api_keys |
+    api_keys | key_rotation_events |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -197,7 +198,7 @@ create_if_not_exists(TableName) ->
     beneficiary |
     channel_limit | channel_activity | notification_preference |
     channel_session | channel_feature_flag |
-    api_keys |
+    api_keys | key_rotation_events |
     savings_product | loan_products | loan_accounts | loan_repayments |
     interest_accrual | auth_user | auth_session | audit_log |
     approval_request | approval_decision | event_outbox |
@@ -462,6 +463,13 @@ table_spec(report_export) ->
         {attributes, [export_id, export_type, parameters, status,
                       generated_at, created_at]},
         {index, [export_type, status]}
+    ];
+table_spec(key_rotation_events) ->
+    [
+        {ram_copies, [node()]},
+        {record_name, key_rotation_event},
+        {attributes, record_info(fields, key_rotation_event)},
+        {index, [key_id, rotated_at]}
     ];
 table_spec(api_usage_event) ->
     [

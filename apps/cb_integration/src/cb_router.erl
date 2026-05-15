@@ -242,8 +242,11 @@ dispatch() ->
 
             %% Partner API keys
             {<<"/api/v1/api-keys">>, cb_api_keys_handler, []},
+            {<<"/api/v1/api-keys/rotation-pending">>, cb_rotation_pending_handler, []},
             {<<"/api/v1/api-keys/:key_id">>, cb_api_keys_handler, []},
             {<<"/api/v1/api-keys/:key_id/usage">>, cb_api_usage_handler, []},
+            {<<"/api/v1/api-keys/:key_id/rotate">>, cb_api_key_rotation_handler, []},
+            {<<"/api/v1/api-keys/:key_id/rotation-history">>, cb_api_key_rotation_handler, []},
 
             %% API deprecation notices
             {<<"/api/v1/deprecations">>, cb_deprecation_handler, []},
@@ -343,6 +346,12 @@ dispatch() ->
             {<<"/api/v1/ledger/replay/sessions">>, cb_ledger_replay_handler, []},
             {<<"/api/v1/ledger/replay/sessions/:session_id">>, cb_ledger_replay_handler, []},
             {<<"/api/v1/ledger/replay/sessions/:session_id/:action">>, cb_ledger_replay_handler, []},
+
+            %% Regulatory evidence exports (P6-S2, TASK-095)
+            {<<"/api/v1/audit/evidence/exports">>, cb_regulatory_evidence_handler, []},
+            {<<"/api/v1/audit/evidence/exports/:export_id">>, cb_regulatory_evidence_handler, []},
+            {<<"/api/v1/audit/evidence/exports/:export_id/:action">>, cb_regulatory_evidence_handler, []},
+            {<<"/api/v1/audit/evidence/:resource">>, cb_regulatory_evidence_handler, []},
 
             %% Cryptographic audit chain (P4-S3, TASK-073)
             {<<"/api/v1/audit/chain/:resource">>, cb_audit_chain_handler, []},

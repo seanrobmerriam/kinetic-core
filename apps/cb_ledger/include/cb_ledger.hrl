@@ -631,6 +631,17 @@
     updated_at         :: timestamp_ms()
 }).
 
+%% @doc Audit trail entry for an API key rotation event.
+%%
+%% Written atomically alongside the new key hash during rotation.
+%% Provides an immutable log of who rotated a key and when.
+-record(key_rotation_event, {
+    event_id   :: uuid(),
+    key_id     :: uuid(),
+    rotated_by :: binary(),
+    rotated_at :: timestamp_ms()
+}).
+
 %% @doc Records a single API request made with an API key.
 %%
 %% Used to build per-key usage reports in the Developer Hub.

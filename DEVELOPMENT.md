@@ -237,7 +237,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-085: Add end-to-end test suite covering all critical payment, account, and compliance journeys. [DONE 2025-01-29] — `test/e2e-journeys.js`; run via `npm run test:e2e:journeys`.
 - TASK-086: Implement performance benchmarking suite with baseline latency and throughput thresholds. [DONE 2025-01-29] — `test/perf-bench.js`; run via `npm run test:perf`.
 - TASK-087: Implement chaos engineering tests for failure injection, network partitions, and recovery. [DONE 2025-01-29] — `test/chaos.js`; run via `npm run test:chaos`.
-- TASK-088: Build contract test automation suite for all external API integrations and provider boundaries.
+- TASK-088: Build contract test automation suite for all external API integrations and provider boundaries. [DONE 2025-01-29] — `test/contracts.js`; run via `npm run test:contracts`.
 - TASK-089: Expand property-based testing coverage across all financial calculation modules.
 - TASK-090: Implement mutation testing to validate test suite effectiveness and gap detection.
 - TASK-091: Enforce CI/CD quality gates with mandatory pass thresholds before merge.

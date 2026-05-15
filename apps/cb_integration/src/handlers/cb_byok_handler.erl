@@ -26,7 +26,8 @@ init(Req, State) ->
 handle(<<"POST">>, undefined, undefined, Req, State) ->
     {ok, Body, Req2} = cowboy_req:read_body(Req),
     case jsone:try_decode(Body, [{keys, atom}]) of
-        {ok, #{owner := O, key_material_b64 := KB64, algorithm := A}, _} ->
+        {ok, #{owner := O, key_material_b64 := KB64, algorithm := A}, _}
+                when is_binary(O), is_binary(KB64), is_binary(A) ->
             try base64:decode(KB64) of
                 Key ->
                     case cb_byok:register_key(O, Key, A) of

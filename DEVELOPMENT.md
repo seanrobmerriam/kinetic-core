@@ -238,7 +238,7 @@ This section breaks each phase into smaller execution units that can be schedule
 - TASK-086: Implement performance benchmarking suite with baseline latency and throughput thresholds. [DONE 2025-01-29] — `test/perf-bench.js`; run via `npm run test:perf`.
 - TASK-087: Implement chaos engineering tests for failure injection, network partitions, and recovery. [DONE 2025-01-29] — `test/chaos.js`; run via `npm run test:chaos`.
 - TASK-088: Build contract test automation suite for all external API integrations and provider boundaries. [DONE 2025-01-29] — `test/contracts.js`; run via `npm run test:contracts`.
-- TASK-089: Expand property-based testing coverage across all financial calculation modules.
+- TASK-089: Expand property-based testing coverage across all financial calculation modules. [DONE 2025-05-15] — expanded `apps/cb_interest/test/prop_interest.erl` (+4 props), `apps/cb_loans/test/prop_loan_calculations.erl` (+4 props), created `apps/cb_loans/test/prop_repayment_schedule.erl` (5 props); run via `rebar3 proper`.
 - TASK-090: Implement mutation testing to validate test suite effectiveness and gap detection.
 - TASK-091: Enforce CI/CD quality gates with mandatory pass thresholds before merge.
 

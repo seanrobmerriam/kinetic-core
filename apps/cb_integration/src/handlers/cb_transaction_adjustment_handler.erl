@@ -19,19 +19,28 @@ handle(<<"POST">>, Req, State) ->
             <<"currency">> := CurrencyBin,
             <<"description">> := Description
         }, _} ->
-            Currency = binary_to_atom(CurrencyBin, utf8),
-            case cb_payments:adjust_balance(IdempotencyKey, AccountId, Amount, Currency, Description) of
-                {ok, Txn} ->
-                    Resp = transaction_to_json(Txn),
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
+            case cb_validate:currency(CurrencyBin) of
+                {error, CurrErr} ->
+                    {ErrStatus, ErrAtom, ErrMsg} = cb_http_errors:to_response(CurrErr),
+                    ErrResp = #{error => ErrAtom, message => ErrMsg},
+                    ErrHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req3 = cowboy_req:reply(ErrStatus, ErrHeaders, jsone:encode(ErrResp), Req2),
                     {ok, Req3, State};
-                {error, Reason} ->
-                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                    Resp = #{error => ErrorAtom, message => Message},
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
-                    {ok, Req3, State}
+                ok ->
+                    Currency = binary_to_existing_atom(CurrencyBin, utf8),
+                    case cb_payments:adjust_balance(IdempotencyKey, AccountId, Amount, Currency, Description) of
+                        {ok, Txn} ->
+                            Resp = transaction_to_json(Txn),
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
+                            {ok, Req3, State};
+                        {error, Reason} ->
+                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                            Resp = #{error => ErrorAtom, message => Message},
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
+                            {ok, Req3, State}
+                    end
             end;
         _ ->
             {Status, ErrorAtom, Message} = cb_http_errors:to_response(missing_required_field),

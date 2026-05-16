@@ -139,21 +139,26 @@ create_product(Req, State) ->
                     MaxTermMonths = maps:get(<<"max_term_months">>, Json),
                     InterestRate = maps:get(<<"interest_rate_bps">>, Json),
                     InterestTypeBin = maps:get(<<"interest_type">>, Json),
-                    Currency = binary_to_atom(CurrencyBin, utf8),
-                    InterestType = binary_to_atom(InterestTypeBin, utf8),
-                    Draft = maps:get(<<"draft">>, Json, false),
-                    CreateFn = case Draft of
-                        true  -> fun cb_loan_products:create_draft_product/9;
-                        false -> fun cb_loan_products:create_product/9
-                    end,
-                    case CreateFn(Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType) of
-                        {ok, ProductId} ->
-                            Resp = #{product_id => ProductId},
-                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                            Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
-                            {ok, Req3, State};
-                        {error, Reason} ->
-                            respond_error(Reason, Req2, State)
+                    case cb_validate:currency(CurrencyBin) of
+                        {error, CurrErr} ->
+                            respond_error(CurrErr, Req2, State);
+                        ok ->
+                            Currency = binary_to_existing_atom(CurrencyBin, utf8),
+                            InterestType = binary_to_existing_atom(InterestTypeBin, utf8),
+                            Draft = maps:get(<<"draft">>, Json, false),
+                            CreateFn = case Draft of
+                                true  -> fun cb_loan_products:create_draft_product/9;
+                                false -> fun cb_loan_products:create_product/9
+                            end,
+                            case CreateFn(Name, Description, Currency, MinAmount, MaxAmount, MinTermMonths, MaxTermMonths, InterestRate, InterestType) of
+                                {ok, ProductId} ->
+                                    Resp = #{product_id => ProductId},
+                                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                                    Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
+                                    {ok, Req3, State};
+                                {error, Reason} ->
+                                    respond_error(Reason, Req2, State)
+                            end
                     end;
                 false ->
                     respond_error(missing_required_field, Req2, State)

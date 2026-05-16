@@ -33,20 +33,30 @@ handle(<<"POST">>, undefined, Req, State) ->
             Name = maps:get(<<"name">>, Body),
             AccountNumber = maps:get(<<"account_number">>, Body),
             BankCode = maps:get(<<"bank_code">>, Body),
-            Currency = binary_to_atom(maps:get(<<"currency">>, Body), utf8),
+            CurrencyBin = maps:get(<<"currency">>, Body),
             Country = maps:get(<<"country">>, Body),
-            case cb_beneficiary:create_beneficiary(PartyId, Name, AccountNumber, BankCode, Currency, Country) of
-                {ok, Beneficiary} ->
-                    Resp = beneficiary_to_json(Beneficiary),
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req1),
+            case cb_validate:currency(CurrencyBin) of
+                {error, CurrErr} ->
+                    {ErrStatus, ErrAtom, ErrMsg} = cb_http_errors:to_response(CurrErr),
+                    ErrResp = #{error => ErrAtom, message => ErrMsg},
+                    ErrHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req2 = cowboy_req:reply(ErrStatus, ErrHeaders, jsone:encode(ErrResp), Req1),
                     {ok, Req2, State};
-                {error, Reason} ->
-                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                    Resp = #{error => ErrorAtom, message => Message},
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
-                    {ok, Req2, State}
+                ok ->
+                    Currency = binary_to_existing_atom(CurrencyBin, utf8),
+                    case cb_beneficiary:create_beneficiary(PartyId, Name, AccountNumber, BankCode, Currency, Country) of
+                        {ok, Beneficiary} ->
+                            Resp = beneficiary_to_json(Beneficiary),
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State};
+                        {error, Reason} ->
+                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                            Resp = #{error => ErrorAtom, message => Message},
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State}
+                    end
             end;
         {error, _} ->
             {Code, Hdrs, Body} = cb_http_errors:to_response_with_metrics(bad_request),
@@ -90,7 +100,7 @@ handle(<<"PATCH">>, BeneficiaryId, Req, State) ->
                 bank_code      => maps:get(<<"bank_code">>, Body, undefined),
                 currency       => case maps:get(<<"currency">>, Body, undefined) of
                     undefined -> undefined;
-                    C -> binary_to_atom(C, utf8)
+                    C -> binary_to_existing_atom(C, utf8)
                 end,
                 country        => maps:get(<<"country">>, Body, undefined),
                 is_active      => maps:get(<<"is_active">>, Body, undefined)

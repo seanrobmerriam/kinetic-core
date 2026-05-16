@@ -288,6 +288,20 @@ to_response(contract_rejected) ->
 to_response(side_effect_failed) ->
     {500, <<"side_effect_failed">>, <<"Contract side effect failed">>};
 
+%% Input sanitization errors
+to_response(request_too_large) ->
+    {413, <<"request_too_large">>, <<"Request body too large">>};
+to_response(unsupported_media_type) ->
+    {415, <<"unsupported_media_type">>, <<"Content-Type must be application/json">>};
+to_response(invalid_query_param) ->
+    {400, <<"invalid_query_param">>, <<"Invalid query parameter">>};
+to_response(invalid_text) ->
+    {422, <<"invalid_text">>, <<"Field contains invalid characters">>};
+to_response(field_too_large) ->
+    {422, <<"field_too_large">>, <<"Field value exceeds maximum allowed length">>};
+to_response(invalid_path_param) ->
+    {400, <<"invalid_path_param">>, <<"Invalid path parameter">>};
+
 %% System errors
 to_response(database_error) ->
     {500, <<"database_error">>, <<"Database error">>};

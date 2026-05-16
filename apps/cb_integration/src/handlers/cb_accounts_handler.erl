@@ -54,8 +54,8 @@ init(Req, State) ->
 
 handle(<<"GET">>, Req, State) ->
     Qs = cowboy_req:parse_qs(Req),
-    Page = binary_to_integer(proplists:get_value(<<"page">>, Qs, <<"1">>)),
-    PageSize = binary_to_integer(proplists:get_value(<<"page_size">>, Qs, <<"20">>)),
+    Page = cb_validate:optional_integer(<<"page">>, maps:from_list(Qs), 1),
+    PageSize = cb_validate:optional_integer(<<"page_size">>, maps:from_list(Qs), 20),
     case cb_accounts:list_accounts(Page, PageSize) of
         {ok, Result} ->
             Resp = #{
@@ -80,19 +80,28 @@ handle(<<"POST">>, Req, State) ->
     {ok, Body, Req2} = cowboy_req:read_body(Req),
     case jsone:try_decode(Body) of
         {ok, #{<<"party_id">> := PartyId, <<"currency">> := CurrencyBin, <<"name">> := Name}, _} ->
-            Currency = binary_to_atom(CurrencyBin, utf8),
-            case cb_accounts:create_account(PartyId, Name, Currency) of
-                {ok, Account} ->
-                    Resp = account_to_json(Account),
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
+            case cb_validate:currency(CurrencyBin) of
+                {error, CurrErr} ->
+                    {ErrStatus, ErrAtom, ErrMsg} = cb_http_errors:to_response(CurrErr),
+                    ErrResp = #{error => ErrAtom, message => ErrMsg},
+                    ErrHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req3 = cowboy_req:reply(ErrStatus, ErrHeaders, jsone:encode(ErrResp), Req2),
                     {ok, Req3, State};
-                {error, Reason} ->
-                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                    Resp = #{error => ErrorAtom, message => Message},
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
-                    {ok, Req3, State}
+                ok ->
+                    Currency = binary_to_existing_atom(CurrencyBin, utf8),
+                    case cb_accounts:create_account(PartyId, Name, Currency) of
+                        {ok, Account} ->
+                            Resp = account_to_json(Account),
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req3 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req2),
+                            {ok, Req3, State};
+                        {error, Reason} ->
+                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                            Resp = #{error => ErrorAtom, message => Message},
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req3 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req2),
+                            {ok, Req3, State}
+                    end
             end;
         _ ->
             {Status, ErrorAtom, Message} = cb_http_errors:to_response(missing_required_field),

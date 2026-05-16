@@ -71,13 +71,17 @@ handle(<<"POST">>, ConsumerId, <<"cursor">>, Req, State) ->
 handle(<<"GET">>, <<"backfill">>, undefined, Req, State) ->
     QS     = cowboy_req:parse_qs(Req),
     Topic  = proplists:get_value(<<"topic">>, QS, <<>>),
-    FromTs = binary_to_integer(proplists:get_value(<<"from_ts">>, QS, <<"0">>)),
-    ToTs   = binary_to_integer(proplists:get_value(<<"to_ts">>, QS, integer_to_binary(erlang:system_time(millisecond)))),
-    case cb_streaming_consumers:backfill(Topic, FromTs, ToTs) of
-        {ok, Events} ->
-            Req2 = cowboy_req:reply(200, headers(),
-                       jsone:encode(#{events => [event_to_map(E) || E <- Events]}), Req),
-            {ok, Req2, State}
+    case {cb_validate:integer_param(<<"from_ts">>, QS, 0),
+          cb_validate:integer_param(<<"to_ts">>, QS, erlang:system_time(millisecond))} of
+        {{ok, FromTs}, {ok, ToTs}} ->
+            case cb_streaming_consumers:backfill(Topic, FromTs, ToTs) of
+                {ok, Events} ->
+                    Req2 = cowboy_req:reply(200, headers(),
+                               jsone:encode(#{events => [event_to_map(E) || E <- Events]}), Req),
+                    {ok, Req2, State}
+            end;
+        _ ->
+            error_reply(400, <<"invalid_query_param">>, Req, State)
     end;
 
 handle(_Method, _ConsumerId, _Action, Req, State) ->

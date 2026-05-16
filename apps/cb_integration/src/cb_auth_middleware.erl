@@ -85,11 +85,18 @@ required_role(Method, Path) ->
     case is_admin_only_boundary(Method, Path) of
         true -> admin_only;
         false ->
-            case is_write_method(Method) of
+            case is_operations_boundary(Path) of
                 true -> write;
-                false -> read
+                false ->
+                    case is_write_method(Method) of
+                        true -> write;
+                        false -> read
+                    end
             end
     end.
+
+is_operations_boundary(Path) ->
+    has_prefix(Path, <<"/api/v1/operations/">>).
 
 is_admin_only_boundary(_Method, <<"/api/v1/api-keys">>) -> true;
 is_admin_only_boundary(<<"GET">>, <<"/api/v1/channel-limits">>) -> true;

@@ -7,7 +7,7 @@
 %% Call `init/0' once at application startup before any requests arrive.
 -module(cb_metrics_counter).
 
--export([init/0, increment/1, get/1, get_all/0]).
+-export([init/0, reset/0, increment/1, get/1, get_all/0]).
 
 -define(TABLE, cb_http_metrics).
 
@@ -16,18 +16,23 @@ init() ->
     _ = ets:new(?TABLE, [named_table, public, {write_concurrency, true}]),
     ok.
 
--spec increment(atom()) -> ok.
+-spec reset() -> ok.
+reset() ->
+    ets:delete_all_objects(?TABLE),
+    ok.
+
+-spec increment(term()) -> ok.
 increment(Counter) ->
     ets:update_counter(?TABLE, Counter, {2, 1}, {Counter, 0}),
     ok.
 
--spec get(atom()) -> non_neg_integer().
+-spec get(term()) -> non_neg_integer().
 get(Counter) ->
     case ets:lookup(?TABLE, Counter) of
         [{Counter, N}] -> N;
         []             -> 0
     end.
 
--spec get_all() -> #{atom() => non_neg_integer()}.
+-spec get_all() -> #{term() => non_neg_integer()}.
 get_all() ->
     maps:from_list(ets:tab2list(?TABLE)).

@@ -195,6 +195,9 @@ dispatch() ->
             %% VM metrics
             {<<"/metrics">>, cb_metrics_handler, []},
 
+            %% Operations SLO/SLA policy snapshot
+            {<<"/api/v1/operations/slo">>, cb_slo_handler, []},
+
             %% Payment orders
             {<<"/api/v1/payment-orders">>, cb_payment_orders_handler, []},
             {<<"/api/v1/payment-orders/:payment_id">>, cb_payment_orders_handler, []},

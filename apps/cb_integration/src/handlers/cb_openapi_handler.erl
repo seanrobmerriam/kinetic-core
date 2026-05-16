@@ -1364,6 +1364,17 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/operations/slo">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"SLO/SLA objective status and alert policy snapshot">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"SLO policy snapshot">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/openapi.json">> => #{
             <<"get">> => #{
                 <<"summary">>  => <<"This OpenAPI specification">>,

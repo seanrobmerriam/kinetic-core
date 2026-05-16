@@ -21,6 +21,7 @@
 -compile(export_all).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 
 %% CT Hooks and Callbacks
 
@@ -68,7 +69,7 @@ end_per_suite(_Config) ->
 %% =============================================================================
 
 %% @doc Test that generated correlation IDs are valid UUIDs (36 chars, hex + dashes)
-test_generate_id_format(Config) ->
+test_generate_id_format(_Config) ->
     CorrelationId = cb_correlation:generate_id(),
     
     %% Check it's a binary
@@ -84,7 +85,7 @@ test_generate_id_format(Config) ->
     {comment, "Generated UUID: " ++ binary_to_list(CorrelationId)}.
 
 %% @doc Test that multiple calls generate different IDs
-test_generate_unique_ids(Config) ->
+test_generate_unique_ids(_Config) ->
     Id1 = cb_correlation:generate_id(),
     Id2 = cb_correlation:generate_id(),
     Id3 = cb_correlation:generate_id(),
@@ -101,7 +102,7 @@ test_generate_unique_ids(Config) ->
 %% =============================================================================
 
 %% @doc Test setting and getting correlation ID from process dictionary
-test_set_and_get_correlation_id(Config) ->
+test_set_and_get_correlation_id(_Config) ->
     CorrelationId = <<"test-correlation-123">>,
     
     %% Set correlation ID
@@ -116,7 +117,7 @@ test_set_and_get_correlation_id(Config) ->
     ok.
 
 %% @doc Test clearing correlation ID
-test_clear_correlation_id(Config) ->
+test_clear_correlation_id(_Config) ->
     CorrelationId = <<"test-correlation-456">>,
     
     %% Set and verify
@@ -131,7 +132,7 @@ test_clear_correlation_id(Config) ->
     ok.
 
 %% @doc Test getting correlation ID when not set
-test_get_undefined_correlation_id(Config) ->
+test_get_undefined_correlation_id(_Config) ->
     %% Ensure clean state
     ok = cb_correlation:clear(),
     
@@ -140,7 +141,7 @@ test_get_undefined_correlation_id(Config) ->
     ok.
 
 %% @doc Test correlation ID initialization without header (should generate new)
-test_initialize_without_header(Config) ->
+test_initialize_without_header(_Config) ->
     %% Create a mock request without correlation ID header
     Req = cowboy_req:new(<<"GET">>, <<"/">>, <<"HTTP/1.1">>, {127, 0, 0, 1}, 8080, 
                          {127, 0, 0, 1}, 12345, cowboy_http, []),
@@ -159,7 +160,7 @@ test_initialize_without_header(Config) ->
     ok.
 
 %% @doc Test correlation ID initialization with header (should propagate)
-test_initialize_with_header(Config) ->
+test_initialize_with_header(_Config) ->
     %% Create a request with correlation ID header
     Req0 = cowboy_req:new(<<"GET">>, <<"/">>, <<"HTTP/1.1">>, {127, 0, 0, 1}, 8080,
                           {127, 0, 0, 1}, 12345, cowboy_http, []),
@@ -185,7 +186,7 @@ test_initialize_with_header(Config) ->
 %% =============================================================================
 
 %% @doc Test that correlation ID is included in log entries
-test_correlation_id_in_logs(Config) ->
+test_correlation_id_in_logs(_Config) ->
     CorrelationId = <<"log-test-correlation-id">>,
     
     %% Set correlation ID
@@ -201,7 +202,7 @@ test_correlation_id_in_logs(Config) ->
     ok.
 
 %% @doc Test that correlation ID is injected into response headers
-test_correlation_id_in_response_headers(Config) ->
+test_correlation_id_in_response_headers(_Config) ->
     %% Create a request
     Req0 = cowboy_req:new(<<"GET">>, <<"/">>, <<"HTTP/1.1">>, {127, 0, 0, 1}, 8080,
                           {127, 0, 0, 1}, 12345, cowboy_http, []),
@@ -221,7 +222,7 @@ test_correlation_id_in_response_headers(Config) ->
 %% =============================================================================
 
 %% @doc Test that concurrent requests maintain isolated correlation IDs
-test_concurrent_correlation_ids(Config) ->
+test_concurrent_correlation_ids(_Config) ->
     %% Create two correlation IDs
     CorrelationId1 = <<"concurrent-test-1">>,
     CorrelationId2 = <<"concurrent-test-2">>,
@@ -250,7 +251,7 @@ test_concurrent_correlation_ids(Config) ->
     ok.
 
 %% @doc Test correlation ID persists across function calls
-test_correlation_id_persistence_across_calls(Config) ->
+test_correlation_id_persistence_across_calls(_Config) ->
     CorrelationId = <<"persistence-test-id">>,
     
     %% Set correlation ID

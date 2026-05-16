@@ -29,6 +29,9 @@ Standardized error response formatting.
 ### Health
 - `GET /health` - System health check
 
+### Operations
+- `GET /api/v1/operations/slo` - SLO/SLA objective status and alert policy snapshot (operations/admin)
+
 ### Parties
 - `POST /parties` - Create party
 - `GET /parties/:id` - Get party

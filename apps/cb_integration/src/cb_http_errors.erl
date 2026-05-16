@@ -325,7 +325,15 @@ to_response_with_metrics(Reason) ->
     Body = jsone:encode(#{error => ErrorAtom, message => Message}),
     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
     case Code >= 500 of
-        true  -> cb_metrics_counter:increment(http_5xx_total);
+        true  ->
+            cb_metrics_counter:increment(http_5xx_total),
+            maybe_increment_slo_5xx();
         false -> ok
     end,
     {Code, Headers, Body}.
+
+maybe_increment_slo_5xx() ->
+    case erlang:get(request_slo_path) of
+        undefined -> ok;
+        CriticalPath -> cb_metrics_counter:increment({slo, CriticalPath, error_5xx})
+    end.

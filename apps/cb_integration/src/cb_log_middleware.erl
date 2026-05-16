@@ -69,6 +69,7 @@ execute(Req, Env) ->
     %% In Cowboy 2.x, middlewares simply return {ok, Req, Env} to continue.
     %% Post-request logging is handled differently (via stream handlers or hooks).
     %% Here we just log that we're processing the request.
+    maybe_track_slo_path(Method, Path),
     Result = {ok, Req, Env},
     cb_metrics_counter:increment(http_requests_total),
 
@@ -82,3 +83,12 @@ execute(Req, Env) ->
     }),
 
     Result.
+
+maybe_track_slo_path(Method, Path) ->
+    case cb_slo_policies:critical_path(Method, Path) of
+        undefined ->
+            ok;
+        CriticalPath ->
+            erlang:put(request_slo_path, CriticalPath),
+            cb_metrics_counter:increment({slo, CriticalPath, total})
+    end.

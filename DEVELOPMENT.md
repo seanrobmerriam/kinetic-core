@@ -253,7 +253,7 @@ This section breaks each phase into smaller execution units that can be schedule
 
 #### P6-S3: Observability and Operations
 
-- TASK-098: Implement distributed tracing with correlation IDs propagated across all services.
+- TASK-098 [DONE 2026-05-15]: Implement distributed tracing with correlation IDs propagated across all services — new `cb_correlation` module provides correlation ID generation (UUID v4), extraction from X-Correlation-ID headers, process dictionary storage for in-process propagation; `cb_correlation_middleware` injects correlation IDs into response headers; `cb_log_middleware` enhanced to initialize and include correlation IDs in all log entries; CT suite `apps/cb_integration/test/cb_distributed_tracing_SUITE.erl` (12 tests) covering generation, propagation, logging, and isolation. Branch: `agents/task-098-distributed-tracing`.
 - TASK-099: Define SLO/SLA targets per critical path and wire alerting policies.
 - TASK-100: Build structured log aggregation with search, retention, and export.
 - TASK-101: Write on-call runbooks for all P1 and P2 failure scenarios.

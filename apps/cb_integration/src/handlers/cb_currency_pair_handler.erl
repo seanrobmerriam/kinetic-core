@@ -28,21 +28,33 @@ init(Req, State) ->
 handle(<<"POST">>, undefined, Req, State) ->
     case jsone:decode(Req) of
         {ok, Body, Req1} ->
-            FromCurrency = binary_to_atom(maps:get(<<"from_currency">>, Body), utf8),
-            ToCurrency = binary_to_atom(maps:get(<<"to_currency">>, Body), utf8),
+            FromBin = maps:get(<<"from_currency">>, Body),
+            ToBin   = maps:get(<<"to_currency">>, Body),
+            ScBin   = maps:get(<<"settlement_currency">>, Body),
             SpreadMillionths = maps:get(<<"spread_millionths">>, Body),
-            SettlementCurrency = binary_to_atom(maps:get(<<"settlement_currency">>, Body), utf8),
-            case cb_currency_pair:create_pair(FromCurrency, ToCurrency, SpreadMillionths, SettlementCurrency) of
-                {ok, Pair} ->
-                    Resp = pair_to_json(Pair),
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req1),
-                    {ok, Req2, State};
-                {error, Reason} ->
-                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                    Resp = #{error => ErrorAtom, message => Message},
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
+            case {cb_validate:currency(FromBin), cb_validate:currency(ToBin), cb_validate:currency(ScBin)} of
+                {ok, ok, ok} ->
+                    FromCurrency       = binary_to_existing_atom(FromBin, utf8),
+                    ToCurrency         = binary_to_existing_atom(ToBin, utf8),
+                    SettlementCurrency = binary_to_existing_atom(ScBin, utf8),
+                    case cb_currency_pair:create_pair(FromCurrency, ToCurrency, SpreadMillionths, SettlementCurrency) of
+                        {ok, Pair} ->
+                            Resp = pair_to_json(Pair),
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(201, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State};
+                        {error, Reason} ->
+                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                            Resp = #{error => ErrorAtom, message => Message},
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State}
+                    end;
+                _ ->
+                    {ErrStatus, ErrAtom, ErrMsg} = cb_http_errors:to_response(invalid_currency),
+                    ErrResp = #{error => ErrAtom, message => ErrMsg},
+                    ErrHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req2 = cowboy_req:reply(ErrStatus, ErrHeaders, jsone:encode(ErrResp), Req1),
                     {ok, Req2, State}
             end;
         {error, _} ->
@@ -83,7 +95,7 @@ handle(<<"PATCH">>, PairId, Req, State) ->
                 spread_millionths => maps:get(<<"spread_millionths">>, Body, undefined),
                 settlement_currency => case maps:get(<<"settlement_currency">>, Body, undefined) of
                     undefined -> undefined;
-                    SC -> binary_to_atom(SC, utf8)
+                    SC -> binary_to_existing_atom(SC, utf8)
                 end
             },
             UpdatesClean = maps:filter(fun(_, V) -> V =/= undefined end, Updates),

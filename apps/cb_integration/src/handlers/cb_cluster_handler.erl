@@ -59,19 +59,26 @@ handle(<<"POST">>, undefined, undefined, Req0, State) ->
             Required = [erlang_node, host, port, role],
             case validate_required(Params, Required) of
                 ok ->
-                    ENode = binary_to_atom(maps:get(erlang_node, Params), utf8),
-                    Host  = maps:get(host, Params),
-                    Port  = maps:get(port, Params),
-                    Role  = binary_to_atom(maps:get(role, Params), utf8),
-                    case cb_cluster:register_node(#{
-                            erlang_node => ENode,
-                            host        => Host,
-                            port        => Port,
-                            role        => Role}) of
-                        {ok, NodeId} ->
-                            reply(201, #{node_id => NodeId}, Req, State);
-                        {error, Reason} ->
-                            error_reply(422, Reason, <<"Registration failed">>, Req, State)
+                    ENodeBin = maps:get(erlang_node, Params),
+                    RoleBin  = maps:get(role, Params),
+                    case byte_size(ENodeBin) > 256 of
+                        true ->
+                            error_reply(400, <<"invalid_node_name">>, <<"Node name too long">>, Req, State);
+                        false ->
+                            ENode = binary_to_atom(ENodeBin, utf8),
+                            Host  = maps:get(host, Params),
+                            Port  = maps:get(port, Params),
+                            Role  = binary_to_existing_atom(RoleBin, utf8),
+                            case cb_cluster:register_node(#{
+                                    erlang_node => ENode,
+                                    host        => Host,
+                                    port        => Port,
+                                    role        => Role}) of
+                                {ok, NodeId} ->
+                                    reply(201, #{node_id => NodeId}, Req, State);
+                                {error, Reason} ->
+                                    error_reply(422, Reason, <<"Registration failed">>, Req, State)
+                            end
                     end;
                 {missing, Field} ->
                     Msg = iolist_to_binary([<<"Missing field: ">>, atom_to_binary(Field, utf8)]),

@@ -46,7 +46,7 @@ handle(<<"POST">>, Req, State) ->
             {ok, BodyBin, Req1} = cowboy_req:read_body(Req),
             case jsone:try_decode(BodyBin) of
                 {ok, Body, _} ->
-                    Resource = binary_to_atom(maps:get(<<"resource">>, Body), utf8),
+                    Resource = binary_to_existing_atom(maps:get(<<"resource">>, Body), utf8),
                     RetentionDays = maps:get(<<"retention_days">>, Body),
                     case cb_audit_retention:set_retention_policy(Resource, RetentionDays) of
                         ok ->

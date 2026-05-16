@@ -48,25 +48,35 @@ handle(<<"GET">>, TxnId, Req, State) ->
 handle(<<"PUT">>, TxnId, Req, State) ->
     case jsone:decode(Req) of
         {ok, Body, Req1} ->
-            Currency = binary_to_atom(maps:get(<<"settlement_currency">>, Body), utf8),
-            case cb_settlement_currency:assign_settlement_currency(TxnId, Currency) of
-                {ok, Txn} ->
-                    Resp = #{
-                        txn_id => Txn#transaction.txn_id,
-                        settlement_currency => case Txn#transaction.settlement_currency of
-                            undefined -> null;
-                            C -> atom_to_binary(C, utf8)
-                        end
-                    },
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req1),
+            CurrencyBin = maps:get(<<"settlement_currency">>, Body),
+            case cb_validate:currency(CurrencyBin) of
+                {error, CurrErr} ->
+                    {ErrStatus, ErrAtom, ErrMsg} = cb_http_errors:to_response(CurrErr),
+                    ErrResp = #{error => ErrAtom, message => ErrMsg},
+                    ErrHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req2 = cowboy_req:reply(ErrStatus, ErrHeaders, jsone:encode(ErrResp), Req1),
                     {ok, Req2, State};
-                {error, Reason} ->
-                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                    Resp = #{error => ErrorAtom, message => Message},
-                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                    Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
-                    {ok, Req2, State}
+                ok ->
+                    Currency = binary_to_existing_atom(CurrencyBin, utf8),
+                    case cb_settlement_currency:assign_settlement_currency(TxnId, Currency) of
+                        {ok, Txn} ->
+                            Resp = #{
+                                txn_id => Txn#transaction.txn_id,
+                                settlement_currency => case Txn#transaction.settlement_currency of
+                                    undefined -> null;
+                                    C -> atom_to_binary(C, utf8)
+                                end
+                            },
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State};
+                        {error, Reason} ->
+                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                            Resp = #{error => ErrorAtom, message => Message},
+                            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req1),
+                            {ok, Req2, State}
+                    end
             end;
         {error, _} ->
             {Code, Hdrs, Body} = cb_http_errors:to_response_with_metrics(bad_request),

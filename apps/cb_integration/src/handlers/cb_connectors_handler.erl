@@ -32,7 +32,7 @@ handle(<<"POST">>, undefined, undefined, Req, State) ->
     case jsone:try_decode(Body, [{keys, atom}]) of
         {ok, #{name := Name, type := TypeBin, module := ModuleBin} = P, _} ->
             Type   = binary_to_existing_atom(TypeBin, utf8),
-            Module = binary_to_atom(ModuleBin, utf8),
+            Module = binary_to_existing_atom(ModuleBin, utf8),
             Attrs  = #{
                 name          => Name,
                 type          => Type,

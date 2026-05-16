@@ -79,21 +79,29 @@ handle(<<"POST">>, Req, State) ->
 handle(<<"GET">>, Req, State) ->
     %% List parties
     Qs = cowboy_req:parse_qs(Req),
-    Page = binary_to_integer(proplists:get_value(<<"page">>, Qs, <<"1">>)),
-    PageSize = binary_to_integer(proplists:get_value(<<"page_size">>, Qs, <<"20">>)),
-    case cb_party:list_parties(Page, PageSize) of
-        {ok, Result} ->
-            Resp = #{
-                items => [party_to_json(P) || P <- maps:get(items, Result)],
-                total => maps:get(total, Result),
-                page => maps:get(page, Result),
-                page_size => maps:get(page_size, Result)
-            },
-            Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-            Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
-            {ok, Req2, State};
-        {error, Reason} ->
-            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+    case {cb_validate:integer_param(<<"page">>, Qs, 1),
+          cb_validate:integer_param(<<"page_size">>, Qs, 20)} of
+        {{ok, Page}, {ok, PageSize}} ->
+            case cb_party:list_parties(Page, PageSize) of
+                {ok, Result} ->
+                    Resp = #{
+                        items => [party_to_json(P) || P <- maps:get(items, Result)],
+                        total => maps:get(total, Result),
+                        page => maps:get(page, Result),
+                        page_size => maps:get(page_size, Result)
+                    },
+                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
+                    {ok, Req2, State};
+                {error, Reason} ->
+                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                    Resp = #{error => ErrorAtom, message => Message},
+                    Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                    Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req),
+                    {ok, Req2, State}
+            end;
+        _ ->
+            {Status, ErrorAtom, Message} = cb_http_errors:to_response(invalid_query_param),
             Resp = #{error => ErrorAtom, message => Message},
             Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
             Req2 = cowboy_req:reply(Status, Headers, jsone:encode(Resp), Req),

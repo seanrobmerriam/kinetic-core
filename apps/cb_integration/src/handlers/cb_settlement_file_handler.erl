@@ -39,21 +39,31 @@ handle(<<"GET">>, Req, State) ->
         {DateStr, CurrencyStr} ->
             case parse_date(DateStr) of
                 {ok, Date} ->
-                    Currency = binary_to_atom(list_to_binary(CurrencyStr), utf8),
-                    case cb_settlement_file:generate_settlement_file(Date, Currency) of
-                        {ok, FileContent, FileName} ->
-                            Headers = maps:merge(#{
-                                <<"content-type">> => <<"text/csv">>,
-                                <<"content-disposition">> => iolist_to_binary([<<"attachment; filename=\"">>, FileName, <<"\"">>])
-                            }, cb_cors:headers()),
-                            Req2 = cowboy_req:reply(200, Headers, FileContent, Req),
+                    CurrencyBin = list_to_binary(CurrencyStr),
+                    case cb_validate:currency(CurrencyBin) of
+                        {error, CurrErr} ->
+                            {ErrStatus, ErrAtom, ErrMsg} = cb_http_errors:to_response(CurrErr),
+                            ErrResp = #{error => ErrAtom, message => ErrMsg},
+                            ErrHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                            Req2 = cowboy_req:reply(ErrStatus, ErrHeaders, jsone:encode(ErrResp), Req),
                             {ok, Req2, State};
-                        {error, Reason} ->
-                            {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
-                            Resp = #{error => ErrorAtom, message => Message},
-                            RespHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
-                            Req2 = cowboy_req:reply(Status, RespHeaders, jsone:encode(Resp), Req),
-                            {ok, Req2, State}
+                        ok ->
+                            Currency = binary_to_existing_atom(CurrencyBin, utf8),
+                            case cb_settlement_file:generate_settlement_file(Date, Currency) of
+                                {ok, FileContent, FileName} ->
+                                    Headers = maps:merge(#{
+                                        <<"content-type">> => <<"text/csv">>,
+                                        <<"content-disposition">> => iolist_to_binary([<<"attachment; filename=\"">>, FileName, <<"\"">>])
+                                    }, cb_cors:headers()),
+                                    Req2 = cowboy_req:reply(200, Headers, FileContent, Req),
+                                    {ok, Req2, State};
+                                {error, Reason} ->
+                                    {Status, ErrorAtom, Message} = cb_http_errors:to_response(Reason),
+                                    Resp = #{error => ErrorAtom, message => Message},
+                                    RespHeaders = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
+                                    Req2 = cowboy_req:reply(Status, RespHeaders, jsone:encode(Resp), Req),
+                                    {ok, Req2, State}
+                            end
                     end;
                 {error, _} ->
                     Resp = #{error => invalid_date, message => <<"date must be in YYYY-MM-DD format">>},

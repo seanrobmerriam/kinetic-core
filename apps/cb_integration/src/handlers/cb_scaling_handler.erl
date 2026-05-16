@@ -99,7 +99,7 @@ handle(<<"POST">>, undefined, undefined, Req0, State) ->
                     Required = [name, metric_name, threshold, direction, cooldown_seconds],
                     case validate_required(Params, Required) of
                         ok ->
-                            Dir = binary_to_atom(maps:get(direction, Params), utf8),
+                            Dir = binary_to_existing_atom(maps:get(direction, Params), utf8),
                             Input = maps:put(direction, Dir, Params),
                             case cb_scaling:add_rule(Input) of
                                 {ok, RuleId}    -> reply(201, #{rule_id => RuleId}, Req, State);

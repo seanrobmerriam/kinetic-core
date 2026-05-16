@@ -13,13 +13,26 @@
 %%   <li>Security - detecting unusual patterns or attacks</li>
 %% </ul>
 %%
+%% <h2>Distributed Tracing</h2>
+%%
+%% This middleware also initializes correlation IDs for distributed tracing.
+%% Every request gets a unique correlation ID that is:
+%% <ul>
+%%   <li>Extracted from X-Correlation-ID header if present</li>
+%%   <li>Generated as a new UUID if not present</li>
+%%   <li>Stored in the process dictionary for propagation to domain modules</li>
+%%   <li>Injected into the response header</li>
+%%   <li>Included in all log entries</li>
+%% </ul>
+%%
 %% <h2>Logging Flow</h2>
 %%
 %% <ol>
-%%   <li><b>Request received</b>: When a request arrives, log method, path, and timestamp</li>
+%%   <li><b>Initialize correlation ID</b>: Extract or generate trace ID</li>
+%%   <li><b>Request received</b>: When a request arrives, log method, path, and correlation ID</li>
 %%   <li><b>Execute middleware</b>: Pass request to rest of the pipeline</li>
-%%   <li><b>Request completed</b>: Log status code and duration</li>
-%%   <li><b>Error handling</b>: Log any middleware errors</li>
+%%   <li><b>Request completed</b>: Log status code, duration, and correlation ID</li>
+%%   <li><b>Clean up</b>: Clear correlation ID from process dictionary</li>
 %% </ol>
 %%
 %% <h2>Timing Information</h2>
@@ -28,6 +41,7 @@
 %% which provides high-resolution timing. Duration is calculated as the
 %% difference between the start time and completion time, measured in milliseconds.
 %%
+%% @see cb_correlation
 %% @see cowboy_middleware
 %% @see logger
 -module(cb_log_middleware).
@@ -40,12 +54,16 @@ execute(Req, Env) ->
     Path   = cowboy_req:path(Req),
     Start  = erlang:monotonic_time(millisecond),
 
-    %% Log the incoming request
+    %% Initialize correlation ID: extract from header or generate new one
+    CorrelationId = cb_correlation:initialize(Req),
+
+    %% Log the incoming request with correlation ID
     logger:info(#{
-        event  => request_received,
-        method => Method,
-        path   => Path,
-        time   => erlang:system_time(millisecond)
+        event            => request_received,
+        correlation_id   => CorrelationId,
+        method           => Method,
+        path             => Path,
+        time             => erlang:system_time(millisecond)
     }),
 
     %% In Cowboy 2.x, middlewares simply return {ok, Req, Env} to continue.
@@ -56,10 +74,11 @@ execute(Req, Env) ->
 
     Duration = erlang:monotonic_time(millisecond) - Start,
     logger:info(#{
-        event    => request_completed,
-        method   => Method,
-        path     => Path,
-        duration => Duration
+        event            => request_completed,
+        correlation_id   => CorrelationId,
+        method           => Method,
+        path             => Path,
+        duration         => Duration
     }),
 
     Result.

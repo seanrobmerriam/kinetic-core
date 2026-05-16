@@ -22,8 +22,14 @@
 %%
 %% <ol>
 %%   <li>`cowboy_router` - Matches incoming requests to handlers based on path</li>
-%%   <li>`cb_log_middleware` - Logs all incoming requests and their responses</li>
+%%   <li>`cb_log_middleware` - Initializes correlation ID and logs all incoming requests and their responses</li>
+%%   <li>`cb_correlation_middleware` - Injects correlation ID into response headers</li>
 %%   <li>`cb_cors_middleware` - Adds CORS headers for cross-origin requests</li>
+%%   <li>`cb_version_middleware` - Validates API version</li>
+%%   <li>`cb_rate_limit_middleware` - Enforces rate limits</li>
+%%   <li>`cb_auth_middleware` - Authenticates requests</li>
+%%   <li>`cb_sanitize_middleware` - Sanitizes input data</li>
+%%   <li>`cb_deprecation_middleware` - Handles deprecated endpoints</li>
 %%   <li>`cowboy_handler` - Dispatches to the matched handler module</li>
 %% </ol>
 %%
@@ -83,7 +89,7 @@ start(_StartType, _StartArgs) ->
         [{port, Port}, {num_acceptors, Acceptors}],
         #{
             env => #{dispatch => Dispatch},
-            middlewares => [cowboy_router, cb_log_middleware, cb_cors_middleware, cb_version_middleware, cb_rate_limit_middleware, cb_auth_middleware, cb_sanitize_middleware, cb_deprecation_middleware, cowboy_handler]
+            middlewares => [cowboy_router, cb_log_middleware, cb_correlation_middleware, cb_cors_middleware, cb_version_middleware, cb_rate_limit_middleware, cb_auth_middleware, cb_sanitize_middleware, cb_deprecation_middleware, cowboy_handler]
         }
     ),
 

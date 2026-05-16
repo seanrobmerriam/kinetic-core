@@ -31,6 +31,11 @@ Standardized error response formatting.
 
 ### Operations
 - `GET /api/v1/operations/slo` - SLO/SLA objective status and alert policy snapshot (operations/admin)
+- `GET /api/v1/operations/logs` - Structured log search for on-call investigation (operations/admin)
+
+## Operational Docs
+
+- Repository runbooks: `docs/on-call-runbooks-p1-p2.md`
 
 ### Parties
 - `POST /parties` - Create party

@@ -48,6 +48,7 @@ ironledger/
 
 - Product requirements: `REQUIREMENTS.md`
 - Phased execution plan: `DEVELOPMENT.md`
+- P1 and P2 on-call runbooks: `docs/on-call-runbooks-p1-p2.md`
 
 ## Quick Start (Docker)
 

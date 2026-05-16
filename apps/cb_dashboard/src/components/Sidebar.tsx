@@ -19,10 +19,12 @@ import {
   IconCoin,
   IconDownload,
   IconFiles,
+  IconKey,
   IconLayoutDashboard,
   IconReceipt,
   IconReportMoney,
   IconSettings,
+  IconShield,
   IconShieldCheck,
   IconSitemap,
   IconTransfer,
@@ -71,6 +73,9 @@ const BANKING_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
+  { label: "Users", icon: IconUsers, href: "/users" },
+  { label: "Roles", icon: IconShield, href: "/roles" },
+  { label: "Permissions", icon: IconKey, href: "/permissions" },
   { label: "Settings", icon: IconSettings, href: "/settings" },
   { label: "Developer", icon: IconCode, href: "/developer" },
   { label: "Channels", icon: IconSitemap, href: "/channels" },
@@ -86,7 +91,6 @@ export function Sidebar({ activeTab }: { activeTab: string }) {
     state.status === "authenticated" && state.user ? state.user.role : "";
 
   const items = activeTab === "admin" ? ADMIN_ITEMS : BANKING_ITEMS;
-
   return (
     <AppShell.Navbar
       style={{

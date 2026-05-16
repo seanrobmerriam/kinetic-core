@@ -90,8 +90,10 @@ create_tables() ->
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
               auth_user, auth_session, audit_log, approval_request,
-              approval_decision, event_outbox, webhook_subscription,
+              approval_decision, audit_retention_policy,
+              event_outbox, webhook_subscription,
               webhook_delivery, report_statement, report_export,
+              structured_log,
               api_usage_event,
               oauth_client, oauth_token,
               kyc_workflow, kyc_step,
@@ -143,7 +145,7 @@ create_tables() ->
     approval_request | approval_decision | event_outbox |
     audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export | api_usage_event |
+    report_export | structured_log | api_usage_event |
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
     aml_rule | suspicious_activity | aml_case | sar_report |
@@ -213,8 +215,9 @@ create_if_not_exists(TableName) ->
     [{'attributes', [atom(), ...]} |
      {'index', ['account_id' | 'currency' | 'dest_account_id' | 'email' |
                 'entity_type' | 'event_type' | 'expires_at' | 'export_type' |
+                'correlation_id' | 'created_at' | 'event' | 'level' |
                 'generated_at' | 'idempotency_key' | 'loan_id' | 'name' |
-                'party_id' | 'request_id' | 'resource_id' | 'resource_type' |
+                'method' | 'party_id' | 'path' | 'request_id' | 'resource_id' | 'resource_type' |
                 'role' | 'source_account_id' | 'status' | 'subscription_id' |
                 'txn_id' | 'user_id' | 'actor_user_id' | 'approved_by' |
                 'action' | 'version' | 'account_type' | 'parent_code' |
@@ -412,8 +415,7 @@ table_spec(audit_log) ->
 table_spec(audit_retention_policy) ->
     [
         {ram_copies, [node()]},
-        {attributes, [resource, retention_days, created_at, updated_at]},
-        {index, [resource]}
+        {attributes, [resource, retention_days, created_at, updated_at]}
     ];
 table_spec(approval_request) ->
     [
@@ -463,6 +465,12 @@ table_spec(report_export) ->
         {attributes, [export_id, export_type, parameters, status,
                       generated_at, created_at]},
         {index, [export_type, status]}
+    ];
+table_spec(structured_log) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, structured_log)},
+        {index, [correlation_id, event, level, method, path, created_at]}
     ];
 table_spec(key_rotation_events) ->
     [

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-### Current Development Phase: P6-S2 (Security Hardening)
+### Current Development Phase: P6-S3 (Observability and Operations)
 
 ## Purpose
 

@@ -58,6 +58,14 @@ execute(Req, Env) ->
     CorrelationId = cb_correlation:initialize(Req),
 
     %% Log the incoming request with correlation ID
+    LogFields = #{
+        event => request_received,
+        correlation_id => CorrelationId,
+        method => Method,
+        path => Path,
+        metadata => #{time => erlang:system_time(millisecond)}
+    },
+    _ = cb_structured_logs:write(info, LogFields),
     logger:info(#{
         event            => request_received,
         correlation_id   => CorrelationId,
@@ -74,6 +82,15 @@ execute(Req, Env) ->
     cb_metrics_counter:increment(http_requests_total),
 
     Duration = erlang:monotonic_time(millisecond) - Start,
+    CompletionFields = #{
+        event => request_completed,
+        correlation_id => CorrelationId,
+        method => Method,
+        path => Path,
+        duration => Duration,
+        metadata => #{}
+    },
+    _ = cb_structured_logs:write(info, CompletionFields),
     logger:info(#{
         event            => request_completed,
         correlation_id   => CorrelationId,

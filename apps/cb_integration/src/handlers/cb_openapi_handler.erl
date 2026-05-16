@@ -1375,6 +1375,59 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/operations/logs">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Search aggregated structured logs">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Structured log search results">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/logs/export">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Export structured logs as CSV">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Structured log CSV export">>},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/logs/retention">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get structured log retention policy">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Structured log retention policy">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Set structured log retention policy">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Updated structured log retention policy">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/logs/retention/apply">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Apply structured log retention policy">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Structured log retention execution result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/openapi.json">> => #{
             <<"get">> => #{
                 <<"summary">>  => <<"This OpenAPI specification">>,

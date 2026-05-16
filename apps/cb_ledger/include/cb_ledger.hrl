@@ -653,6 +653,22 @@
     recorded_at :: timestamp_ms()
 }).
 
+%% @doc Aggregated structured log entry captured for operational search/export.
+%%
+%% Stores normalized logger context for request lifecycle and service events.
+-record(structured_log, {
+    log_id          :: uuid(),
+    level           :: binary(),
+    event           :: binary(),
+    correlation_id  :: binary() | undefined,
+    method          :: binary() | undefined,
+    path            :: binary() | undefined,
+    status_code     :: non_neg_integer() | undefined,
+    duration        :: non_neg_integer() | undefined,
+    metadata        :: map(),
+    created_at      :: timestamp_ms()
+}).
+
 %% =============================================================================
 %% Compliance & AML Records (P2-S1)
 %% =============================================================================

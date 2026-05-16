@@ -197,6 +197,10 @@ dispatch() ->
 
             %% Operations SLO/SLA policy snapshot
             {<<"/api/v1/operations/slo">>, cb_slo_handler, []},
+            {<<"/api/v1/operations/logs">>, cb_structured_logs_handler, []},
+            {<<"/api/v1/operations/logs/export">>, cb_structured_logs_handler, []},
+            {<<"/api/v1/operations/logs/retention">>, cb_structured_logs_handler, []},
+            {<<"/api/v1/operations/logs/retention/apply">>, cb_structured_logs_handler, []},
 
             %% Payment orders
             {<<"/api/v1/payment-orders">>, cb_payment_orders_handler, []},

@@ -50,7 +50,7 @@ init_per_testcase(_TestCase, Config) ->
          loan_products, loan_accounts, loan_repayments, interest_accrual,
          auth_user, auth_session, audit_log, approval_request, approval_decision,
          event_outbox, webhook_subscription, webhook_delivery,
-         report_statement, report_export]
+            report_statement, report_export, structured_log, audit_retention_policy]
     ),
     Config.
 
@@ -120,6 +120,10 @@ schema_creates_feature_tables(_Config) ->
     ?assertEqual(
         [export_type, status],
         lists:sort(index_names(report_export))
+    ),
+    ?assertEqual(
+        [correlation_id, created_at, event, level, method, path],
+        lists:sort(index_names(structured_log))
     ),
     ok.
 

@@ -19,7 +19,7 @@ Implement working Admin dashboard sections for Users, Roles, and Permissions wit
   - RBAC-030/RBAC-031: Added permission-key evaluation in auth middleware with `rbac_enforced` observe/enforce toggle, structured denial telemetry fields, and dual-mode integration tests.
   - RBAC-040/RBAC-041/RBAC-042/RBAC-043 (initial): Added typed frontend admin API client and implemented initial `/users`, `/roles`, `/permissions` pages wired to backend endpoints.
   - RBAC-044 (initial): Added frontend permission helpers, admin tab visibility guards, admin sidebar filtering by required permission, and route-level redirect guards for `/users`, `/roles`, and `/permissions`.
-  - RBAC-051 (initial): Added frontend Jest coverage for RBAC guard behavior in header/sidebar visibility and app-layout admin-route redirects.
+  - RBAC-051: Added frontend Jest RBAC guard coverage plus CI wiring in frontend and integration workflows for RBAC route and endpoint compatibility checks.
   - RBAC-052 (partial): Added runbook procedures for enabling RBAC enforcement and emergency rollback.
 
 ## Current Baseline
@@ -343,13 +343,21 @@ Add routes for:
 - Add CT coverage for RBAC CRUD, role assignment, and allow/deny matrix.
 
 **Files**
-- `apps/cb_integration/test/*` (new and updated suites)
+- `apps/cb_integration/test/cb_auth_integration_SUITE.erl` (12 new tests added)
 
 **Acceptance Criteria**
 - Permission checks validated for all critical endpoints.
 
 **Verification**
-- `rebar3 ct`
+- `rebar3 ct` ✅ All 20 tests passing
+
+**Completed**: 2026-01-17. Added 12 new CT tests covering:
+- `create_role_succeeds`, `create_role_duplicate_key_fails`
+- `update_role_succeeds`, `update_system_role_fails`
+- `delete_role_succeeds` (verify via list, no DELETE endpoint exists)
+- `assign_user_role_succeeds`, `unassign_user_role_succeeds`
+- `effective_permissions_accumulates`
+- `enforce_mode_admin_all_rbac_endpoints`, `enforce_mode_readonly_denied_user_write`, `enforce_mode_readonly_denied_role_write`, `enforce_mode_empty_role_user_denied`
 
 ### RBAC-051 Frontend and CI Gates
 **Scope**

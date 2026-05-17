@@ -12,7 +12,20 @@
     admin_can_manage_rbac_resources/1,
     operations_cannot_access_rbac_resources/1,
     observe_mode_falls_back_to_role_checks/1,
-    enforce_mode_denies_missing_permissions/1
+    enforce_mode_denies_missing_permissions/1,
+    %% RBAC-050: CRUD and allow/deny matrix
+    create_role_succeeds/1,
+    create_role_duplicate_key_fails/1,
+    update_role_succeeds/1,
+    update_system_role_fails/1,
+    delete_role_succeeds/1,
+    assign_user_role_succeeds/1,
+    unassign_user_role_succeeds/1,
+    effective_permissions_accumulates/1,
+    enforce_mode_admin_all_rbac_endpoints/1,
+    enforce_mode_readonly_denied_user_write/1,
+    enforce_mode_readonly_denied_role_write/1,
+    enforce_mode_empty_role_user_denied/1
 ]).
 
 -define(PORT, 18083).
@@ -26,7 +39,19 @@ all() ->
         admin_can_manage_rbac_resources,
         operations_cannot_access_rbac_resources,
         observe_mode_falls_back_to_role_checks,
-        enforce_mode_denies_missing_permissions
+        enforce_mode_denies_missing_permissions,
+        create_role_succeeds,
+        create_role_duplicate_key_fails,
+        update_role_succeeds,
+        update_system_role_fails,
+        delete_role_succeeds,
+        assign_user_role_succeeds,
+        unassign_user_role_succeeds,
+        effective_permissions_accumulates,
+        enforce_mode_admin_all_rbac_endpoints,
+        enforce_mode_readonly_denied_user_write,
+        enforce_mode_readonly_denied_role_write,
+        enforce_mode_empty_role_user_denied
     ].
 
 init_per_suite(Config) ->
@@ -267,3 +292,204 @@ request(Method, Path, Body, Headers) ->
 
 auth_headers(SessionId) ->
     [{"authorization", "Bearer " ++ binary_to_list(SessionId)}].
+
+%%% ============================================================
+%%% RBAC-050: CRUD and allow/deny matrix
+%%% ============================================================
+
+create_role_succeeds(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 201, _}, _Headers, Body}} = request(
+        post,
+        "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Support">>, description => <<"Support role">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"role_id">> := RoleId}, _} = jsone:try_decode(list_to_binary(Body)),
+    ?assert(is_binary(RoleId)),
+    ok.
+
+create_role_duplicate_key_fails(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin2@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin2@example.com">>, <<"secret-pass">>),
+    _ = request(post, "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Dupe">>, description => <<"First">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]),
+    {ok, {{_, 409, _}, _Headers, Body}} = request(
+        post,
+        "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Dupe">>, description => <<"Second">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"error">> := <<"role_key_exists">>}, _} = jsone:try_decode(list_to_binary(Body)),
+    ok.
+
+update_role_succeeds(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin3@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin3@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 201, _}, _Headers, Body}} = request(
+        post,
+        "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Updater">>, description => <<"Original">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"role_id">> := RoleId}, _} = jsone:try_decode(list_to_binary(Body)),
+    {ok, {{_, 200, _}, _MHdrs, PatchBody}} = request(
+        patch,
+        "/api/v1/roles/" ++ binary_to_list(RoleId),
+        jsone:encode(#{display_name => <<"Updater">>, description => <<"Updated">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"description">> := <<"Updated">>}, _} = jsone:try_decode(list_to_binary(PatchBody)),
+    ok.
+
+update_system_role_fails(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin4@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin4@example.com">>, <<"secret-pass">>),
+    {ok, AdminRole} = cb_rbac:get_role_by_key(<<"admin">>),
+    RoleId = maps:get(role_id, AdminRole),
+    {ok, {{_, 409, _}, _Headers, Body}} = request(
+        patch,
+        "/api/v1/roles/" ++ binary_to_list(RoleId),
+        jsone:encode(#{description => <<"Hacked">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"error">> := <<"role_protected">>}, _} = jsone:try_decode(list_to_binary(Body)),
+    ok.
+
+delete_role_succeeds(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin5@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin5@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 201, _}, _Headers, _Body}} = request(
+        post,
+        "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Deletable">>, description => <<"Will be deleted">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    %% Verify role exists by listing roles
+    {ok, {{_, 200, _}, _, ListBody1}} = request(get, "/api/v1/roles", <<>>, auth_headers(SessionId)),
+    {ok, #{<<"items">> := Items1}, _} = jsone:try_decode(list_to_binary(ListBody1)),
+    ?assert(lists:any(fun(R) -> maps:get(<<"role_key">>, R) =:= <<"deletable">> end, Items1)),
+    ok.
+
+assign_user_role_succeeds(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin6@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin6@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 201, _}, _Headers, UserBody}} = request(
+        post,
+        "/api/v1/users",
+        jsone:encode(#{email => <<"assign-user@example.com">>, password => <<"pw">>, role => <<"read_only">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"user_id">> := UserId}, _} = jsone:try_decode(list_to_binary(UserBody)),
+    {ok, AdminRole} = cb_rbac:get_role_by_key(<<"admin">>),
+    {ok, {{_, 200, _}, _AHdrs, _}} = request(
+        post,
+        "/api/v1/users/" ++ binary_to_list(UserId) ++ "/roles",
+        jsone:encode(#{role_id => maps:get(role_id, AdminRole)}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    ok.
+
+unassign_user_role_succeeds(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"crud-admin7@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"crud-admin7@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 201, _}, _Headers, UserBody}} = request(
+        post,
+        "/api/v1/users",
+        jsone:encode(#{email => <<"unassign-user@example.com">>, password => <<"pw">>, role => <<"read_only">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"user_id">> := UserId}, _} = jsone:try_decode(list_to_binary(UserBody)),
+    {ok, AdminRole} = cb_rbac:get_role_by_key(<<"admin">>),
+    _ = request(
+        post,
+        "/api/v1/users/" ++ binary_to_list(UserId) ++ "/roles",
+        jsone:encode(#{role_id => maps:get(role_id, AdminRole)}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, {{_, 200, _}, _UHdrs, _}} = request(
+        delete,
+        "/api/v1/users/" ++ binary_to_list(UserId) ++ "/roles/" ++ binary_to_list(maps:get(role_id, AdminRole)),
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    ok.
+
+effective_permissions_accumulates(_Config) ->
+    {ok, _RoUserId} = cb_auth:create_user(<<"eff-perms@example.com">>, <<"secret-pass">>, read_only),
+    {ok, RoRole} = cb_rbac:get_role_by_key(<<"read_only">>),
+    ok = cb_rbac:assign_user_role(_RoUserId, maps:get(role_id, RoRole)),
+    {ok, SessionId} = login(<<"eff-perms@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 200, _}, _MeHeaders, MeBody}} = request(
+        get,
+        "/api/v1/auth/me",
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, #{<<"user">> := #{<<"permissions">> := Perms, <<"roles">> := Roles}}, _} =
+        jsone:try_decode(list_to_binary(MeBody)),
+    ?assert(lists:member(<<"user.read">>, Perms)),
+    ?assert(lists:member(<<"read_only">>, Roles)),
+    ok.
+
+enforce_mode_admin_all_rbac_endpoints(_Config) ->
+    application:set_env(cb_integration, rbac_enforced, true),
+    {ok, AdminUserId} = cb_auth:create_user(<<"enforce-admin-full@example.com">>, <<"secret-pass">>, admin),
+    {ok, AdminRole} = cb_rbac:get_role_by_key(<<"admin">>),
+    ok = cb_rbac:assign_user_role(AdminUserId, maps:get(role_id, AdminRole)),
+    {ok, SessionId} = login(<<"enforce-admin-full@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 200, _}, _, _}} = request(get, "/api/v1/users", <<>>, auth_headers(SessionId)),
+    {ok, {{_, 200, _}, _, _}} = request(get, "/api/v1/roles", <<>>, auth_headers(SessionId)),
+    {ok, {{_, 200, _}, _, _}} = request(get, "/api/v1/permissions", <<>>, auth_headers(SessionId)),
+    ok.
+
+enforce_mode_readonly_denied_user_write(_Config) ->
+    application:set_env(cb_integration, rbac_enforced, true),
+    {ok, RoUserId} = cb_auth:create_user(<<"enforce-ro@example.com">>, <<"secret-pass">>, read_only),
+    {ok, RoRole} = cb_rbac:get_role_by_key(<<"read_only">>),
+    ok = cb_rbac:assign_user_role(RoUserId, maps:get(role_id, RoRole)),
+    {ok, SessionId} = login(<<"enforce-ro@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 403, _}, _Headers, Body}} = request(
+        post,
+        "/api/v1/users",
+        jsone:encode(#{email => <<"hacker@example.com">>, password => <<"pw">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"error">> := <<"forbidden">>}, _} = jsone:try_decode(list_to_binary(Body)),
+    ok.
+
+enforce_mode_readonly_denied_role_write(_Config) ->
+    application:set_env(cb_integration, rbac_enforced, true),
+    {ok, RoUserId} = cb_auth:create_user(<<"enforce-ro2@example.com">>, <<"secret-pass">>, read_only),
+    {ok, RoRole} = cb_rbac:get_role_by_key(<<"read_only">>),
+    ok = cb_rbac:assign_user_role(RoUserId, maps:get(role_id, RoRole)),
+    {ok, SessionId} = login(<<"enforce-ro2@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 403, _}, _Headers, Body}} = request(
+        post,
+        "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Hacker">>, description => <<"Nope">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"error">> := <<"forbidden">>}, _} = jsone:try_decode(list_to_binary(Body)),
+    ok.
+
+enforce_mode_empty_role_user_denied(_Config) ->
+    application:set_env(cb_integration, rbac_enforced, true),
+    {ok, AdminUserId} = cb_auth:create_user(<<"enforce-empty@example.com">>, <<"secret-pass">>, admin),
+    {ok, AdminRole} = cb_rbac:get_role_by_key(<<"admin">>),
+    ok = cb_rbac:assign_user_role(AdminUserId, maps:get(role_id, AdminRole)),
+    RoleId = maps:get(role_id, AdminRole),
+    {ok, ExistingPerms} = cb_rbac:list_role_permissions(RoleId),
+    ok = cb_rbac:set_role_permissions(RoleId, []),
+    {ok, SessionId} = login(<<"enforce-empty@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 403, _}, _Headers, Body}} = request(
+        get,
+        "/api/v1/users",
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, #{<<"error">> := <<"forbidden">>}, _} = jsone:try_decode(list_to_binary(Body)),
+    ok = cb_rbac:set_role_permissions(RoleId, ExistingPerms),
+    ok.

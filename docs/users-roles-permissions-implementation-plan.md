@@ -20,7 +20,7 @@ Implement working Admin dashboard sections for Users, Roles, and Permissions wit
   - RBAC-040/RBAC-041/RBAC-042/RBAC-043 (initial): Added typed frontend admin API client and implemented initial `/users`, `/roles`, `/permissions` pages wired to backend endpoints.
   - RBAC-044 (initial): Added frontend permission helpers, admin tab visibility guards, admin sidebar filtering by required permission, and route-level redirect guards for `/users`, `/roles`, and `/permissions`.
   - RBAC-051: Added frontend Jest RBAC guard coverage plus CI wiring in frontend and integration workflows for RBAC route and endpoint compatibility checks.
-  - RBAC-052 (partial): Added runbook procedures for enabling RBAC enforcement and emergency rollback.
+  - RBAC-052: Added runbook procedures for enabling RBAC enforcement and emergency rollback. RBAC observe/enforce toggle documented in on-call runbooks with rollout procedure and emergency rollback steps.
 
 ## Current Baseline
 - Admin nav links exist in dashboard sidebar: `/users`, `/roles`, `/permissions`.

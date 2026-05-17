@@ -42,6 +42,7 @@ interface NavItem {
   href?: string;
   initiallyOpened?: boolean;
   links?: { label: string; href: string }[];
+  requiredPermission?: string;
 }
 
 const BANKING_ITEMS: NavItem[] = [
@@ -74,9 +75,9 @@ const BANKING_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
-  { label: "Users", icon: IconUsers, href: "/users" },
-  { label: "Roles", icon: IconShield, href: "/roles" },
-  { label: "Permissions", icon: IconKey, href: "/permissions" },
+  { label: "Users", icon: IconUsers, href: "/users", requiredPermission: "user.read" },
+  { label: "Roles", icon: IconShield, href: "/roles", requiredPermission: "role.read" },
+  { label: "Permissions", icon: IconKey, href: "/permissions", requiredPermission: "permission.read" },
   { label: "Settings", icon: IconSettings, href: "/settings" },
   { label: "Developer", icon: IconCode, href: "/developer" },
   { label: "Channels", icon: IconSitemap, href: "/channels" },
@@ -85,14 +86,27 @@ const ADMIN_ITEMS: NavItem[] = [
 ];
 
 export function Sidebar({ activeTab }: { activeTab: string }) {
-  const { state } = useAuth();
+  const { state, hasAnyPermission, hasPermission } = useAuth();
   const email =
     state.status === "authenticated" && state.user ? state.user.email : "";
   const initial = email ? email.charAt(0).toUpperCase() : "?";
   const role =
     state.status === "authenticated" && state.user ? state.user.role : "";
 
-  const items = activeTab === "admin" ? ADMIN_ITEMS : BANKING_ITEMS;
+  const canAccessAdmin = hasAnyPermission([
+    "user.read",
+    "user.write",
+    "role.read",
+    "role.write",
+    "permission.read",
+  ]);
+
+  const items =
+    activeTab === "admin" && canAccessAdmin
+      ? ADMIN_ITEMS.filter((item) =>
+          item.requiredPermission ? hasPermission(item.requiredPermission) : true,
+        )
+      : BANKING_ITEMS;
   return (
     <AppShell.Navbar
       style={{

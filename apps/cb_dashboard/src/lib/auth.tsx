@@ -23,9 +23,16 @@ interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
   devToolsEnabled: boolean;
   setDevToolsEnabled: (enabled: boolean) => void;
 }
+
+const LEGACY_ROLE_PERMISSIONS: Record<string, string[]> = {
+  operations: ["user.read", "user.write", "role.read", "permission.read"],
+  read_only: ["user.read", "role.read", "permission.read"],
+};
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -121,9 +128,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }, [router]);
 
+  const hasPermission = useCallback(
+    (permission: string) => {
+      if (state.status !== "authenticated") return false;
+      if (state.user.role === "admin") return true;
+
+      const explicitPermissions = state.user.permissions ?? [];
+      if (explicitPermissions.includes(permission)) return true;
+
+      const legacyPermissions = LEGACY_ROLE_PERMISSIONS[state.user.role] ?? [];
+      return legacyPermissions.includes(permission);
+    },
+    [state],
+  );
+
+  const hasAnyPermission = useCallback(
+    (permissions: string[]) => permissions.some((permission) => hasPermission(permission)),
+    [hasPermission],
+  );
+
   const value = useMemo<AuthContextValue>(
-    () => ({ state, login, logout, devToolsEnabled, setDevToolsEnabled }),
-    [state, login, logout, devToolsEnabled],
+    () => ({
+      state,
+      login,
+      logout,
+      hasPermission,
+      hasAnyPermission,
+      devToolsEnabled,
+      setDevToolsEnabled,
+    }),
+    [state, login, logout, hasPermission, hasAnyPermission, devToolsEnabled],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

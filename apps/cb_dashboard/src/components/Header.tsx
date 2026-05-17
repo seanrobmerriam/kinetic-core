@@ -31,10 +31,12 @@ export function Header({
   onRefresh,
   activeTab,
   setActiveTab,
+  canAccessAdmin,
 }: {
   onRefresh?: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  canAccessAdmin: boolean;
 }) {
   const router = useRouter();
   const { state, logout, devToolsEnabled, setDevToolsEnabled } = useAuth();
@@ -187,16 +189,24 @@ export function Header({
       <Box px="lg" pb={0}>
         <Tabs
           value={activeTab}
-          onChange={(v) => setActiveTab(v ?? "banking")}
+          onChange={(v) => {
+            if (v === "admin" && !canAccessAdmin) {
+              setActiveTab("banking");
+              return;
+            }
+            setActiveTab(v ?? "banking");
+          }}
           variant="default"
         >
           <Tabs.List>
             <Tabs.Tab value="banking" fw={500}>
               Banking
             </Tabs.Tab>
-            <Tabs.Tab value="admin" fw={500}>
-              Admin
-            </Tabs.Tab>
+            {canAccessAdmin && (
+              <Tabs.Tab value="admin" fw={500}>
+                Admin
+              </Tabs.Tab>
+            )}
           </Tabs.List>
         </Tabs>
       </Box>

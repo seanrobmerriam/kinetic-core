@@ -49,6 +49,7 @@ ironledger/
 - Product requirements: `REQUIREMENTS.md`
 - Phased execution plan: `DEVELOPMENT.md`
 - P1 and P2 on-call runbooks: `docs/on-call-runbooks-p1-p2.md`
+- Canary deployment support: `docs/canary-deployment.md`
 
 ## Quick Start (Docker)
 
@@ -207,6 +208,9 @@ Run from repository root unless noted.
 rebar3 ct
 rebar3 dialyzer
 rebar3 proper
+
+# Canary deployment gate
+npm run canary:gate -- --canary-url http://localhost:8081
 
 # Frontend lint
 cd apps/cb_dashboard && npm run lint

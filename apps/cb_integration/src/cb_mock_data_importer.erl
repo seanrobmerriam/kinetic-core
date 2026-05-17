@@ -60,11 +60,11 @@ do_import(Summary0) ->
 
 bulk_ensure_csv_parties(LoanProductId, Summary0) ->
     Identities = load_csv_identities(),
-    bulk_ensure_csv_parties(Identities, 1, LoanProductId, Summary0).
+    bulk_ensure_csv_parties(Identities, 1, LoanProductId, Summary0, undefined).
 
-bulk_ensure_csv_parties([], _N, _LoanProductId, Summary) ->
+bulk_ensure_csv_parties([], _N, _LoanProductId, Summary, _PrevCheckingId) ->
     {ok, Summary};
-bulk_ensure_csv_parties([Identity | Rest], N, LoanProductId, Summary0) ->
+bulk_ensure_csv_parties([Identity | Rest], N, LoanProductId, Summary0, PrevCheckingId) ->
     #{full_name := FullName, base_email := BaseEmail, age := Age} = Identity,
     %% Make email unique by appending the row index (the CSV has ~1600 unique
     %% base emails across 4002 rows).
@@ -117,7 +117,22 @@ bulk_ensure_csv_parties([Identity | Rest], N, LoanProductId, Summary0) ->
                     end;
                 _ -> Summary3
             end,
-            bulk_ensure_csv_parties(Rest, N + 1, LoanProductId, Summary4);
+            %% Seed payment orders between neighboring checking accounts so
+            %% the payments dashboard has realistic mock data after import.
+            Summary5 = case {PrevCheckingId, N rem 5} of
+                {undefined, _} ->
+                    Summary4;
+                {_PrevAccId, R} when R =/= 0 ->
+                    Summary4;
+                {PrevAccId, 0} ->
+                    PaymentKey = <<"csv-payment-", (integer_to_binary(N))/binary>>,
+                    PaymentAmount = 1000 + ((N rem 20) * 250),
+                    case ensure_payment_order(PaymentKey, PartyId, CheckingId, PrevAccId, PaymentAmount, Summary4) of
+                        {ok, S6} -> S6;
+                        {error, _} -> Summary4
+                    end
+            end,
+            bulk_ensure_csv_parties(Rest, N + 1, LoanProductId, Summary5, CheckingId);
         {error, Reason} ->
             {error, Reason}
     end.
@@ -252,7 +267,9 @@ new_summary() ->
         loans_created => 0,
         loans_existing => 0,
         loan_repayments_created => 0,
-        loan_repayments_existing => 0
+        loan_repayments_existing => 0,
+        payment_orders_created => 0,
+        payment_orders_existing => 0
     }.
 
 inc(Key, Summary) ->
@@ -333,6 +350,19 @@ ensure_payment_txn(IdempotencyKey, Fun, Summary0) ->
             case Fun() of
                 {ok, _Txn} ->
                     {ok, inc(transactions_created, Summary0)};
+                {error, Reason} ->
+                    {error, Reason}
+            end
+    end.
+
+ensure_payment_order(IdempotencyKey, PartyId, SourceAccountId, DestAccountId, Amount, Summary0) ->
+    case find_payment_order_by_key(IdempotencyKey) of
+        {ok, _Order} ->
+            {ok, inc(payment_orders_existing, Summary0)};
+        not_found ->
+            case cb_payment_orders:initiate(IdempotencyKey, PartyId, SourceAccountId, DestAccountId, Amount) of
+                {ok, _Order} ->
+                    {ok, inc(payment_orders_created, Summary0)};
                 {error, Reason} ->
                     {error, Reason}
             end
@@ -420,6 +450,18 @@ find_txn_by_key(IdempotencyKey) ->
     Fun = fun() ->
         case mnesia:index_read(transaction, IdempotencyKey, idempotency_key) of
             [Txn | _] -> {ok, Txn};
+            [] -> not_found
+        end
+    end,
+    case mnesia:transaction(Fun) of
+        {atomic, Result} -> Result;
+        {aborted, _} -> {error, database_error}
+    end.
+
+find_payment_order_by_key(IdempotencyKey) ->
+    Fun = fun() ->
+        case mnesia:index_read(payment_order, IdempotencyKey, idempotency_key) of
+            [Order | _] -> {ok, Order};
             [] -> not_found
         end
     end,

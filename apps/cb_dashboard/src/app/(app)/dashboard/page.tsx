@@ -40,7 +40,7 @@ import { api } from "@/lib/api";
 import { useNotify } from "@/lib/notify";
 import { useRefresh } from "@/lib/refresh";
 import { formatAmount, formatNumber, formatTimestamp } from "@/lib/format";
-import type { Account, LedgerEntry, Party, Transaction } from "@/lib/types";
+import type { Account, LedgerEntry, Party, PaymentOrder, Transaction } from "@/lib/types";
 
 interface ListResponse<T> {
   items: T[];
@@ -189,6 +189,7 @@ export default function DashboardPage() {
   const [parties, setParties] = useState<Party[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -202,6 +203,16 @@ export default function DashboardPage() {
         const accountRows: AccountRow[] = [];
         const txns: Transaction[] = [];
         const seenTxns = new Set<string>();
+        let paymentOrderItems: PaymentOrder[] = [];
+        try {
+          const paymentOrderResp = await api<ListResponse<PaymentOrder>>(
+            "GET",
+            "/payment-orders",
+          );
+          paymentOrderItems = paymentOrderResp.items ?? [];
+        } catch {
+          paymentOrderItems = [];
+        }
         const ledgerEntries: LedgerEntry[] = [];
 
         for (const party of partyList) {
@@ -253,6 +264,11 @@ export default function DashboardPage() {
         setTransactions(
           txns.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0)),
         );
+        setPaymentOrders(
+          paymentOrderItems.sort(
+            (a, b) => (b.created_at ?? 0) - (a.created_at ?? 0),
+          ),
+        );
         setLedger(
           ledgerEntries.sort((a, b) => (b.posted_at ?? 0) - (a.posted_at ?? 0)),
         );
@@ -278,12 +294,14 @@ export default function DashboardPage() {
     const openedToday = accounts.filter(
       (a) => (a.created_at ?? 0) * 1000 >= todayMs,
     ).length;
-    const pendingPayments = transactions.filter(
-      (t) => (t.status ?? "").toLowerCase() === "pending",
-    ).length;
-    const totalPaymentVolume = transactions
-      .filter((t) => (t.status ?? "").toLowerCase() === "posted")
-      .reduce((s, t) => s + (t.amount ?? 0), 0);
+    const pendingPayments = paymentOrders.filter((p) => {
+      const status = (p.status ?? "").toLowerCase();
+      return status === "pending" || status === "processing";
+    }).length;
+    const totalPaymentVolume = paymentOrders
+      .filter((p) => (p.status ?? "").toLowerCase() === "completed")
+      .reduce((s, p) => s + (p.amount ?? 0), 0);
+    const totalPayments = paymentOrders.length;
     return {
       totalDeposits,
       activeAccounts,
@@ -293,8 +311,9 @@ export default function DashboardPage() {
       totalLedgerEntries: ledger.length,
       pendingPayments,
       totalPaymentVolume,
+      totalPayments,
     };
-  }, [accounts, parties, transactions, ledger]);
+  }, [accounts, parties, transactions, paymentOrders, ledger]);
 
   return (
     <Stack gap="lg">
@@ -317,7 +336,7 @@ export default function DashboardPage() {
         <Kpi
           label="Payments Volume"
           value={formatAmount(stats.totalPaymentVolume, "USD")}
-          hint={`${formatNumber(stats.totalTransactions)} payments total`}
+          hint={`${formatNumber(stats.totalPayments)} payments total`}
           Icon={IconBuildingBank}
           tone="teal"
         />

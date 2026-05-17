@@ -96,12 +96,9 @@ export function Header({
     <AppShell.Header style={{ display: "flex", flexDirection: "column" }}>
       <Group flex={1} px="lg" justify="space-between" wrap="nowrap">
         <div>
-          <Title order={3} fw={600}>
-            Kinetic
+          <Title order={3} fw={700}>
+            Kinetic Core
           </Title>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-            Core Bank
-          </Text>
         </div>
 
         <Group gap="xs" wrap="nowrap">

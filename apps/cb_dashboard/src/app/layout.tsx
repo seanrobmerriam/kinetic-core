@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Raleway } from "next/font/google";
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import "@mantine/core/styles.css";
@@ -9,7 +9,7 @@ import { Providers } from "./providers";
 import { theme } from "./theme";
 import { getDir } from "../lib/locale";
 
-const manrope = Manrope({
+const raleway = Raleway({
   subsets: ["latin", "latin-ext"],
   display: "swap",
   variable: "--font-sans-display",
@@ -39,7 +39,7 @@ export default function RootLayout({
   const dir = getDir(locale);
 
   return (
-    <html lang={locale} dir={dir} className={manrope.variable} {...mantineHtmlProps}>
+    <html lang={locale} dir={dir} className={raleway.variable} {...mantineHtmlProps}>
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>

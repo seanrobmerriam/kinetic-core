@@ -1,0 +1,73 @@
+name: Security Scans
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  trivy_backend:
+    name: Trivy - Backend Image
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -f Dockerfile.api -t core-banking-backend:scan .
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: core-banking-backend:scan
+          format: sarif
+          output: trivy-backend.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-backend
+
+  trivy_frontend:
+    name: Trivy - Frontend Image
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build frontend image
+        run: docker build -f apps/cb_dashboard/Dockerfile -t core-banking-frontend:scan apps/cb_dashboard/
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: core-banking-frontend:scan
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+
+  erlang_audit:
+    name: Rebar3 Hex Audit
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-erlang
+      - name: Audit Hex dependencies
+        run: rebar3 hex audit
+
+  npm_audit:
+    name: pnpm Audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nextjs
+      - name: Audit npm packages
+        run: npm audit --audit-level=high
+        working-directory: apps/cb_dashboard

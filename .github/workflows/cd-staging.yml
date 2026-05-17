@@ -1,0 +1,79 @@
+name: CD - Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: false
+
+jobs:
+  build_and_push:
+    name: Build & Push Images
+    runs-on: ubuntu-22.04
+    outputs:
+      sha_tag: ${{ steps.meta.outputs.sha_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        run: echo "sha_tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push backend image
+        uses: ./.github/actions/docker-build-push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-name: core-banking-backend
+          tag: ${{ steps.meta.outputs.sha_tag }}
+          context: .
+          dockerfile: Dockerfile.api
+
+      - name: Build & push frontend image
+        uses: ./.github/actions/docker-build-push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-name: core-banking-frontend
+          tag: ${{ steps.meta.outputs.sha_tag }}
+          context: apps/cb_dashboard
+          dockerfile: Dockerfile
+
+  deploy_staging:
+    name: Deploy to Staging
+    needs: build_and_push
+    runs-on: ubuntu-22.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/core-banking
+
+            export IMAGE_TAG=${{ needs.build_and_push.outputs.sha_tag }}
+            docker compose pull
+
+            docker compose up -d --no-deps backend
+            sleep 10
+            docker compose up -d --no-deps frontend
+
+            for i in $(seq 1 15); do
+              STATUS=$(curl -sf http://localhost:8080/health | jq -r '.status' 2>/dev/null || echo "")
+              [ "$STATUS" = "ok" ] && break || sleep 4
+            done
+            [ "$STATUS" = "ok" ] || { docker compose logs; exit 1; }
+
+            echo "Staging deploy complete - $IMAGE_TAG"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Staging deploy failed for ${{ needs.build_and_push.outputs.sha_tag }}"

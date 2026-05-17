@@ -1,0 +1,118 @@
+name: CI - Erlang Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Compile
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-erlang
+      - name: Compile (warnings as errors)
+        run: rebar3 compile
+
+  money_arithmetic_guard:
+    name: Integer Money Arithmetic Guard
+    runs-on: ubuntu-22.04
+    needs: compile
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on forbidden float64 money type
+        run: |
+          if rg -n "float64" .; then
+            echo "Forbidden float64 money handling detected. Use integer minor units only."
+            exit 1
+          fi
+          echo "No float64 money handling detected."
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-22.04
+    needs: [compile, money_arithmetic_guard]
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-erlang
+      - name: Cache PLT
+        uses: actions/cache@v4
+        with:
+          path: _build/default/lib/*.plt
+          key: plt-${{ hashFiles('rebar.lock') }}-${{ runner.os }}
+      - name: Run Dialyzer
+        run: rebar3 dialyzer
+
+  property_tests:
+    name: PropEr Property Tests
+    runs-on: ubuntu-22.04
+    needs: [compile, money_arithmetic_guard]
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-erlang
+      - name: Run PropEr
+        run: |
+          mkdir -p _build/test/proper
+          rebar3 proper --numtests 500 | tee _build/test/proper/proper.log
+      - name: Upload PropEr logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proper-logs
+          path: _build/test/proper/
+
+  common_test:
+    name: Common Test Suite
+    runs-on: ubuntu-22.04
+    needs: [compile, money_arithmetic_guard]
+    defaults:
+      run:
+        working-directory: .
+    env:
+      CORE_BANKING_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-erlang
+      - name: Run Common Test
+        run: rebar3 ct --cover
+      - name: Upload CT logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ct-logs
+          path: _build/test/logs/
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erlang-coverage
+          path: _build/test/cover/
+
+  xref:
+    name: Cross-reference Check
+    runs-on: ubuntu-22.04
+    needs: [compile, money_arithmetic_guard]
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-erlang
+      - run: rebar3 xref

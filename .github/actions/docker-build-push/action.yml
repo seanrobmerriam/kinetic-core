@@ -1,0 +1,43 @@
+name: Docker Build & Push
+description: Multi-stage Docker build and registry push
+
+inputs:
+  image-name:
+    required: true
+  tag:
+    required: true
+  context:
+    required: true
+  dockerfile:
+    required: false
+    default: Dockerfile
+  registry:
+    required: false
+    default: ghcr.io
+  push:
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: docker/setup-buildx-action@v3
+
+    - uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ env.GITHUB_TOKEN }}
+
+    - uses: docker/build-push-action@v5
+      with:
+        context: ${{ inputs.context }}
+        file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+        push: ${{ inputs.push }}
+        tags: |
+          ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.image-name }}:${{ inputs.tag }}
+          ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.image-name }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILD_SHA=${{ github.sha }}

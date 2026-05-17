@@ -1,0 +1,37 @@
+name: Setup Erlang/OTP
+description: Install Erlang/OTP and Rebar3 with caching
+
+inputs:
+  otp-version:
+    description: OTP version string
+    required: true
+    default: "26.2"
+  rebar3-version:
+    description: Rebar3 version string
+    required: true
+    default: "3.23.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Cache OTP build
+      uses: actions/cache@v4
+      with:
+        path: ~/.kerl
+        key: otp-${{ inputs.otp-version }}-${{ runner.os }}
+
+    - name: Install Erlang/OTP via erlef/setup-beam
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ inputs.otp-version }}
+        rebar3-version: ${{ inputs.rebar3-version }}
+
+    - name: Cache Rebar3 deps
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/rebar3
+          _build
+        key: rebar3-${{ hashFiles('rebar.lock') }}-${{ runner.os }}
+        restore-keys: |
+          rebar3-${{ runner.os }}-

@@ -1,0 +1,64 @@
+name: CI - Integration (Docker Compose Stack)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Stack Smoke Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build stack
+        run: docker compose build --parallel
+
+      - name: Start stack
+        run: docker compose up -d
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(curl -sf http://localhost:8080/health | jq -r '.status' 2>/dev/null || echo "")
+            [ "$STATUS" = "ok" ] && { echo "Backend healthy"; break; }
+            echo "Attempt $i - waiting..."; sleep 3
+          done
+          [ "$STATUS" = "ok" ] || { docker compose logs backend; exit 1; }
+
+      - name: Wait for frontend health
+        run: |
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:3000 && { echo "Frontend healthy"; break; }
+            echo "Attempt $i - waiting..."; sleep 3
+          done
+
+      - name: Run API smoke tests
+        run: |
+          curl -sf http://localhost:8080/health
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/ledger/ping)
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ] || \
+            { echo "Unexpected ledger endpoint status: $STATUS"; exit 1; }
+
+      - name: Capture compose logs
+        if: always()
+        run: |
+          mkdir -p /tmp/compose-logs
+          docker compose logs --no-color > /tmp/compose-logs/compose.log || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+      - name: Upload compose logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-logs
+          path: /tmp/compose-logs/

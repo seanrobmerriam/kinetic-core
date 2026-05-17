@@ -1,0 +1,74 @@
+name: CI - Next.js Frontend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint_typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nextjs
+      - run: npm run lint
+        working-directory: apps/cb_dashboard
+      - run: npx tsc --noEmit
+        working-directory: apps/cb_dashboard
+
+  unit_tests:
+    name: Jest Unit Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nextjs
+      - name: Run Jest
+        run: npm test -- --coverage --ci
+        working-directory: apps/cb_dashboard
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: apps/cb_dashboard/coverage/
+
+  build:
+    name: Production Build
+    runs-on: ubuntu-22.04
+    needs: [lint_typecheck, unit_tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nextjs
+      - name: Build Next.js
+        run: npm run build
+        working-directory: apps/cb_dashboard
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: apps/cb_dashboard/.next/
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-nextjs
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/cb_dashboard
+      - name: Run Playwright
+        run: npx playwright test
+        working-directory: apps/cb_dashboard
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/cb_dashboard/playwright-report/

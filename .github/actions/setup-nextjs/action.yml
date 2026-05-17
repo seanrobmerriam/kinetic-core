@@ -1,0 +1,22 @@
+name: Setup Next.js
+description: Install Node.js and npm dependencies with caching
+
+inputs:
+  node-version:
+    description: Node.js version
+    required: true
+    default: "20"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: apps/cb_dashboard/package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+      working-directory: apps/cb_dashboard

@@ -70,21 +70,30 @@ schemas() ->
                 <<"status">> => #{<<"type">> => <<"string">>},
                 <<"created_at">> => #{<<"type">> => <<"integer">>},
                 <<"updated_at">> => #{<<"type">> => <<"integer">>},
-                <<"roles">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"object">>}},
+                <<"roles">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"string">>}},
+                <<"permissions">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"string">>}},
                 <<"effective">> => #{<<"type">> => <<"object">>}
             }
         },
-        <<"RbacRole">> => #{
+        <<"RbacUserList">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"items">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"$ref">> => <<"#/components/schemas/RbacUser">>}},
+                <<"total">> => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"RbacRolePermissionKeys">> => #{
             <<"type">> => <<"object">>,
             <<"properties">> => #{
                 <<"role_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
-                <<"role_key">> => #{<<"type">> => <<"string">>},
-                <<"display_name">> => #{<<"type">> => <<"string">>},
-                <<"description">> => #{<<"type">> => <<"string">>},
-                <<"status">> => #{<<"type">> => <<"string">>},
-                <<"is_system">> => #{<<"type">> => <<"boolean">>},
-                <<"created_at">> => #{<<"type">> => <<"integer">>},
-                <<"updated_at">> => #{<<"type">> => <<"integer">>}
+                <<"permission_keys">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"string">>}}
+            }
+        },
+        <<"RbacRoleList">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"items">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"$ref">> => <<"#/components/schemas/RbacRole">>}},
+                <<"total">> => #{<<"type">> => <<"integer">>}
             }
         },
         <<"RbacPermission">> => #{
@@ -511,7 +520,7 @@ paths() ->
                 <<"summary">> => <<"List users">>,
                 <<"responses">> => #{
                     <<"200">> => #{<<"description">> => <<"List of users">>,
-                                  <<"content">> => json_content(<<"object">>)},
+                                  <<"content">> => json_ref(<<"RbacUserList">>)},
                     <<"403">> => error_response()
                 }
             },
@@ -588,7 +597,7 @@ paths() ->
                 <<"summary">> => <<"List roles">>,
                 <<"responses">> => #{
                     <<"200">> => #{<<"description">> => <<"List of roles">>,
-                                  <<"content">> => json_content(<<"object">>)}
+                                  <<"content">> => json_ref(<<"RbacRoleList">>)}
                 }
             },
             <<"post">> => #{

@@ -8,7 +8,9 @@
     health_is_public/1,
     api_requires_authentication/1,
     login_and_me_round_trip/1,
-    logout_revokes_session/1
+    logout_revokes_session/1,
+    admin_can_manage_rbac_resources/1,
+    operations_cannot_access_rbac_resources/1
 ]).
 
 -define(PORT, 18083).
@@ -18,7 +20,9 @@ all() ->
         health_is_public,
         api_requires_authentication,
         login_and_me_round_trip,
-        logout_revokes_session
+        logout_revokes_session,
+        admin_can_manage_rbac_resources,
+        operations_cannot_access_rbac_resources
     ].
 
 init_per_suite(Config) ->
@@ -38,8 +42,11 @@ init_per_testcase(_TestCase, Config) ->
         fun(Table) -> mnesia:clear_table(Table) end,
         [party, account, transaction, ledger_entry, savings_product,
          loan_products, loan_accounts, loan_repayments, interest_accrual,
-         auth_user, auth_session, audit_log]
+            auth_user, auth_session, auth_role, auth_permission,
+            auth_role_permission, auth_user_role,
+            audit_log]
     ),
+        ok = cb_rbac:seed_defaults(),
     Config.
 
 health_is_public(_Config) ->
@@ -63,6 +70,8 @@ login_and_me_round_trip(_Config) ->
     {ok, #{<<"session_id">> := SessionId, <<"user">> := User}, _} =
         jsone:try_decode(list_to_binary(LoginBody)),
     ?assertEqual(<<"admin@example.com">>, maps:get(<<"email">>, User)),
+    ?assert(maps:is_key(<<"roles">>, User)),
+    ?assert(maps:is_key(<<"permissions">>, User)),
 
     {ok, {{_, 200, _}, _MeHeaders, MeBody}} = request(
         get,
@@ -72,6 +81,8 @@ login_and_me_round_trip(_Config) ->
     ),
     {ok, #{<<"user">> := MeUser}, _} = jsone:try_decode(list_to_binary(MeBody)),
     ?assertEqual(<<"admin@example.com">>, maps:get(<<"email">>, MeUser)),
+    ?assert(maps:is_key(<<"roles">>, MeUser)),
+    ?assert(maps:is_key(<<"permissions">>, MeUser)),
     ok.
 
 logout_revokes_session(_Config) ->
@@ -100,13 +111,95 @@ logout_revokes_session(_Config) ->
     {ok, #{<<"error">> := <<"unauthorized">>}, _} = jsone:try_decode(list_to_binary(MeBody)),
     ok.
 
+admin_can_manage_rbac_resources(_Config) ->
+    {ok, _AdminUserId} = cb_auth:create_user(<<"admin-rbac@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"admin-rbac@example.com">>, <<"secret-pass">>),
+
+    {ok, {{_, 200, _}, _PermHeaders, PermBody}} = request(
+        get,
+        "/api/v1/permissions",
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, PermJson, _} = jsone:try_decode(list_to_binary(PermBody)),
+    ?assert(maps:is_key(<<"items">>, PermJson)),
+
+    {ok, {{_, 201, _}, _RoleHeaders, RoleBody}} = request(
+        post,
+        "/api/v1/roles",
+        jsone:encode(#{display_name => <<"Support">>, description => <<"Support role">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"role_id">> := RoleId}, _} = jsone:try_decode(list_to_binary(RoleBody)),
+
+    {ok, {{_, 200, _}, _RolePermHeaders, _RolePermBody}} = request(
+        put,
+        "/api/v1/roles/" ++ binary_to_list(RoleId) ++ "/permissions",
+        jsone:encode(#{permission_keys => [<<"user.read">>, <<"permission.read">>]}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+
+    {ok, {{_, 201, _}, _UserHeaders, UserBody}} = request(
+        post,
+        "/api/v1/users",
+        jsone:encode(#{email => <<"rbac-user@example.com">>, password => <<"pw-rbac">>, role => <<"read_only">>}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+    {ok, #{<<"user_id">> := UserId}, _} = jsone:try_decode(list_to_binary(UserBody)),
+
+    {ok, {{_, 200, _}, _AssignHeaders, _AssignBody}} = request(
+        post,
+        "/api/v1/users/" ++ binary_to_list(UserId) ++ "/roles",
+        jsone:encode(#{role_id => RoleId}),
+        [{"content-type", "application/json"} | auth_headers(SessionId)]
+    ),
+
+    {ok, {{_, 200, _}, _DetailHeaders, DetailBody}} = request(
+        get,
+        "/api/v1/users/" ++ binary_to_list(UserId),
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, UserJson, _} = jsone:try_decode(list_to_binary(DetailBody)),
+    ?assert(maps:is_key(<<"roles">>, UserJson)),
+    ?assert(maps:is_key(<<"effective">>, UserJson)),
+    ok.
+
+operations_cannot_access_rbac_resources(_Config) ->
+    {ok, _OpsUserId} = cb_auth:create_user(<<"ops-rbac@example.com">>, <<"secret-pass">>, operations),
+    {ok, SessionId} = login(<<"ops-rbac@example.com">>, <<"secret-pass">>),
+    {ok, {{_, 403, _}, _Headers, Body}} = request(
+        get,
+        "/api/v1/users",
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, #{<<"error">> := <<"forbidden">>}, _} = jsone:try_decode(list_to_binary(Body)),
+    ok.
+
+login(Email, Password) ->
+    {ok, {{_, 200, _}, _Headers, LoginBody}} = request(
+        post,
+        "/api/v1/auth/login",
+        jsone:encode(#{email => Email, password => Password}),
+        [{"content-type", "application/json"}]
+    ),
+    {ok, #{<<"session_id">> := SessionId}, _} = jsone:try_decode(list_to_binary(LoginBody)),
+    {ok, SessionId}.
+
 request(Method, Path, Body, Headers) ->
     URL = "http://127.0.0.1:" ++ integer_to_list(?PORT) ++ Path,
     case Method of
         get ->
             httpc:request(get, {URL, Headers}, [], []);
         post ->
-            httpc:request(post, {URL, Headers, "application/json", binary_to_list(Body)}, [], [])
+            httpc:request(post, {URL, Headers, "application/json", binary_to_list(Body)}, [], []);
+        put ->
+            httpc:request(put, {URL, Headers, "application/json", binary_to_list(Body)}, [], []);
+        patch ->
+            httpc:request(patch, {URL, Headers, "application/json", binary_to_list(Body)}, [], []);
+        delete ->
+            httpc:request(delete, {URL, Headers}, [], [])
     end.
 
 auth_headers(SessionId) ->

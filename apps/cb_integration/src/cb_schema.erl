@@ -89,7 +89,9 @@ create_tables() ->
               key_rotation_events,
               savings_product,
               loan_products, loan_accounts, loan_repayments, interest_accrual,
-              auth_user, auth_session, audit_log, approval_request,
+              auth_user, auth_session, auth_role, auth_permission,
+              auth_role_permission, auth_user_role,
+              audit_log, approval_request,
               approval_decision, audit_retention_policy,
               event_outbox, webhook_subscription,
               webhook_delivery, report_statement, report_export,
@@ -141,7 +143,9 @@ create_tables() ->
     channel_session | channel_feature_flag |
     api_keys | key_rotation_events |
     savings_product | loan_products | loan_accounts | loan_repayments |
-    interest_accrual | auth_user | auth_session | audit_log |
+    interest_accrual | auth_user | auth_session |
+    auth_role | auth_permission | auth_role_permission | auth_user_role |
+    audit_log |
     approval_request | approval_decision | event_outbox |
     audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
@@ -202,7 +206,9 @@ create_if_not_exists(TableName) ->
     channel_session | channel_feature_flag |
     api_keys | key_rotation_events |
     savings_product | loan_products | loan_accounts | loan_repayments |
-    interest_accrual | auth_user | auth_session | audit_log |
+    interest_accrual | auth_user | auth_session |
+    auth_role | auth_permission | auth_role_permission | auth_user_role |
+    audit_log |
     approval_request | approval_decision | event_outbox |
     audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
@@ -404,6 +410,30 @@ table_spec(auth_session) ->
         {attributes, [session_id, user_id, status, expires_at,
                       created_at, updated_at, channel_type]},
         {index, [user_id, expires_at]}
+    ];
+table_spec(auth_role) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, auth_role)},
+        {index, [role_key, status]}
+    ];
+table_spec(auth_permission) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, auth_permission)},
+        {index, [permission_key, resource, action, status]}
+    ];
+table_spec(auth_role_permission) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, auth_role_permission)},
+        {index, [role_id, permission_key, status]}
+    ];
+table_spec(auth_user_role) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, auth_user_role)},
+        {index, [user_id, role_id, status]}
     ];
 table_spec(audit_log) ->
     [

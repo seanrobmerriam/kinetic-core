@@ -48,7 +48,9 @@ init_per_testcase(_TestCase, Config) ->
         fun(Table) -> mnesia:clear_table(Table) end,
         [party, account, transaction, ledger_entry, savings_product,
          loan_products, loan_accounts, loan_repayments, interest_accrual,
-         auth_user, auth_session, audit_log, approval_request, approval_decision,
+         auth_user, auth_session, auth_role, auth_permission,
+         auth_role_permission, auth_user_role,
+         audit_log, approval_request, approval_decision,
          event_outbox, webhook_subscription, webhook_delivery,
             report_statement, report_export, structured_log, audit_retention_policy]
     ),
@@ -88,6 +90,22 @@ schema_creates_feature_tables(_Config) ->
     ?assertEqual(
         [expires_at, user_id],
         lists:sort(index_names(auth_session))
+    ),
+    ?assertEqual(
+        [role_key, status],
+        lists:sort(index_names(auth_role))
+    ),
+    ?assertEqual(
+        [action, permission_key, resource, status],
+        lists:sort(index_names(auth_permission))
+    ),
+    ?assertEqual(
+        [permission_key, role_id, status],
+        lists:sort(index_names(auth_role_permission))
+    ),
+    ?assertEqual(
+        [role_id, status, user_id],
+        lists:sort(index_names(auth_user_role))
     ),
     ?assertEqual(
         [actor_user_id, entity_type],

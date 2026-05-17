@@ -15,10 +15,11 @@ init(Req, State) ->
                         {ok, User} ->
                             case cb_auth:create_session(maps:get(user_id, User), ChannelType) of
                                 {ok, Session} ->
+                                    Effective = effective_payload(maps:get(user_id, User)),
                                     Resp = #{
                                         session_id => maps:get(session_id, Session),
                                         expires_at => maps:get(expires_at, Session),
-                                        user => user_to_json(User)
+                                        user => user_to_json(User, Effective)
                                     },
                                     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
                                     Req3 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req2),
@@ -41,13 +42,23 @@ init(Req, State) ->
             {ok, Req2, State}
     end.
 
-user_to_json(User) ->
+user_to_json(User, Effective) ->
+    Roles = maps:get(roles, Effective, []),
+    Permissions = maps:get(permissions, Effective, []),
     #{
         user_id => maps:get(user_id, User),
         email => maps:get(email, User),
         role => maps:get(role, User),
-        status => maps:get(status, User)
+        status => maps:get(status, User),
+        roles => Roles,
+        permissions => Permissions
     }.
+
+effective_payload(UserId) ->
+    case cb_rbac:effective_permissions(UserId) of
+        {ok, Effective} -> Effective;
+        {error, _} -> #{roles => [], permissions => []}
+    end.
 
 parse_channel_type(<<"web">>)    -> web;
 parse_channel_type(<<"mobile">>) -> mobile;

@@ -76,6 +76,7 @@ start(_StartType, _StartArgs) ->
 
     %% Create tables
     ok = cb_schema:create_tables(),
+    ok = cb_rbac:seed_defaults(),
     ok = cb_metrics_counter:init(),
     ok = cb_auth:ensure_bootstrap_users(),
 

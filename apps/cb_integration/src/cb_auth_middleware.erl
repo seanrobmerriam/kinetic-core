@@ -99,12 +99,18 @@ is_operations_boundary(Path) ->
     has_prefix(Path, <<"/api/v1/operations/">>).
 
 is_admin_only_boundary(_Method, <<"/api/v1/api-keys">>) -> true;
+is_admin_only_boundary(_Method, <<"/api/v1/users">>) -> true;
+is_admin_only_boundary(_Method, <<"/api/v1/roles">>) -> true;
+is_admin_only_boundary(_Method, <<"/api/v1/permissions">>) -> true;
 is_admin_only_boundary(<<"GET">>, <<"/api/v1/channel-limits">>) -> true;
 is_admin_only_boundary(_Method, <<"/api/v1/audit/retention-policies">>) -> true;
 is_admin_only_boundary(_Method, <<"/api/v1/audit/apply-retention">>) -> true;
 is_admin_only_boundary(_Method, <<"/api/v1/audit/evidence/exports">>) -> true;
 is_admin_only_boundary(Method, Path) ->
-    case has_prefix(Path, <<"/api/v1/api-keys/">>) of
+    case has_prefix(Path, <<"/api/v1/users/">>) orelse
+         has_prefix(Path, <<"/api/v1/roles/">>) orelse
+         has_prefix(Path, <<"/api/v1/permissions/">>) orelse
+         has_prefix(Path, <<"/api/v1/api-keys/">>) of
         true -> true;
         false ->
             case has_prefix(Path, <<"/api/v1/channel-limits/">>) orelse

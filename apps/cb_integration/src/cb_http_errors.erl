@@ -302,6 +302,20 @@ to_response(field_too_large) ->
 to_response(invalid_path_param) ->
     {400, <<"invalid_path_param">>, <<"Invalid path parameter">>};
 
+%% RBAC errors
+to_response(user_not_found) ->
+    {404, <<"user_not_found">>, <<"User not found">>};
+to_response(role_not_found) ->
+    {404, <<"role_not_found">>, <<"Role not found">>};
+to_response(permission_not_found) ->
+    {404, <<"permission_not_found">>, <<"Permission not found">>};
+to_response(role_protected) ->
+    {409, <<"role_protected">>, <<"System role is protected">>};
+to_response(role_key_exists) ->
+    {409, <<"role_key_exists">>, <<"Role key already exists">>};
+to_response(invalid_role_name) ->
+    {422, <<"invalid_role_name">>, <<"Invalid role name">>};
+
 %% System errors
 to_response(database_error) ->
     {500, <<"database_error">>, <<"Database error">>};

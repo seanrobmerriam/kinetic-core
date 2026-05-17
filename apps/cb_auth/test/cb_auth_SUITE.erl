@@ -32,7 +32,8 @@ end_per_suite(_Config) ->
 init_per_testcase(_TestCase, Config) ->
     lists:foreach(
         fun(Table) -> mnesia:clear_table(Table) end,
-        [auth_user, auth_session, audit_log]
+        [auth_user, auth_session, auth_role, auth_permission,
+         auth_role_permission, auth_user_role, audit_log]
     ),
     Config.
 

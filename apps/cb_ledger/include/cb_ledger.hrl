@@ -613,6 +613,18 @@
 %% @doc API key status type.
 -type api_key_status() :: active | revoked.
 
+%% @doc RBAC role lifecycle status.
+-type rbac_role_status() :: active | disabled.
+
+%% @doc RBAC permission lifecycle status.
+-type rbac_permission_status() :: active | disabled.
+
+%% @doc RBAC relationship status for grants and assignments.
+-type rbac_assignment_status() :: active | revoked.
+
+%% @doc Stable permission key used in authorization checks.
+-type permission_key() :: binary().
+
 %% @doc Partner API key for programmatic access.
 %%
 %% API keys are used as an alternative to session tokens for partner/system integrations.
@@ -629,6 +641,53 @@
     expires_at         :: timestamp_ms() | never,
     created_at         :: timestamp_ms(),
     updated_at         :: timestamp_ms()
+}).
+
+%% @doc RBAC role definition.
+%%
+%% Built-in roles are marked with `is_system = true` and protected from
+%% direct updates in RBAC domain operations.
+-record(auth_role, {
+    role_id       :: uuid(),
+    role_key      :: binary(),
+    display_name  :: binary(),
+    description   :: binary(),
+    status        :: rbac_role_status(),
+    is_system     :: boolean(),
+    created_at    :: timestamp_ms(),
+    updated_at    :: timestamp_ms()
+}).
+
+%% @doc RBAC permission catalog entry.
+-record(auth_permission, {
+    permission_id   :: uuid(),
+    permission_key  :: permission_key(),
+    resource        :: binary(),
+    action          :: binary(),
+    description     :: binary(),
+    status          :: rbac_permission_status(),
+    created_at      :: timestamp_ms(),
+    updated_at      :: timestamp_ms()
+}).
+
+%% @doc Role to permission grant.
+-record(auth_role_permission, {
+    role_permission_id :: uuid(),
+    role_id            :: uuid(),
+    permission_key     :: permission_key(),
+    status             :: rbac_assignment_status(),
+    created_at         :: timestamp_ms(),
+    updated_at         :: timestamp_ms()
+}).
+
+%% @doc User to role assignment.
+-record(auth_user_role, {
+    user_role_id  :: uuid(),
+    user_id       :: uuid(),
+    role_id       :: uuid(),
+    status        :: rbac_assignment_status(),
+    created_at    :: timestamp_ms(),
+    updated_at    :: timestamp_ms()
 }).
 
 %% @doc Audit trail entry for an API key rotation event.

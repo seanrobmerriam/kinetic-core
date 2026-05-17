@@ -12,7 +12,21 @@ init(Req, State) ->
                 undefined ->
                     error_reply(unauthorized, Req, State);
                 _ ->
-                    Resp = #{user => User},
+                    UserId = maps:get(user_id, User, undefined),
+                    Effective = case UserId of
+                        Id when is_binary(Id) ->
+                            case cb_rbac:effective_permissions(Id) of
+                                {ok, Payload} -> Payload;
+                                {error, _} -> #{roles => [], permissions => []}
+                            end;
+                        _ ->
+                            #{roles => [], permissions => []}
+                    end,
+                    EnrichedUser = User#{
+                        roles => maps:get(roles, Effective, []),
+                        permissions => maps:get(permissions, Effective, [])
+                    },
+                    Resp = #{user => EnrichedUser},
                     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),
                     Req2 = cowboy_req:reply(200, Headers, jsone:encode(Resp), Req),
                     {ok, Req2, State}

@@ -4,7 +4,9 @@
 
 -export([
     create_user/3,
+    list_users/0,
     get_user/1,
+    update_user/2,
     authenticate/2,
     ensure_bootstrap_users/0,
     create_session/1,
@@ -39,6 +41,25 @@ create_user(Email, Password, Role)
         {aborted, _Reason} -> {error, database_error}
     end.
 
+-spec list_users() -> {ok, [map()]} | {error, database_error}.
+list_users() ->
+    F = fun() ->
+        Rows = mnesia:select(auth_user, [{{auth_user, '$1', '$2', '_', '$3', '$4', '$5', '$6'}, [],
+                                          [{{'$1', '$2', '$3', '$4', '$5', '$6'}}]}]),
+        [#{
+            user_id => Id,
+            email => Email,
+            role => Role,
+            status => Status,
+            created_at => CreatedAt,
+            updated_at => UpdatedAt
+        } || {Id, Email, Role, Status, CreatedAt, UpdatedAt} <- Rows]
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Users} -> {ok, lists:sort(fun user_sort/2, Users)};
+        {aborted, _Reason} -> {error, database_error}
+    end.
+
 -spec get_user(binary()) -> {ok, map()} | {error, user_not_found | database_error}.
 get_user(UserId) when is_binary(UserId) ->
     F = fun() ->
@@ -52,6 +73,41 @@ get_user(UserId) when is_binary(UserId) ->
                     created_at => CreatedAt,
                     updated_at => UpdatedAt
                 }};
+            [] ->
+                {error, user_not_found}
+        end
+    end,
+    case mnesia:transaction(F) of
+        {atomic, Result} -> Result;
+        {aborted, _Reason} -> {error, database_error}
+    end.
+
+-spec update_user(binary(), map()) ->
+    {ok, map()} | {error, user_not_found | email_already_exists | database_error}.
+update_user(UserId, Updates) when is_binary(UserId), is_map(Updates) ->
+    F = fun() ->
+        case mnesia:read(auth_user, UserId, write) of
+            [{auth_user, Id, ExistingEmail, PasswordHash, ExistingRole, ExistingStatus, CreatedAt, _UpdatedAt}] ->
+                TargetEmail = maps:get(email, Updates, ExistingEmail),
+                case email_available(TargetEmail, Id, ExistingEmail) of
+                    ok ->
+                        Role = maps:get(role, Updates, ExistingRole),
+                        Status = maps:get(status, Updates, ExistingStatus),
+                        Now = erlang:system_time(millisecond),
+                        ok = mnesia:write(
+                            {auth_user, Id, TargetEmail, PasswordHash, Role, Status, CreatedAt, Now}
+                        ),
+                        {ok, #{
+                            user_id => Id,
+                            email => TargetEmail,
+                            role => Role,
+                            status => Status,
+                            created_at => CreatedAt,
+                            updated_at => Now
+                        }};
+                    {error, _} = Err ->
+                        Err
+                end;
             [] ->
                 {error, user_not_found}
         end
@@ -194,3 +250,16 @@ to_binary(Value) when is_binary(Value) ->
     Value;
 to_binary(Value) when is_list(Value) ->
     unicode:characters_to_binary(Value).
+
+email_available(TargetEmail, UserId, ExistingEmail) when TargetEmail =:= ExistingEmail ->
+    case UserId of
+        _ when is_binary(UserId) -> ok
+    end;
+email_available(TargetEmail, _UserId, _ExistingEmail) ->
+    case mnesia:index_read(auth_user, TargetEmail, email) of
+        [] -> ok;
+        _ -> {error, email_already_exists}
+    end.
+
+user_sort(A, B) ->
+    maps:get(email, A) =< maps:get(email, B).

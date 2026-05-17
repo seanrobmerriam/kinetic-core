@@ -78,6 +78,16 @@ dispatch() ->
             {<<"/api/v1/auth/logout">>, cb_logout_handler, []},
             {<<"/api/v1/auth/me">>, cb_me_handler, []},
 
+            %% RBAC admin
+            {<<"/api/v1/users">>, cb_users_handler, []},
+            {<<"/api/v1/users/:user_id">>, cb_users_handler, []},
+            {<<"/api/v1/users/:user_id/roles">>, cb_users_handler, []},
+            {<<"/api/v1/users/:user_id/roles/:role_id">>, cb_users_handler, []},
+            {<<"/api/v1/roles">>, cb_roles_handler, []},
+            {<<"/api/v1/roles/:role_id">>, cb_roles_handler, []},
+            {<<"/api/v1/roles/:role_id/permissions">>, cb_roles_handler, []},
+            {<<"/api/v1/permissions">>, cb_permissions_handler, []},
+
             %% Parties
             {<<"/api/v1/parties">>, cb_parties_handler, []},
             {<<"/api/v1/parties/:party_id">>, cb_party_handler, []},

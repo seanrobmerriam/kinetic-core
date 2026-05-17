@@ -3,10 +3,8 @@
 import { Badge, Group, Paper, Stack, Text } from "@mantine/core";
 import {
   IconAlertTriangle,
-  IconAlertOctagon,
   IconCheck,
-  IconInfoCircle,
-  type Icon,
+  IconAlertCircle,
 } from "@/components/icons";
 import type { SLOAlert } from "@/lib/types/operations";
 
@@ -21,7 +19,7 @@ export function AlertItem({ alert }: AlertItemProps) {
   const severityConfig = {
     info: {
       color: "blue",
-      icon: IconInfoCircle,
+      icon: IconAlertCircle,
       label: "Info",
     },
     warning: {
@@ -31,7 +29,7 @@ export function AlertItem({ alert }: AlertItemProps) {
     },
     critical: {
       color: "red",
-      icon: IconAlertOctagon,
+      icon: IconAlertTriangle,
       label: "Critical",
     },
   };

@@ -2,15 +2,14 @@
  * API client for operations and observability endpoints.
  */
 
-import { api } from './index';
-import type { SLOSnapshot } from './types/operations';
+import { api } from '../api';
+import type { SLOSnapshot } from '../types/operations';
 
 /**
  * Fetch current SLO snapshot with all objectives and alerts.
  */
 export async function getSLOSnapshot(): Promise<SLOSnapshot> {
-  const response = await api('/operations/slo');
-  return response.json();
+  return api<SLOSnapshot>("GET", "/operations/slo");
 }
 
 /**

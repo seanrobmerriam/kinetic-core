@@ -24,8 +24,8 @@ import type { SLOSnapshot } from "@/lib/types/operations";
 export default function OperationsPage() {
   const [snapshot, setSnapshot] = useState<SLOSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
-  const { notify } = useNotify();
-  const { register } = useRefresh();
+  const { setError } = useNotify();
+  const { tick } = useRefresh();
 
   const fetchSnapshot = async () => {
     setLoading(true);
@@ -34,18 +34,10 @@ export default function OperationsPage() {
       if (data) {
         setSnapshot(data);
       } else {
-        notify({
-          title: "Failed to load SLO data",
-          message: "Unable to fetch operations snapshot",
-          color: "red",
-        });
+        setError("Unable to fetch operations snapshot");
       }
     } catch (error) {
-      notify({
-        title: "Error loading operations",
-        message: error instanceof Error ? error.message : "Unknown error",
-        color: "red",
-      });
+      setError(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -58,8 +50,8 @@ export default function OperationsPage() {
   }, []);
 
   useEffect(() => {
-    register("operations", fetchSnapshot);
-  }, [register]);
+    fetchSnapshot();
+  }, [tick]);
 
   if (loading && !snapshot) {
     return (

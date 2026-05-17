@@ -15,6 +15,8 @@ import {
   Spoiler,
   Stack,
   Text,
+  Textarea,
+  TextInput,
   Title,
 } from "@mantine/core";
 import { IconArrowLeft } from "@/components/icons";

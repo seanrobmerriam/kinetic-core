@@ -118,7 +118,10 @@ export default function ExportsPage() {
           </div>
         </Group>
         {downloading && (
-          <Progress value={100} animated mt="md" label="Generating export…" color="blue" />
+          <Stack gap="xs" mt="md">
+            <Text size="sm" c="dimmed">Generating export...</Text>
+            <Progress value={100} animated color="blue" />
+          </Stack>
         )}
         {lastDownload && !downloading && (
           <Text size="xs" c="dimmed" mt="sm">

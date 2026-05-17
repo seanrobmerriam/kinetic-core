@@ -99,7 +99,7 @@ export default function AccountDetailPage({
     let cancelled = false;
     (async () => {
       try {
-        %% Fetch account directly — no party iteration needed
+        // Fetch account directly without iterating parties.
         let found: Account | null = null;
         let foundPartyId: string | null = null;
         try {
@@ -114,7 +114,7 @@ export default function AccountDetailPage({
           return;
         }
 
-        %% Fetch owning party separately — only when needed for display
+        // Fetch owning party separately only when needed for display.
         if (foundPartyId) {
           try {
             const fullParty = await api<Party>(
@@ -123,7 +123,7 @@ export default function AccountDetailPage({
             );
             if (!cancelled) setParty(fullParty);
           } catch {
-            %% Party fetch failed — continue without party info
+            // Party fetch failed; continue without party info.
           }
         }
 

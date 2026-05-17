@@ -1,5 +1,7 @@
 "use client";
 
+import type { Party } from "./types";
+
 const SESSION_STORAGE_KEY = "ironledger.session_id";
 
 const PRIMARY_PORT = 18081;

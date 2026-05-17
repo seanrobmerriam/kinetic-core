@@ -4,9 +4,6 @@ import { Badge, Box, Group, Paper, Text, Tooltip } from "@mantine/core";
 import {
   IconAlertTriangle,
   IconCheck,
-  IconCircleFilled,
-  IconExclamationMark,
-  type Icon,
 } from "@/components/icons";
 import type { SLOObjective } from "@/lib/types/operations";
 
@@ -26,7 +23,7 @@ export function SLOCard({ objective }: SLOCardProps) {
     },
     breached: {
       color: "red",
-      icon: IconExclamationMark,
+      icon: IconAlertTriangle,
       label: "Breached",
     },
     insufficient_data: {
@@ -93,7 +90,14 @@ export function SLOCard({ objective }: SLOCardProps) {
               <Text size="xs" fw={500} mb="xs">Checks:</Text>
               {value.checks.map((check) => (
                 <Group gap="xs" key={check.name} mb="xs">
-                  <IconCircleFilled size={8} color={check.status === "ok" ? "green" : "red"} />
+                  <Box
+                    w={8}
+                    h={8}
+                    style={{
+                      borderRadius: "50%",
+                      backgroundColor: check.status === "ok" ? "var(--mantine-color-green-6)" : "var(--mantine-color-red-6)",
+                    }}
+                  />
                   <Text size="xs">{check.name}: {check.status === "ok" ? "OK" : "FAILED"} ({check.latency_ms}ms)</Text>
                 </Group>
               ))}

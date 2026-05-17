@@ -15,6 +15,7 @@ import {
   IconBook,
   IconBuildingBank,
   IconChevronRight,
+  IconClock,
   IconCode,
   IconCoin,
   IconDownload,
@@ -79,6 +80,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: "Settings", icon: IconSettings, href: "/settings" },
   { label: "Developer", icon: IconCode, href: "/developer" },
   { label: "Channels", icon: IconSitemap, href: "/channels" },
+  { label: "Operations", icon: IconClock, href: "/operations" },
   { label: "Logs", icon: IconFiles, href: "/logs" },
 ];
 

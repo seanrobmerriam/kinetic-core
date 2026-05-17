@@ -2,7 +2,7 @@
 %% @doc CB Payments Application
 %%
 %% This is the OTP application callback module for the cb_payments application.
-%% It provides the entry point for starting the payments subsystem of IronLedger.
+%% It provides the entry point for starting the payments subsystem of Kinetic Core.
 %%
 %% The cb_payments application is responsible for:
 %%

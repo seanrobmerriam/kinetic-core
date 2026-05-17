@@ -1,4 +1,4 @@
-%%% @doc Scheduled operational job runner for IronLedger.
+%%% @doc Scheduled operational job runner for Kinetic Core.
 %%%
 %%% This gen_server maintains a registry of named background jobs and provides
 %%% an explicit-trigger API so that jobs can be called from tests or operator

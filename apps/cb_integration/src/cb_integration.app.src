@@ -1,8 +1,8 @@
 {application, cb_integration,
  [
-  {description, "IronLedger HTTP API Integration Layer"},
+  {description, "Kinetic Core HTTP API Integration Layer"},
   {vsn, "0.1.0"},
-  {registered, [cb_integration_sup, ironledger_http]},
+  {registered, [cb_integration_sup, kinetic_core_http]},
   {applications, [
                   kernel,
                   stdlib,

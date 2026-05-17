@@ -2,7 +2,7 @@
 %%% @doc Savings product record definitions and type specifications.
 %%%
 %%% This header file defines the core data structures for savings products
-%%% in the IronLedger core banking system.
+%%% in the Kinetic Core core banking system.
 %%%
 %%% ## Savings Products in Banking
 %%%

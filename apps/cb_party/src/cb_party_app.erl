@@ -3,7 +3,7 @@
 %%
 %% This module implements the OTP application behaviour for the cb_party application.
 %% It serves as the entry point for starting the party management subsystem in the
-%% IronLedger core banking system.
+%% Kinetic Core core banking system.
 %%
 %% <h3>Role in the System</h3>
 %%

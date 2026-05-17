@@ -1,6 +1,6 @@
 {application, cb_accounts,
  [
-  {description, "IronLedger Account Management"},
+  {description, "Kinetic Core Account Management"},
   {vsn, "0.1.0"},
   {registered, [cb_accounts_sup]},
   {applications, [

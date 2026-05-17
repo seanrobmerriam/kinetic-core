@@ -1,5 +1,5 @@
 %%%
-%%% @doc Interest accrual tracking for IronLedger core banking system.
+%%% @doc Interest accrual tracking for Kinetic Core core banking system.
 %%%
 %%% This module manages the lifecycle of interest accruals. Interest accrual is the
 %%% process of accumulating interest over time before it is actually paid or charged.

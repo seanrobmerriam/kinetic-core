@@ -1,6 +1,6 @@
 {application, cb_approvals,
  [
-  {description, "IronLedger Approvals"},
+  {description, "Kinetic Core Approvals"},
   {vsn, "0.1.0"},
   {registered, [cb_approvals_sup, cb_approvals]},
   {applications, [

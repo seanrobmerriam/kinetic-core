@@ -1,6 +1,6 @@
 %%%===================================================================
 %%%
-%%% @doc Repayment schedule engine for IronLedger loan products.
+%%% @doc Repayment schedule engine for Kinetic Core loan products.
 %%%
 %%% Generates an ordered list of installments for a loan given its
 %%% principal, term, annual interest rate, and interest type.

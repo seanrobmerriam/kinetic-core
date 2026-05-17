@@ -52,7 +52,7 @@ export default function LoginPage() {
             <IconBuildingBank size={32} />
           </ThemeIcon>
           <Title order={2} ta="center">
-            IronLedger Dashboard
+            Kinetic Core Dashboard
           </Title>
           <Text c="dimmed" ta="center" size="sm">
             Modern core banking operations with real-time visibility and

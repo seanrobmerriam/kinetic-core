@@ -7,7 +7,7 @@
 %%% ## Application Purpose
 %%%
 %%% The cb_savings_products application manages the lifecycle of
-%%% savings product definitions in the IronLedger core banking system.
+%%% savings product definitions in the Kinetic Core core banking system.
 %%% It provides the foundation for opening and managing interest-bearing
 %%% savings accounts.
 %%%

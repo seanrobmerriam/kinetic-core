@@ -1,5 +1,5 @@
 {application, cb_savings_products, [
-    {description, "Savings products management for IronLedger"},
+    {description, "Savings products management for Kinetic Core"},
     {vsn, "0.1.0"},
     {registered, []},
     {mod, {cb_savings_products_app, []}},

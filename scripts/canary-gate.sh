@@ -10,7 +10,7 @@
 #   bash scripts/canary-gate.sh \
 #     --canary-url http://localhost:18081 \
 #     --baseline-url http://localhost:18082 \
-#     --rollback-cmd 'kubectl rollout undo deployment/ironledger' \
+#     --rollback-cmd 'kubectl rollout undo deployment/kinetic_core' \
 #     --bearer-token "$TOKEN" \
 #     --monitor-seconds 300 \
 #     --interval-seconds 15

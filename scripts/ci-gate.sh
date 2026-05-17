@@ -83,7 +83,7 @@ else
 
   rebar3 release >/dev/null 2>&1
 
-  _build/default/rel/ironledger/bin/ironledger foreground &
+  _build/default/rel/kinetic_core/bin/kinetic_core foreground &
   API_PID=$!
   trap "kill $API_PID 2>/dev/null || true" EXIT
 

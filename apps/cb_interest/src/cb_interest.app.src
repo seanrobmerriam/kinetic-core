@@ -1,5 +1,5 @@
 {application, cb_interest, [
-    {description, "Interest calculation and accrual for IronLedger"},
+    {description, "Interest calculation and accrual for Kinetic Core"},
     {vsn, "0.1.0"},
     {registered, []},
     {mod, {cb_interest_app, []}},

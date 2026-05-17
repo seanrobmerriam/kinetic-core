@@ -2,7 +2,7 @@
 %% @doc cb_accounts_sup - Top-Level Supervisor
 %%
 %% This module implements the OTP {@link supervisor} behaviour and serves as
-%% the top-level supervisor for the cb_accounts application in IronLedger.
+%% the top-level supervisor for the cb_accounts application in Kinetic Core.
 %%
 %% h2. Supervision Role
 %%
@@ -81,7 +81,7 @@
 %% h4. Registration
 %% <ul>
 %%   <li>Registered locally as `cb_accounts_sup`</li>
-%%   <li>Part of the IronLedger supervision hierarchy</li>
+%%   <li>Part of the Kinetic Core supervision hierarchy</li>
 %% </ul>
 %%
 %% @returns {@type {ok, pid()}} if the supervisor starts successfully,

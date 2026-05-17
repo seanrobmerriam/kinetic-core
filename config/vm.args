@@ -1,7 +1,7 @@
-## IronLedger VM Configuration
+## Kinetic Core VM Configuration
 ## Node name and cookie for distributed Erlang
--name ironledger@127.0.0.1
--setcookie ironledger_secret_cookie
+-name kinetic_core@127.0.0.1
+-setcookie kinetic_core_secret_cookie
 
 ## Enable kernel polling for better I/O performance
 +K true

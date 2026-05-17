@@ -1,5 +1,5 @@
 % =============================================================================
-% @doc IronLedger Application Entry Point
+% @doc Kinetic Core Application Entry Point
 % =============================================================================
 %%
 %% This module implements the OTP application behavior for the cb_ledger
@@ -23,7 +23,7 @@
 %%
 %% == Dependencies ==
 %%
-%% cb_ledger has no runtime dependencies on other IronLedger applications.
+%% cb_ledger has no runtime dependencies on other Kinetic Core applications.
 %% However, other applications (cb_accounts, cb_payments) depend on cb_ledger
 %% for posting financial transactions.
 %%

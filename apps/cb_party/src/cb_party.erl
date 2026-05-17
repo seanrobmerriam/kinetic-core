@@ -2,7 +2,7 @@
 %% <h2>Party Management Module</h2>
 %%
 %% This module provides the core business logic for managing "parties" (also known as
-%% "customers" or "clients") in the IronLedger core banking system.
+%% "customers" or "clients") in the Kinetic Core core banking system.
 %%
 %% <h3>What is a Party?</h3>
 %%

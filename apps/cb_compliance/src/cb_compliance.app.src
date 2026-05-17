@@ -1,5 +1,5 @@
 {application, cb_compliance,
-    [{description, "IronLedger Compliance & AML domain logic"},
+    [{description, "Kinetic Core Compliance & AML domain logic"},
      {vsn, "0.1.0"},
      {modules, []},
      {registered, []},

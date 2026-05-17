@@ -1,4 +1,4 @@
-%% @doc Account statement generation for IronLedger.
+%% @doc Account statement generation for Kinetic Core.
 %%
 %% Produces a chronological statement of ledger entries for an account,
 %% with a running balance column computed from the oldest entry forward.

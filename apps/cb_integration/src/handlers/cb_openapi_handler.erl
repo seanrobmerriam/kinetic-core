@@ -1,6 +1,6 @@
 %% @doc OpenAPI Specification Handler
 %%
-%% Serves the OpenAPI 3.0 specification for the IronLedger API at
+%% Serves the OpenAPI 3.0 specification for the Kinetic Core API at
 %% GET /api/v1/openapi.json.  The spec covers the release-blocking
 %% (Phase 0) endpoints and is generated inline from the route table.
 %%
@@ -33,7 +33,7 @@ spec() ->
     #{
         <<"openapi">> => <<"3.0.3">>,
         <<"info">> => #{
-            <<"title">>       => <<"IronLedger Core Banking API">>,
+            <<"title">>       => <<"Kinetic Core Core Banking API">>,
             <<"version">>     => <<"0.1.0">>,
             <<"description">> => <<"Release-blocking REST API for the Kinetic Core banking platform.">>
         },

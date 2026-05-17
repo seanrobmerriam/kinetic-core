@@ -1,6 +1,6 @@
 {application, cb_loans,
  [
-  {description, "IronLedger Loan Management"},
+  {description, "Kinetic Core Loan Management"},
   {vsn, "0.1.0"},
   {registered, [cb_loans_sup]},
   {applications, [

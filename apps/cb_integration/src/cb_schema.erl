@@ -1,7 +1,7 @@
 %% @doc Mnesia Database Schema Management
 %%
 %% This module is responsible for creating and managing the Mnesia database schema
-%% and tables for the IronLedger core banking system.
+%% and tables for the Kinetic Core core banking system.
 %%
 %% <h2>What is Mnesia?</h2>
 %%
@@ -17,7 +17,7 @@
 %%
 %% <h2>Table Configuration</h2>
 %%
-%% All tables in IronLedger use `ram_copies' (in-memory only) for the prototype.
+%% All tables in Kinetic Core use `ram_copies' (in-memory only) for the prototype.
 %% This provides fast read/write performance but data is lost on node restart.
 %% For production, consider:
 %%

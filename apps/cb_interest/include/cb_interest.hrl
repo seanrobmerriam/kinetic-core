@@ -1,8 +1,8 @@
 %%%
-%%% @doc Interest calculation and accrual types for IronLedger core banking system.
+%%% @doc Interest calculation and accrual types for Kinetic Core core banking system.
 %%%
 %%% This module defines the core types and records used for interest calculation,
-%%% accrual tracking, and interest posting in the IronLedger core banking system.
+%%% accrual tracking, and interest posting in the Kinetic Core core banking system.
 %%%
 %%% == Banking Domain Concepts ==
 %%%

@@ -1,6 +1,6 @@
 %%%===================================================================
 %%%
-%%% @doc Loan domain types and record definitions for the IronLedger
+%%% @doc Loan domain types and record definitions for the Kinetic Core
 %%%      core banking system.
 %%%
 %%% This module defines the core data structures for loan management,

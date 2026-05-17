@@ -1,7 +1,7 @@
 %% @doc Centralised request validation helpers.
 %%
 %% Provides reusable typed validators for common field types found in
-%% IronLedger API requests. All validators return `{ok, Value}' on
+%% Kinetic Core API requests. All validators return `{ok, Value}' on
 %% success or `{error, Reason}' where `Reason' is an atom accepted by
 %% `cb_http_errors:to_response/1'.
 -module(cb_validate).

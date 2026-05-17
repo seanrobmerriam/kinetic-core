@@ -1,5 +1,5 @@
 % =============================================================================
-% @doc IronLedger Top-Level Supervisor
+% @doc Kinetic Core Top-Level Supervisor
 % =============================================================================
 %%
 %% This module implements the top-level supervisor for the cb_ledger

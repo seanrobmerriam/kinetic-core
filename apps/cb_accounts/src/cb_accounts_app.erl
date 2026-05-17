@@ -2,7 +2,7 @@
 %% @doc cb_accounts_app - OTP Application Callback Module
 %%
 %% This module implements the OTP {@link application} behaviour and serves as
-%% the entry point for the cb_accounts application in the IronLedger banking system.
+%% the entry point for the cb_accounts application in the Kinetic Core banking system.
 %%
 %% h2. Application Role
 %%

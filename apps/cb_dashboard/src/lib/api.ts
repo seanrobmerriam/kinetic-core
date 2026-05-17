@@ -2,7 +2,7 @@
 
 import type { Party } from "./types";
 
-const SESSION_STORAGE_KEY = "ironledger.session_id";
+const SESSION_STORAGE_KEY = "kinetic_core.session_id";
 
 const PRIMARY_PORT = 18081;
 const FALLBACK_PORT = 8081;
@@ -167,7 +167,7 @@ async function apiCall<T>(
       if (alt && alt !== apiBase) {
         try {
           response = await fetch(`${alt}${path}`, init);
-          console.warn(`[IronLedger] API switched to ${alt}`);
+          console.warn(`[Kinetic Core] API switched to ${alt}`);
           apiBase = alt;
         } catch {
           throw new Error(`fetch error: ${(err as Error).message}`);

@@ -1,5 +1,5 @@
 %%%
-%%% @doc Top-level supervisor for the IronLedger interest application.
+%%% @doc Top-level supervisor for the Kinetic Core interest application.
 %%%
 %%% This module implements the OTP supervisor behaviour for the cb_interest application.
 %%% It is the root of the process supervision tree and is responsible for starting

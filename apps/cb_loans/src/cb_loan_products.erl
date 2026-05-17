@@ -2,7 +2,7 @@
 %%%
 %%% @doc Loan Product Management Module
 %%%
-%%% This module manages loan product definitions in the IronLedger
+%%% This module manages loan product definitions in the Kinetic Core
 %%% core banking system. Loan products are templates that define
 %%% standardized loan offerings.
 %%%

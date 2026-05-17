@@ -6,7 +6,7 @@ services:
     ports:
       - "18081:8081"
     volumes:
-      - ironledger_mnesia:/tmp/ironledger_mnesia
+      - kinetic_core_mnesia:/tmp/kinetic_core_mnesia
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8081/health"]
       interval: 10s
@@ -37,4 +37,4 @@ services:
           action: rebuild
 
 volumes:
-  ironledger_mnesia:
+  kinetic_core_mnesia:

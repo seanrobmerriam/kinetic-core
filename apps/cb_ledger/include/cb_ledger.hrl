@@ -1,13 +1,13 @@
 % =============================================================================
-% IronLedger Domain Types
+% Kinetic Core Domain Types
 % =============================================================================
 %%
 %% This file contains all type definitions and record structures for the
-%% IronLedger double-entry bookkeeping system.
+%% Kinetic Core double-entry bookkeeping system.
 %%
 %% == Double-Entry Bookkeeping Fundamentals ==
 %%
-%% Every financial transaction in IronLedger is recorded using double-entry
+%% Every financial transaction in Kinetic Core is recorded using double-entry
 %% bookkeeping, where every debit has an equal and corresponding credit.
 %% This ensures the fundamental accounting equation always holds:
 %%

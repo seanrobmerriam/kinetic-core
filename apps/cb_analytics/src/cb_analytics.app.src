@@ -1,6 +1,6 @@
 {application, cb_analytics,
  [
-  {description, "IronLedger Analytics Platform"},
+  {description, "Kinetic Core Analytics Platform"},
   {vsn, "0.1.0"},
   {registered, [cb_analytics_sup]},
   {applications, [

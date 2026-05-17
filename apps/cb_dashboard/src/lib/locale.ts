@@ -1,5 +1,5 @@
 /**
- * Locale and RTL support utilities for the IronLedger dashboard (TASK-036).
+ * Locale and RTL support utilities for the Kinetic Core dashboard (TASK-036).
  *
  * Provides:
  *  - RTL detection for supported locale codes

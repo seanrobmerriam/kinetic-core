@@ -1,9 +1,9 @@
 %%%
-%%% @doc OTP Application callback for the IronLedger interest application.
+%%% @doc OTP Application callback for the Kinetic Core interest application.
 %%%
 %%% This module implements the OTP application behaviour for the cb_interest
 %%% application. It is the entry point for starting the interest subsystem when
-%%% the IronLedger node boots.
+%%% the Kinetic Core node boots.
 %%%
 %%% == Application Responsibilities ==
 %%%

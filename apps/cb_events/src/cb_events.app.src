@@ -1,6 +1,6 @@
 {application, cb_events,
  [
-  {description, "IronLedger Events"},
+  {description, "Kinetic Core Events"},
   {vsn, "0.1.0"},
   {registered, [cb_events_sup, cb_events]},
   {applications, [

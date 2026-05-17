@@ -17,7 +17,7 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
-  title: "IronLedger Dashboard",
+  title: "Kinetic Core Dashboard",
   description: "Core banking operations dashboard",
 };
 

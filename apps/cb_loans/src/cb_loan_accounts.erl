@@ -3,7 +3,7 @@
 %%% @doc Loan Account Management Module
 %%%
 %%% This module manages the complete lifecycle of loan accounts in the
-%%% IronLedger core banking system. It handles loan creation, approval,
+%%% Kinetic Core core banking system. It handles loan creation, approval,
 %%% rejection, disbursement, and repayment processing.
 %%%
 %%% <h2>Loan Lifecycle</h2>

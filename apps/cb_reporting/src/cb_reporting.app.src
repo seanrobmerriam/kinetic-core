@@ -1,6 +1,6 @@
 {application, cb_reporting,
  [
-  {description, "IronLedger Reporting"},
+  {description, "Kinetic Core Reporting"},
   {vsn, "0.1.0"},
   {registered, [cb_reporting_sup, cb_reporting]},
   {applications, [

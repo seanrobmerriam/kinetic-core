@@ -326,7 +326,7 @@ attempt_delivery(Event, Del) ->
             Secret  = Sub#webhook_subscription.hmac_secret,
             Sig     = hmac_signature(Secret, Payload),
             Headers = [{"content-type", "application/json"},
-                       {"x-ironledger-signature", binary_to_list(Sig)}],
+                       {"x-kinetic_core-signature", binary_to_list(Sig)}],
             Req     = {URL, Headers, "application/json", Payload},
             case httpc:request(post, Req, [{timeout, 5000}], []) of
                 {ok, {{_, Code, _}, _, _}} when Code >= 200, Code < 300 ->

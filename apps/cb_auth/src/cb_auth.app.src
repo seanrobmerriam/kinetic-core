@@ -1,6 +1,6 @@
 {application, cb_auth,
  [
-  {description, "IronLedger Authentication"},
+  {description, "Kinetic Core Authentication"},
   {vsn, "0.1.0"},
   {registered, [cb_auth_sup, cb_auth_sessions]},
   {applications, [

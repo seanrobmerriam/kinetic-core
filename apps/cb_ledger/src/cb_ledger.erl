@@ -1,9 +1,9 @@
 % =============================================================================
-% @doc IronLedger - Double-Entry Bookkeeping Core
+% @doc Kinetic Core - Double-Entry Bookkeeping Core
 % =============================================================================
 %%
 %% This module implements the core double-entry ledger functionality for
-%% IronLedger. It provides the fundamental operations for recording financial
+%% Kinetic Core. It provides the fundamental operations for recording financial
 %% transactions as pairs of debit and credit entries.
 %%
 %% == Double-Entry Bookkeeping ==

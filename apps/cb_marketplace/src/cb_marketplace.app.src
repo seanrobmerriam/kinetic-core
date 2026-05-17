@@ -1,6 +1,6 @@
 {application, cb_marketplace,
  [
-  {description, "IronLedger Marketplace and Connector Registry"},
+  {description, "Kinetic Core Marketplace and Connector Registry"},
   {vsn, "0.1.0"},
   {registered, [cb_marketplace_sup]},
   {applications, [

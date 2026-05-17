@@ -1,6 +1,6 @@
 .,d# Commercial Software License Agreement (CSLA) v1.0
 
-**Software:** IronLedger Core Bank
+**Software:** Kinetic Core Core Bank
 **Licensor:** Kinetic Fintech LLC ("Licensor")
 **Licensee:** [INSTITUTION LEGAL NAME] ("Licensee")
 **Effective Date:** [EFFECTIVE DATE]

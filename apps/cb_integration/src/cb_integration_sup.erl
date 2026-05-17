@@ -1,10 +1,10 @@
-%% @doc IronLedger Application Supervisor
+%% @doc Kinetic Core Application Supervisor
 %%
 %% This module implements the top-level supervisor for the cb_integration
 %% application. It follows the OTP supervisor behaviour and provides fault
 %% tolerance for the HTTP API layer.
 %%
-%% In IronLedger's architecture, this supervisor manages no child processes directly.
+%% In Kinetic Core's architecture, this supervisor manages no child processes directly.
 %% The actual HTTP server (Cowboy) is started by the application callback module
 %% (cb_integration_app) rather than under this supervisor. This is intentional because:
 %%

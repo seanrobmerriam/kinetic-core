@@ -1,15 +1,15 @@
-# IronLedger Client SDKs
+# Kinetic Core Client SDKs
 
-Client SDKs generated from the IronLedger OpenAPI specification.
+Client SDKs generated from the Kinetic Core OpenAPI specification.
 
 ## Available SDKs
 
 | Language | Directory | Package |
 |----------|-----------|---------|
-| Java | `java/` | `ironledger` |
-| Python | `python/` | `ironledger` |
-| Node.js (TypeScript) | `nodejs/` | `ironledger` |
-| .NET | `dotnet/` | `ironledger` |
+| Java | `java/` | `kinetic_core` |
+| Python | `python/` | `kinetic_core` |
+| Node.js (TypeScript) | `nodejs/` | `kinetic_core` |
+| .NET | `dotnet/` | `kinetic_core` |
 
 ## Generating SDKs
 
@@ -24,7 +24,7 @@ Default server URL: `http://localhost:8080`
 ### Prerequisites
 
 - Node.js and npm
-- A running IronLedger server
+- A running Kinetic Core server
 
 The script uses `npx @openapitools/openapi-generator-cli` (auto-downloaded).
 
@@ -33,10 +33,10 @@ The script uses `npx @openapitools/openapi-generator-cli` (auto-downloaded).
 ### Python
 
 ```python
-import ironledger
-from ironledger.api import AccountsApi
+import kinetic_core
+from kinetic_core.api import AccountsApi
 
-client = ironledger.ApiClient(configuration=ironledger.Configuration(
+client = kinetic_core.ApiClient(configuration=kinetic_core.Configuration(
     host="http://localhost:8080/api/v1",
     access_token="your-session-token"
 ))
@@ -47,7 +47,7 @@ accounts = api.list_accounts()
 ### TypeScript (Node.js)
 
 ```typescript
-import { AccountsApi, Configuration } from 'ironledger';
+import { AccountsApi, Configuration } from 'kinetic_core';
 
 const api = new AccountsApi(new Configuration({
   basePath: 'http://localhost:8080/api/v1',

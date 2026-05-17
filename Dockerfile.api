@@ -19,4 +19,4 @@ RUN rebar3 compile \
 
 EXPOSE 8081
 
-CMD ["_build/default/rel/ironledger/bin/ironledger", "foreground"]
+CMD ["_build/default/rel/kinetic_core/bin/kinetic_core", "foreground"]

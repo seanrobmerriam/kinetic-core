@@ -237,7 +237,7 @@ unwrap_dek(#byok_key{wrapped_material = Wrapped, iv = IV}) ->
 master_kek() ->
     Secret = case application:get_env(cb_insights, master_kek_secret) of
         {ok, S} when is_binary(S) -> S;
-        _ -> <<"ironledger-default-kek-do-not-use-in-prod">>
+        _ -> <<"kinetic_core-default-kek-do-not-use-in-prod">>
     end,
     crypto:hash(sha256, Secret).
 

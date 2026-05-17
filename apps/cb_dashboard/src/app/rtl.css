@@ -1,5 +1,5 @@
 /**
- * RTL layout overrides for IronLedger Dashboard (TASK-036).
+ * RTL layout overrides for Kinetic Core Dashboard (TASK-036).
  *
  * Applied globally when <html dir="rtl"> is set by layout.tsx.
  * Follows the logical property convention so that LTR components

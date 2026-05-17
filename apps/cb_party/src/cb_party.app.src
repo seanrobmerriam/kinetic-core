@@ -1,6 +1,6 @@
 {application, cb_party,
  [
-  {description, "IronLedger Party Management"},
+  {description, "Kinetic Core Party Management"},
   {vsn, "0.1.0"},
   {registered, []},
   {applications, [

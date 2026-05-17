@@ -1,5 +1,5 @@
 %%%
-%%% @doc Interest posting to the general ledger for IronLedger core banking system.
+%%% @doc Interest posting to the general ledger for Kinetic Core core banking system.
 %%%
 %%% This module handles the process of posting accrued interest to the general ledger.
 %%% Interest posting is the mechanism that transfers accrued interest from the accrual

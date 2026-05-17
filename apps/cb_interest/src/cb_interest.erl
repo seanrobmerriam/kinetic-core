@@ -1,5 +1,5 @@
 %%%
-%%% @doc Pure integer-safe interest calculation functions for IronLedger.
+%%% @doc Pure integer-safe interest calculation functions for Kinetic Core.
 %%%
 %%% All annual rates are expressed in basis points. Daily rates are represented
 %%% internally as parts per billion so daily accrual can remain integer-safe.

@@ -67,7 +67,7 @@ The implementation replaced the entire `<style>` block with a TailAdmin-aligned 
 
 ## Testing
 
-- ✅ WASM build: `GOOS=js GOARCH=wasm go build -o dist/ironledger.wasm .` — exit 0
+- ✅ WASM build: `GOOS=js GOARCH=wasm go build -o dist/kinetic_core.wasm .` — exit 0
 - ✅ All existing CSS class names preserved (no Go file changes needed)
 - ✅ All new login + header CSS classes added
 

@@ -2,7 +2,7 @@
 %%% @doc Savings Products Management Module.
 %%%
 %%% This module provides the core API for managing savings products in the
-%%% IronLedger core banking system.
+%%% Kinetic Core core banking system.
 %%%
 %%% ## Overview
 %%%

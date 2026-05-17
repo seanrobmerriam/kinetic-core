@@ -4,7 +4,7 @@ Double-entry bookkeeping core module. Posts debit/credit entry pairs and maintai
 
 ## Module Overview
 
-The cb_ledger module is the heart of IronLedger's accounting system. It implements double-entry bookkeeping where every financial transaction creates paired debit and credit entries. The sum of all debits always equals the sum of all credits, maintaining the fundamental accounting equation: Assets = Liabilities + Equity.
+The cb_ledger module is the heart of Kinetic Core's accounting system. It implements double-entry bookkeeping where every financial transaction creates paired debit and credit entries. The sum of all debits always equals the sum of all credits, maintaining the fundamental accounting equation: Assets = Liabilities + Equity.
 
 ## Types
 

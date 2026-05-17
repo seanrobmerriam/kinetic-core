@@ -4,7 +4,7 @@ HTTP API layer - Cowboy server, routing, handlers, CORS, and error handling.
 
 ## Module Overview
 
-The cb_integration module provides the HTTP API layer for IronLedger using Cowboy. It handles routing, request/response processing, CORS, logging, and error handling.
+The cb_integration module provides the HTTP API layer for Kinetic Core using Cowboy. It handles routing, request/response processing, CORS, logging, and error handling.
 
 ## Components
 

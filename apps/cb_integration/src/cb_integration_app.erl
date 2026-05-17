@@ -1,4 +1,4 @@
-%% @doc IronLedger HTTP API Application
+%% @doc Kinetic Core HTTP API Application
 %%
 %% This module is the main entry point for the cb_integration OTP application.
 %% It implements the `application` behaviour and is responsible for:
@@ -86,7 +86,7 @@ start(_StartType, _StartArgs) ->
 
     Dispatch = cb_router:dispatch(),
     {ok, _} = cowboy:start_clear(
-        ironledger_http,
+        kinetic_core_http,
         [{port, Port}, {num_acceptors, Acceptors}],
         #{
             env => #{dispatch => Dispatch},
@@ -101,7 +101,7 @@ start(_StartType, _StartArgs) ->
 %% Called when the application is stopped. This function:
 %%
 %% <ol>
-%%   <li>Stops the Cowboy HTTP listener (ironledger_http)</li>
+%%   <li>Stops the Cowboy HTTP listener (kinetic_core_http)</li>
 %%   <li>Mnesia will be stopped automatically by the Erlang VM on shutdown</li>
 %% </ol>
 %%
@@ -109,7 +109,7 @@ start(_StartType, _StartArgs) ->
 %% @returns `ok' always
 -spec stop(any()) -> ok.
 stop(_State) ->
-    case cowboy:stop_listener(ironledger_http) of
+    case cowboy:stop_listener(kinetic_core_http) of
         ok -> ok;
         {error, not_found} -> ok
     end.

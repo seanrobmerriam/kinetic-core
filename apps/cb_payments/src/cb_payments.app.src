@@ -1,6 +1,6 @@
 {application, cb_payments,
  [
-  {description, "IronLedger Payments & Transfers"},
+  {description, "Kinetic Core Payments & Transfers"},
   {vsn, "0.1.0"},
   {registered, [cb_payments_sup]},
   {applications, [

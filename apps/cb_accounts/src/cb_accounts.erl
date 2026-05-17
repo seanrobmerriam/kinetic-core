@@ -1,7 +1,7 @@
 %%%
 %% @doc cb_accounts - Account Lifecycle Management Module
 %%
-%% This module provides the core account management functionality for IronLedger,
+%% This module provides the core account management functionality for Kinetic Core,
 %% a core banking system. It handles the complete lifecycle of bank accounts
 %% including creation, retrieval, status management (freeze/unfreeze), and closure.
 %%
@@ -32,7 +32,7 @@
 %%
 %% h3. Currency Handling
 %%
-%% IronLedger supports multi-currency accounts. Each account is denominated in
+%% Kinetic Core supports multi-currency accounts. Each account is denominated in
 %% a single currency (ISO 4217). Supported currencies:
 %% <ul>
 %%   <li><strong>USD</strong> - US Dollar</li>

@@ -1,4 +1,4 @@
-# IronLedger
+# Kinetic Core
 
 A Docker-first core banking platform built on Erlang/OTP with a Next.js dashboard.
 
@@ -20,7 +20,7 @@ A Docker-first core banking platform built on Erlang/OTP with a Next.js dashboar
 ## Repository Layout
 
 ```text
-ironledger/
+kinetic_core/
 ├── apps/
 │   ├── cb_accounts/
 │   ├── cb_approvals/
@@ -98,7 +98,7 @@ rebar3 shell
 rebar3 release
 
 # Run release in foreground
-_build/default/rel/ironledger/bin/ironledger foreground
+_build/default/rel/kinetic_core/bin/kinetic_core foreground
 ```
 
 ### Dashboard (Next.js)
@@ -226,8 +226,8 @@ npm run test:e2e
 
 ## Notes
 
-- Mnesia is configured for prototype-style runtime at `/tmp/ironledger_mnesia`.
-- A named Docker volume (`ironledger_mnesia`) is mounted in compose.
+- Mnesia is configured for prototype-style runtime at `/tmp/kinetic_core_mnesia`.
+- A named Docker volume (`kinetic_core_mnesia`) is mounted in compose.
 - Development endpoints include `POST /api/v1/dev/mock-import` when dev tools are enabled.
 
 ## Contributing

@@ -1,7 +1,7 @@
 %%%
 %% @doc CB Payments Module
 %%
-%% This module provides the core payment processing functionality for IronLedger,
+%% This module provides the core payment processing functionality for Kinetic Core,
 %% a core banking system implementing double-entry bookkeeping.
 %%
 %% ## Payment Types

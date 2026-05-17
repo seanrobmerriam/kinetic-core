@@ -10,7 +10,7 @@
 %%%
 %%% The cb_loans application manages all loan-related functionality
 %%% including loan products, loan accounts, and repayment processing.
-%%% It is started as part of the IronLedger banking platform.
+%%% It is started as part of the Kinetic Core banking platform.
 %%%
 %%% <h2>Supervision Tree</h2>
 %%%

@@ -1,4 +1,4 @@
-%% @doc Cowboy Router Configuration for IronLedger HTTP API
+%% @doc Cowboy Router Configuration for Kinetic Core HTTP API
 %%
 %% This module defines the routing table for the Cowboy HTTP server. Cowboy routing
 %% matches incoming HTTP requests to handler modules based on the request path and
@@ -21,7 +21,7 @@
 %%
 %% <h2>REST API Structure</h2>
 %%
-%% The IronLedger API follows RESTful conventions:
+%% The Kinetic Core API follows RESTful conventions:
 %%
 %% <ul>
 %%   <li><b>GET</b> - Retrieve resources (list or single)</li>

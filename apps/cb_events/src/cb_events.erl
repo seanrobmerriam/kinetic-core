@@ -1,6 +1,6 @@
 %% @doc Domain Events Outbox
 %%
-%% This module implements the domain event outbox pattern for IronLedger.
+%% This module implements the domain event outbox pattern for Kinetic Core.
 %% Events are written to the `event_outbox' Mnesia table atomically
 %% inside the same transaction that mutates domain records.  A background
 %% job (scheduled via cb_jobs) later picks up pending events and drives

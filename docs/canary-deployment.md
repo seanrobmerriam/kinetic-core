@@ -21,7 +21,7 @@ bash scripts/canary-gate.sh \
   --bearer-token "$OPS_TOKEN" \
   --monitor-seconds 300 \
   --interval-seconds 15 \
-  --rollback-cmd 'kubectl rollout undo deployment/ironledger'
+  --rollback-cmd 'kubectl rollout undo deployment/kinetic_core'
 ```
 
 ## Operational Notes

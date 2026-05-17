@@ -1,4 +1,4 @@
-%% @doc CSV export generation for IronLedger.
+%% @doc CSV export generation for Kinetic Core.
 %%
 %% Provides CSV exports for accounts, transactions, and events.
 %% Returns {ok, binary()} containing the full CSV (including header row).

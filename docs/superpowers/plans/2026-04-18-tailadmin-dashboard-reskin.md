@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reskin the entire IronLedger dashboard and login page to a TailAdmin-like look while preserving existing behavior.
+**Goal:** Reskin the entire Kinetic Core dashboard and login page to a TailAdmin-like look while preserving existing behavior.
 
 **Architecture:** Keep all Go/WASM behavior and IDs stable, and perform a presentation-layer refactor via CSS token and component overrides in the dashboard HTML stylesheet. Add minimal Go structural hooks only for theme toggle and login composition classes.
 
@@ -20,7 +20,7 @@
 - [ ] **Step 2: Add theme toggle button to header actions**
 - [ ] **Step 3: Add TailAdmin-like login structure classes (`login-shell`, `login-hero`, `login-auth`, `login-card`) while keeping IDs and submit wiring unchanged**
 - [ ] **Step 4: Build dashboard wasm**
-Run: `cd apps/cb_dashboard && GOARCH=wasm GOOS=js go build -o dist/ironledger.wasm .`
+Run: `cd apps/cb_dashboard && GOARCH=wasm GOOS=js go build -o dist/kinetic_core.wasm .`
 Expected: exit code `0`
 
 ### Task 2: Apply TailAdmin-Like Global Design Tokens and Component Overrides
@@ -41,7 +41,7 @@ Expected: exit code `0`
 - Modify (if needed): `apps/cb_dashboard/dist/index.html`, `apps/cb_dashboard/app.go`
 
 - [ ] **Step 1: Rebuild wasm**
-Run: `cd apps/cb_dashboard && GOARCH=wasm GOOS=js go build -o dist/ironledger.wasm .`
+Run: `cd apps/cb_dashboard && GOARCH=wasm GOOS=js go build -o dist/kinetic_core.wasm .`
 Expected: exit code `0`
 
 - [ ] **Step 2: Quick runtime smoke via compose logs and browser**

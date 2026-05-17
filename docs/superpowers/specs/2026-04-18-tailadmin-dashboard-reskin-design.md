@@ -6,7 +6,7 @@ Status: Draft for user review
 
 ## 1. Objective
 
-Reskin the entire IronLedger dashboard UI (including login) to closely match the TailAdmin visual style while preserving all existing application behavior and API interactions.
+Reskin the entire Kinetic Core dashboard UI (including login) to closely match the TailAdmin visual style while preserving all existing application behavior and API interactions.
 
 ## 2. Scope
 

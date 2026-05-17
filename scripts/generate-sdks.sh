@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# generate-sdks.sh — Generate client SDKs from the IronLedger OpenAPI specification.
+# generate-sdks.sh — Generate client SDKs from the Kinetic Core OpenAPI specification.
 #
 # Usage:
 #   ./scripts/generate-sdks.sh [server_url]
@@ -8,7 +8,7 @@
 #
 # Prerequisites:
 #   - Node.js and npm installed
-#   - A running IronLedger server (rebar3 shell)
+#   - A running Kinetic Core server (rebar3 shell)
 #
 # The script uses npx @openapitools/openapi-generator-cli (auto-downloaded on first run).
 
@@ -19,7 +19,7 @@ SPEC_URL="${SERVER_URL}/api/v1/openapi.json"
 SPEC_FILE="sdk/openapi.json"
 SDK_DIR="sdk"
 
-echo "==> IronLedger SDK Generator"
+echo "==> Kinetic Core SDK Generator"
 echo "    Server: ${SERVER_URL}"
 echo "    Spec:   ${SPEC_URL}"
 echo ""
@@ -44,15 +44,15 @@ generate_sdk() {
         --input-spec "${SPEC_FILE}" \
         --generator-name "${LANG}" \
         --output "${OUTPUT_DIR}" \
-        --package-name ironledger \
+        --package-name kinetic_core \
         ${EXTRA_ARGS}
     echo "    Done."
 }
 
-generate_sdk java    java    "--additional-properties=groupId=com.ironledger,artifactId=ironledger-client"
+generate_sdk java    java    "--additional-properties=groupId=com.kinetic_core,artifactId=kinetic_core-client"
 generate_sdk python  python  ""
-generate_sdk typescript-node nodejs "--additional-properties=npmName=ironledger,supportsES6=true"
-generate_sdk csharp  dotnet  "--additional-properties=packageName=IronLedger"
+generate_sdk typescript-node nodejs "--additional-properties=npmName=kinetic_core,supportsES6=true"
+generate_sdk csharp  dotnet  "--additional-properties=packageName=Kinetic Core"
 
 echo ""
 echo "==> All SDKs generated successfully."

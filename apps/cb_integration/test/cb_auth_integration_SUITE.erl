@@ -10,7 +10,9 @@
     login_and_me_round_trip/1,
     logout_revokes_session/1,
     admin_can_manage_rbac_resources/1,
-    operations_cannot_access_rbac_resources/1
+    operations_cannot_access_rbac_resources/1,
+    observe_mode_falls_back_to_role_checks/1,
+    enforce_mode_denies_missing_permissions/1
 ]).
 
 -define(PORT, 18083).
@@ -22,7 +24,9 @@ all() ->
         login_and_me_round_trip,
         logout_revokes_session,
         admin_can_manage_rbac_resources,
-        operations_cannot_access_rbac_resources
+        operations_cannot_access_rbac_resources,
+        observe_mode_falls_back_to_role_checks,
+        enforce_mode_denies_missing_permissions
     ].
 
 init_per_suite(Config) ->
@@ -38,13 +42,14 @@ end_per_suite(_Config) ->
     ok.
 
 init_per_testcase(_TestCase, Config) ->
+    application:set_env(cb_integration, rbac_enforced, false),
     lists:foreach(
         fun(Table) -> mnesia:clear_table(Table) end,
         [party, account, transaction, ledger_entry, savings_product,
          loan_products, loan_accounts, loan_repayments, interest_accrual,
             auth_user, auth_session, auth_role, auth_permission,
             auth_role_permission, auth_user_role,
-            audit_log]
+            audit_log, structured_log]
     ),
         ok = cb_rbac:seed_defaults(),
     Config.
@@ -176,6 +181,64 @@ operations_cannot_access_rbac_resources(_Config) ->
     ),
     {ok, #{<<"error">> := <<"forbidden">>}, _} = jsone:try_decode(list_to_binary(Body)),
     ok.
+
+observe_mode_falls_back_to_role_checks(_Config) ->
+    application:set_env(cb_integration, rbac_enforced, false),
+    remove_admin_permission(<<"user.read">>),
+
+    {ok, _AdminUserId} = cb_auth:create_user(<<"observe-admin@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"observe-admin@example.com">>, <<"secret-pass">>),
+
+    {ok, {{_, 200, _}, _Headers, Body}} = request(
+        get,
+        "/api/v1/users",
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, Json, _} = jsone:try_decode(list_to_binary(Body)),
+    ?assert(maps:is_key(<<"items">>, Json)),
+
+    {ok, #{items := LogItems}} = cb_structured_logs:search(#{event => <<"rbac_denied">>, limit => 20}),
+    ?assert(lists:any(fun has_observe_user_read_denial/1, LogItems)),
+    ok.
+
+enforce_mode_denies_missing_permissions(_Config) ->
+    application:set_env(cb_integration, rbac_enforced, true),
+    remove_admin_permission(<<"user.read">>),
+
+    {ok, _AdminUserId} = cb_auth:create_user(<<"enforce-admin@example.com">>, <<"secret-pass">>, admin),
+    {ok, SessionId} = login(<<"enforce-admin@example.com">>, <<"secret-pass">>),
+
+    {ok, {{_, 403, _}, _Headers, Body}} = request(
+        get,
+        "/api/v1/users",
+        <<>>,
+        auth_headers(SessionId)
+    ),
+    {ok, #{<<"error">> := <<"forbidden">>}, _} = jsone:try_decode(list_to_binary(Body)),
+
+    {ok, #{items := LogItems}} = cb_structured_logs:search(#{event => <<"rbac_denied">>, limit => 20}),
+    ?assert(lists:any(fun has_enforce_user_read_denial/1, LogItems)),
+    ok.
+
+remove_admin_permission(PermissionKey) ->
+    {ok, AdminRole} = cb_rbac:get_role_by_key(<<"admin">>),
+    RoleId = maps:get(role_id, AdminRole),
+    {ok, ExistingPermissions} = cb_rbac:list_role_permissions(RoleId),
+    ok = cb_rbac:set_role_permissions(RoleId, ExistingPermissions -- [PermissionKey]),
+    ok.
+
+has_observe_user_read_denial(LogItem) ->
+    Metadata = maps:get(metadata, LogItem, #{}),
+    maps:get(mode, Metadata, <<>>) =:= <<"observe">> andalso
+    maps:get(required_permission, Metadata, <<>>) =:= <<"user.read">> andalso
+    maps:get(path, Metadata, <<>>) =:= <<"/api/v1/users">>.
+
+has_enforce_user_read_denial(LogItem) ->
+    Metadata = maps:get(metadata, LogItem, #{}),
+    maps:get(mode, Metadata, <<>>) =:= <<"enforce">> andalso
+    maps:get(required_permission, Metadata, <<>>) =:= <<"user.read">> andalso
+    maps:get(path, Metadata, <<>>) =:= <<"/api/v1/users">>.
 
 login(Email, Password) ->
     {ok, {{_, 200, _}, _Headers, LoginBody}} = request(

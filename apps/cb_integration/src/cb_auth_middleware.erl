@@ -95,9 +95,10 @@ authorize_role(Role, Req, Env) ->
 maybe_observe_or_forbid(Role, PermissionKey, Method, Path, Req, Env) ->
     case rbac_enforced() of
         true ->
+            log_rbac_denial(enforce, Role, PermissionKey, Method, Path),
             forbidden(Req);
         false ->
-            observe_denial(Role, PermissionKey, Method, Path),
+            log_rbac_denial(observe, Role, PermissionKey, Method, Path),
             authorize_role(Role, Req, Env)
     end.
 
@@ -109,13 +110,13 @@ rbac_enforced() ->
 
 required_permission(_Method, Path) when Path =:= <<"/api/v1/permissions">> ->
     <<"permission.read">>;
-required_permission(_Method, Path) when Path =:= <<"/api/v1/users">> ->
-    case _Method of
+required_permission(Method, Path) when Path =:= <<"/api/v1/users">> ->
+    case Method of
         <<"GET">> -> <<"user.read">>;
         _ -> <<"user.write">>
     end;
-required_permission(_Method, Path) when Path =:= <<"/api/v1/roles">> ->
-    case _Method of
+required_permission(Method, Path) when Path =:= <<"/api/v1/roles">> ->
+    case Method of
         <<"GET">> -> <<"role.read">>;
         _ -> <<"role.write">>
     end;
@@ -138,11 +139,37 @@ required_permission(Method, Path) ->
             end
     end.
 
-observe_denial(Role, PermissionKey, Method, Path) ->
-    logger:warning(
-        "rbac_observe_denial role=~p required_permission=~p method=~p path=~p",
-        [Role, PermissionKey, Method, Path]
-    ).
+log_rbac_denial(Mode, Role, PermissionKey, Method, Path) ->
+    CorrelationId = cb_correlation:get(),
+    Fields = #{
+        event => rbac_denied,
+        correlation_id => CorrelationId,
+        method => Method,
+        path => Path,
+        metadata => #{}
+    },
+    Metadata = #{
+        mode => atom_to_binary(Mode, utf8),
+        role => normalize_role(Role),
+        required_permission => PermissionKey,
+        correlation_id => CorrelationId,
+        method => Method,
+        path => Path
+    },
+    _ = cb_structured_logs:write(warning, Fields#{metadata => Metadata}),
+    logger:warning(#{
+        event => rbac_denied,
+        mode => Mode,
+        role => Role,
+        required_permission => PermissionKey,
+        correlation_id => CorrelationId,
+        method => Method,
+        path => Path
+    }).
+
+normalize_role(Role) when is_atom(Role) -> atom_to_binary(Role, utf8);
+normalize_role(Role) when is_binary(Role) -> Role;
+normalize_role(Role) -> iolist_to_binary(io_lib:format("~p", [Role])).
 
 session_permissions(Session) ->
     UserId = maps:get(user_id, Session, undefined),

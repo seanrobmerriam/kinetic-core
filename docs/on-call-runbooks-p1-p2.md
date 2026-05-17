@@ -45,6 +45,38 @@ rebar3 ct --suite apps/cb_integration/test/cb_auth_integration_SUITE.erl
 rebar3 ct --suite apps/cb_integration/test/cb_slo_policies_SUITE.erl
 ```
 
+## RBAC Observe or Enforce Toggle
+
+RBAC authorization mode is controlled by `rbac_enforced` under `cb_integration` in `config/sys.config`.
+
+- `rbac_enforced = false`:
+	- Observe mode.
+	- Missing permission-key decisions are logged as `rbac_denied` with metadata mode `observe`.
+	- Request still falls back to legacy role-based authorization.
+- `rbac_enforced = true`:
+	- Enforce mode.
+	- Missing permission-key decisions return `403 forbidden`.
+	- Denials are logged as `rbac_denied` with metadata mode `enforce`.
+
+### Rollout Procedure
+
+1. Start in observe mode and monitor logs:
+	 - `GET /api/v1/operations/logs?event=rbac_denied&limit=100`
+2. Confirm no unexpected denials for admin workflows.
+3. Enable enforce mode by setting `rbac_enforced` to `true` and restarting integration services.
+4. Re-run smoke checks:
+	 - login
+	 - `/api/v1/users`
+	 - `/api/v1/roles`
+	 - `/api/v1/permissions`
+
+### Emergency Rollback
+
+1. Set `rbac_enforced` back to `false`.
+2. Restart integration services.
+3. Verify requests are again accepted through role fallback.
+4. Preserve `rbac_denied` log entries and correlation IDs for post-incident analysis.
+
 ## Scenario Matrix
 
 | Runbook ID | Phase tasks covered | Primary surface |

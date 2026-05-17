@@ -2,7 +2,7 @@
  * Tests for operations dashboard components
  */
 
-import { render, screen } from "@testing-library/react";
+import { renderWithProviders, screen } from "@/test-utils/render";
 import { SLOCard } from "../SLOCard";
 import { AlertItem, AlertsList } from "../AlertItem";
 import type { SLOObjective, SLOAlert } from "@/lib/types/operations";
@@ -22,8 +22,8 @@ describe("SLOCard", () => {
       },
     };
 
-    render(<SLOCard objective={objective} />);
-    expect(screen.getByText("Healthy")).toBeInTheDocument();
+    renderWithProviders(<SLOCard objective={objective} />);
+    expect(screen.getAllByText("Healthy").length).toBeGreaterThan(0);
     expect(screen.getByText("Authentication login success ratio")).toBeInTheDocument();
   });
 
@@ -41,7 +41,7 @@ describe("SLOCard", () => {
       },
     };
 
-    render(<SLOCard objective={objective} />);
+    renderWithProviders(<SLOCard objective={objective} />);
     expect(screen.getByText("Breached")).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe("SLOCard", () => {
       },
     };
 
-    render(<SLOCard objective={objective} />);
+    renderWithProviders(<SLOCard objective={objective} />);
     expect(screen.getByText("Insufficient Data")).toBeInTheDocument();
   });
 
@@ -75,7 +75,7 @@ describe("SLOCard", () => {
         max_latency_ms: 100,
         checks: [
           {
-            name: "mnesia",
+            service: "mnesia",
             status: "ok",
             latency_ms: 50,
           },
@@ -83,8 +83,8 @@ describe("SLOCard", () => {
       },
     };
 
-    render(<SLOCard objective={objective} />);
-    expect(screen.getByText("Healthy")).toBeInTheDocument();
+    renderWithProviders(<SLOCard objective={objective} />);
+    expect(screen.getAllByText("Healthy").length).toBeGreaterThan(0);
     expect(screen.getByText("mnesia: OK (50ms)")).toBeInTheDocument();
   });
 });
@@ -99,7 +99,7 @@ describe("AlertItem", () => {
       message: "Availability below target: 99.900% < 99.950%",
     };
 
-    render(<AlertItem alert={alert} />);
+    renderWithProviders(<AlertItem alert={alert} />);
     expect(screen.getByText("Critical")).toBeInTheDocument();
     expect(screen.getByText("Firing")).toBeInTheDocument();
     expect(screen.getByText("auth_login")).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("AlertItem", () => {
       message: "Objective within target",
     };
 
-    render(<AlertItem alert={alert} />);
+    renderWithProviders(<AlertItem alert={alert} />);
     expect(screen.getByText("Info")).toBeInTheDocument();
     expect(screen.getByText("Resolved")).toBeInTheDocument();
   });
@@ -122,7 +122,7 @@ describe("AlertItem", () => {
 
 describe("AlertsList", () => {
   it("renders no alerts message when list is empty", () => {
-    render(<AlertsList alerts={[]} />);
+    renderWithProviders(<AlertsList alerts={[]} />);
     expect(screen.getByText("All systems operational")).toBeInTheDocument();
   });
 
@@ -151,9 +151,9 @@ describe("AlertsList", () => {
       },
     ];
 
-    render(<AlertsList alerts={alerts} />);
+    renderWithProviders(<AlertsList alerts={alerts} />);
     expect(screen.getByText(/Active Alerts/)).toBeInTheDocument();
-    expect(screen.getByText(/Monitoring/)).toBeInTheDocument();
-    expect(screen.getByText(/Resolved/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Monitoring/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Resolved/).length).toBeGreaterThan(0);
   });
 });

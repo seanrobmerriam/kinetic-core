@@ -89,16 +89,23 @@ export function SLOCard({ objective }: SLOCardProps) {
             <Box mt="xs">
               <Text size="xs" fw={500} mb="xs">Checks:</Text>
               {value.checks.map((check) => (
-                <Group gap="xs" key={check.name} mb="xs">
+                <Group gap="xs" key={check.service ?? check.name ?? "check"} mb="xs">
                   <Box
                     w={8}
                     h={8}
                     style={{
                       borderRadius: "50%",
-                      backgroundColor: check.status === "ok" ? "var(--mantine-color-green-6)" : "var(--mantine-color-red-6)",
+                      backgroundColor:
+                        check.status === "ok"
+                          ? "var(--mantine-color-green-6)"
+                          : check.status === "degraded"
+                            ? "var(--mantine-color-yellow-6)"
+                            : "var(--mantine-color-red-6)",
                     }}
                   />
-                  <Text size="xs">{check.name}: {check.status === "ok" ? "OK" : "FAILED"} ({check.latency_ms}ms)</Text>
+                  <Text size="xs">
+                    {check.service ?? check.name}: {check.status.toUpperCase()} ({check.latency_ms}ms)
+                  </Text>
                 </Group>
               ))}
             </Box>

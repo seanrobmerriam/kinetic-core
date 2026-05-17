@@ -22,7 +22,8 @@ export interface SLOObjectiveValue {
 }
 
 export interface DependencyCheck {
-  name: string;
+  service: string;
+  name?: string;
   status: 'ok' | 'degraded' | 'unhealthy';
   latency_ms: number;
   message?: string;

@@ -61,6 +61,45 @@ schemas() ->
                 <<"message">> => #{<<"type">> => <<"string">>}
             }
         },
+        <<"RbacUser">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"user_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"email">> => #{<<"type">> => <<"string">>},
+                <<"role">> => #{<<"type">> => <<"string">>},
+                <<"status">> => #{<<"type">> => <<"string">>},
+                <<"created_at">> => #{<<"type">> => <<"integer">>},
+                <<"updated_at">> => #{<<"type">> => <<"integer">>},
+                <<"roles">> => #{<<"type">> => <<"array">>, <<"items">> => #{<<"type">> => <<"object">>}},
+                <<"effective">> => #{<<"type">> => <<"object">>}
+            }
+        },
+        <<"RbacRole">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"role_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"role_key">> => #{<<"type">> => <<"string">>},
+                <<"display_name">> => #{<<"type">> => <<"string">>},
+                <<"description">> => #{<<"type">> => <<"string">>},
+                <<"status">> => #{<<"type">> => <<"string">>},
+                <<"is_system">> => #{<<"type">> => <<"boolean">>},
+                <<"created_at">> => #{<<"type">> => <<"integer">>},
+                <<"updated_at">> => #{<<"type">> => <<"integer">>}
+            }
+        },
+        <<"RbacPermission">> => #{
+            <<"type">> => <<"object">>,
+            <<"properties">> => #{
+                <<"permission_id">> => #{<<"type">> => <<"string">>, <<"format">> => <<"uuid">>},
+                <<"permission_key">> => #{<<"type">> => <<"string">>},
+                <<"resource">> => #{<<"type">> => <<"string">>},
+                <<"action">> => #{<<"type">> => <<"string">>},
+                <<"description">> => #{<<"type">> => <<"string">>},
+                <<"status">> => #{<<"type">> => <<"string">>},
+                <<"created_at">> => #{<<"type">> => <<"integer">>},
+                <<"updated_at">> => #{<<"type">> => <<"integer">>}
+            }
+        },
         <<"Party">> => #{
             <<"type">> => <<"object">>,
             <<"properties">> => #{
@@ -464,6 +503,143 @@ paths() ->
                     <<"200">> => #{<<"description">> => <<"Current user">>,
                                   <<"content">> => json_content(<<"object">>)},
                     <<"401">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/users">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List users">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of users">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"403">> => error_response()
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create user">>,
+                <<"requestBody">> => #{
+                    <<"required">> => true,
+                    <<"content">> => #{
+                        <<"application/json">> => #{
+                            <<"schema">> => #{
+                                <<"type">> => <<"object">>,
+                                <<"required">> => [<<"email">>, <<"password">>, <<"role">>],
+                                <<"properties">> => #{
+                                    <<"email">> => #{<<"type">> => <<"string">>},
+                                    <<"password">> => #{<<"type">> => <<"string">>},
+                                    <<"role">> => #{<<"type">> => <<"string">>, <<"enum">> => [<<"admin">>, <<"operations">>, <<"read_only">>]}
+                                }
+                            }
+                        }
+                    }
+                },
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"User created">>,
+                                  <<"content">> => json_ref(<<"RbacUser">>)},
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/users/{user_id}">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get user by ID">>,
+                <<"parameters">> => [path_param(<<"user_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"User detail">>,
+                                  <<"content">> => json_ref(<<"RbacUser">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"patch">> => #{
+                <<"summary">> => <<"Update user">>,
+                <<"parameters">> => [path_param(<<"user_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"User updated">>,
+                                  <<"content">> => json_ref(<<"RbacUser">>)},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/users/{user_id}/roles">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Assign role to user">>,
+                <<"parameters">> => [path_param(<<"user_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Role assigned">>},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/users/{user_id}/roles/{role_id}">> => #{
+            <<"delete">> => #{
+                <<"summary">> => <<"Unassign role from user">>,
+                <<"parameters">> => [path_param(<<"user_id">>), path_param(<<"role_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Role unassigned">>},
+                    <<"404">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/roles">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List roles">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"List of roles">>,
+                                  <<"content">> => json_content(<<"object">>)}
+                }
+            },
+            <<"post">> => #{
+                <<"summary">> => <<"Create role">>,
+                <<"responses">> => #{
+                    <<"201">> => #{<<"description">> => <<"Role created">>,
+                                  <<"content">> => json_ref(<<"RbacRole">>)},
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/roles/{role_id}">> => #{
+            <<"patch">> => #{
+                <<"summary">> => <<"Update role">>,
+                <<"parameters">> => [path_param(<<"role_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Role updated">>,
+                                  <<"content">> => json_ref(<<"RbacRole">>)},
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/roles/{role_id}/permissions">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List role permission keys">>,
+                <<"parameters">> => [path_param(<<"role_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Role permission keys">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"404">> => error_response()
+                }
+            },
+            <<"put">> => #{
+                <<"summary">> => <<"Replace role permissions">>,
+                <<"parameters">> => [path_param(<<"role_id">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Role permissions updated">>},
+                    <<"404">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/permissions">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Permission catalog">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Grouped permissions">>,
+                                  <<"content">> => json_content(<<"object">>)}
                 }
             }
         },

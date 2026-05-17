@@ -15,6 +15,9 @@ Implement working Admin dashboard sections for Users, Roles, and Permissions wit
   - RBAC-022 (initial): Implemented roles handler endpoints for list/create/patch and role permission get/replace.
   - RBAC-023: Implemented permissions catalog endpoint with grouped output.
   - RBAC-024: Enriched login and me payloads with effective roles and permissions.
+  - RBAC-002 (partial): Added OpenAPI schemas and paths for users, roles, and permissions endpoints.
+  - RBAC-030/RBAC-031 (initial): Added permission-key evaluation in auth middleware with `rbac_enforced` observe/enforce toggle.
+  - RBAC-040/RBAC-041/RBAC-042/RBAC-043 (initial): Added typed frontend admin API client and implemented initial `/users`, `/roles`, `/permissions` pages wired to backend endpoints.
 
 ## Current Baseline
 - Admin nav links exist in dashboard sidebar: `/users`, `/roles`, `/permissions`.

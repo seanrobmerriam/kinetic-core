@@ -3,6 +3,8 @@ export interface AuthUser {
   email: string;
   role: string;
   status: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 export interface PartyAddress {

@@ -20,7 +20,9 @@ execute(Req, Env) ->
                             erlang:put(auth_session, Session),
                             erlang:put(auth_user, session_user(Session)),
                             Role = maps:get(role, Session),
-                            authorize_role(Role, Req, Env);
+                            Permissions = session_permissions(Session),
+                            erlang:put(auth_permissions, Permissions),
+                            authorize(Role, Permissions, Req, Env);
                         {error, _} ->
                             case cb_api_keys:authenticate_key(Token) of
                                 {ok, KeyMeta} ->
@@ -34,14 +36,18 @@ execute(Req, Env) ->
                                         cowboy_req:path(Req)
                                     ),
                                     Role = maps:get(role, KeyMeta),
-                                    authorize_role(Role, Req, Env);
+                                    Permissions = role_permissions(Role),
+                                    erlang:put(auth_permissions, Permissions),
+                                    authorize(Role, Permissions, Req, Env);
                                 {error, _} ->
                                     case cb_oauth:validate_token(Token) of
                                         {ok, OAuthCtx} ->
                                             erlang:put(auth_session, OAuthCtx),
                                             erlang:put(auth_user, oauth_user(OAuthCtx)),
                                             Role = maps:get(role, OAuthCtx),
-                                            authorize_role(Role, Req, Env);
+                                            Permissions = role_permissions(Role),
+                                            erlang:put(auth_permissions, Permissions),
+                                            authorize(Role, Permissions, Req, Env);
                                         {error, _} ->
                                             unauthorized(Req)
                                     end
@@ -63,6 +69,21 @@ is_write_method(<<"PATCH">>)  -> true;
 is_write_method(<<"DELETE">>) -> true;
 is_write_method(_)            -> false.
 
+authorize(Role, Permissions, Req, Env) ->
+    Method = cowboy_req:method(Req),
+    Path = cowboy_req:path(Req),
+    case required_permission(Method, Path) of
+        undefined ->
+            authorize_role(Role, Req, Env);
+        PermissionKey ->
+            case lists:member(PermissionKey, Permissions) of
+                true ->
+                    {ok, Req, Env};
+                false ->
+                    maybe_observe_or_forbid(Role, PermissionKey, Method, Path, Req, Env)
+            end
+    end.
+
 authorize_role(Role, Req, Env) ->
     Method = cowboy_req:method(Req),
     Path = cowboy_req:path(Req),
@@ -70,6 +91,90 @@ authorize_role(Role, Req, Env) ->
         true -> {ok, Req, Env};
         false -> forbidden(Req)
     end.
+
+maybe_observe_or_forbid(Role, PermissionKey, Method, Path, Req, Env) ->
+    case rbac_enforced() of
+        true ->
+            forbidden(Req);
+        false ->
+            observe_denial(Role, PermissionKey, Method, Path),
+            authorize_role(Role, Req, Env)
+    end.
+
+rbac_enforced() ->
+    case application:get_env(cb_integration, rbac_enforced, false) of
+        true -> true;
+        _ -> false
+    end.
+
+required_permission(_Method, Path) when Path =:= <<"/api/v1/permissions">> ->
+    <<"permission.read">>;
+required_permission(_Method, Path) when Path =:= <<"/api/v1/users">> ->
+    case _Method of
+        <<"GET">> -> <<"user.read">>;
+        _ -> <<"user.write">>
+    end;
+required_permission(_Method, Path) when Path =:= <<"/api/v1/roles">> ->
+    case _Method of
+        <<"GET">> -> <<"role.read">>;
+        _ -> <<"role.write">>
+    end;
+required_permission(Method, Path) ->
+    case has_prefix(Path, <<"/api/v1/users/">>) of
+        true ->
+            case Method of
+                <<"GET">> -> <<"user.read">>;
+                _ -> <<"user.write">>
+            end;
+        false ->
+            case has_prefix(Path, <<"/api/v1/roles/">>) of
+                true ->
+                    case Method of
+                        <<"GET">> -> <<"role.read">>;
+                        _ -> <<"role.write">>
+                    end;
+                false ->
+                    undefined
+            end
+    end.
+
+observe_denial(Role, PermissionKey, Method, Path) ->
+    logger:warning(
+        "rbac_observe_denial role=~p required_permission=~p method=~p path=~p",
+        [Role, PermissionKey, Method, Path]
+    ).
+
+session_permissions(Session) ->
+    UserId = maps:get(user_id, Session, undefined),
+    case UserId of
+        undefined -> [];
+        _ ->
+            case cb_rbac:effective_permissions(UserId) of
+                {ok, Effective} -> maps:get(permissions, Effective, []);
+                {error, _} -> []
+            end
+    end.
+
+role_permissions(Role) ->
+    RoleKey = role_key(Role),
+    case RoleKey of
+        undefined -> [];
+        _ ->
+            case cb_rbac:get_role_by_key(RoleKey) of
+                {ok, RoleMap} ->
+                    RoleId = maps:get(role_id, RoleMap),
+                    case cb_rbac:list_role_permissions(RoleId) of
+                        {ok, PermissionKeys} -> PermissionKeys;
+                        {error, _} -> []
+                    end;
+                {error, _} -> []
+            end
+    end.
+
+role_key(admin) -> <<"admin">>;
+role_key(operations) -> <<"operations">>;
+role_key(read_only) -> <<"read_only">>;
+role_key(_) -> undefined.
 
 role_allows(Role, Method, Path) ->
     case required_role(Method, Path) of

@@ -27,6 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-nextjs
+      - name: Run RBAC guard tests
+        run: npm run test:rbac
+        working-directory: apps/cb_dashboard
       - name: Run Jest
         run: npm test -- --coverage --ci
         working-directory: apps/cb_dashboard

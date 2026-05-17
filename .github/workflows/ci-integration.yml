@@ -46,6 +46,26 @@ jobs:
           [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ] || \
             { echo "Unexpected ledger endpoint status: $STATUS"; exit 1; }
 
+      - name: Run RBAC API compatibility checks
+        run: |
+          USERS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/users)
+          ROLES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/roles)
+          PERMISSIONS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/permissions)
+
+          [ "$USERS_STATUS" = "401" ] || { echo "Expected /users to be 401 unauthenticated, got: $USERS_STATUS"; exit 1; }
+          [ "$ROLES_STATUS" = "401" ] || { echo "Expected /roles to be 401 unauthenticated, got: $ROLES_STATUS"; exit 1; }
+          [ "$PERMISSIONS_STATUS" = "401" ] || { echo "Expected /permissions to be 401 unauthenticated, got: $PERMISSIONS_STATUS"; exit 1; }
+
+      - name: Run frontend RBAC route compatibility checks
+        run: |
+          USERS_PAGE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/users)
+          ROLES_PAGE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/roles)
+          PERMISSIONS_PAGE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/permissions)
+
+          [ "$USERS_PAGE_STATUS" = "200" ] || { echo "Expected /users page to render, got: $USERS_PAGE_STATUS"; exit 1; }
+          [ "$ROLES_PAGE_STATUS" = "200" ] || { echo "Expected /roles page to render, got: $ROLES_PAGE_STATUS"; exit 1; }
+          [ "$PERMISSIONS_PAGE_STATUS" = "200" ] || { echo "Expected /permissions page to render, got: $PERMISSIONS_PAGE_STATUS"; exit 1; }
+
       - name: Capture compose logs
         if: always()
         run: |

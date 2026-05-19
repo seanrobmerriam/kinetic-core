@@ -1671,6 +1671,17 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/operations/schema-migrations/compat">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Check schema backward-compatibility against stored baseline">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Compat check result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/operations/schema-migrations/apply">> => #{
             <<"post">> => #{
                 <<"summary">> => <<"Apply schema migrations up to target version">>,

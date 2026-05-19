@@ -39,6 +39,16 @@ migrate() ->
 
 -spec migrate_to(migration_version()) -> {ok, map()} | {error, term()}.
 migrate_to(Target) when is_integer(Target), Target >= 0 ->
+    case cb_schema_compat:check() of
+        ok ->
+            do_migrate_to(Target);
+        {violations, Violations} ->
+            {error, {backward_compat_violations, Violations}}
+    end;
+migrate_to(_) ->
+    {error, invalid_parameters}.
+
+do_migrate_to(Target) ->
     Current = current_version(),
     case Target < Current of
         true ->
@@ -50,9 +60,7 @@ migrate_to(Target) when is_integer(Target), Target >= 0 ->
                 true ->
                     apply_up(Current + 1, Target)
             end
-    end;
-migrate_to(_) ->
-    {error, invalid_parameters}.
+    end.
 
 -spec rollback_to(migration_version()) -> {ok, map()} | {error, term()}.
 rollback_to(Target) when is_integer(Target), Target >= 0 ->

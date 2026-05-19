@@ -11,6 +11,14 @@ init(Req, State) ->
 
 handle(<<"GET">>, <<"/api/v1/operations/schema-migrations">>, Req, State) ->
     json_reply(200, cb_schema_migrations:status(), Req, State);
+handle(<<"GET">>, <<"/api/v1/operations/schema-migrations/compat">>, Req, State) ->
+    Result = case cb_schema_compat:check() of
+        ok ->
+            #{status => <<"ok">>, violations => []};
+        {violations, Violations} ->
+            #{status => <<"violations">>, violations => violations_to_json(Violations)}
+    end,
+    json_reply(200, Result, Req, State);
 handle(<<"POST">>, <<"/api/v1/operations/schema-migrations/apply">>, Req, State) ->
     {ok, Body, Req1} = cowboy_req:read_body(Req),
     case decode_body(Body) of
@@ -84,6 +92,12 @@ normalize_reason(target_above_current) ->
     {409, <<"target_above_current">>, <<"Rollback target exceeds current schema version">>};
 normalize_reason(unsupported_target_version) ->
     {422, <<"unsupported_target_version">>, <<"Target schema version is not supported">>};
+normalize_reason({backward_compat_violations, Violations}) ->
+    Msg = iolist_to_binary([
+        <<"Schema backward-compat violations detected: ">>,
+        iolist_to_binary(lists:join(<<", ">>, [violation_summary(V) || V <- Violations]))
+    ]),
+    {409, <<"backward_compat_violations">>, Msg};
 normalize_reason(invalid_json) ->
     cb_http_errors:to_response(invalid_json);
 normalize_reason(invalid_parameters) ->
@@ -96,6 +110,23 @@ normalize_reason(Reason) when is_atom(Reason) ->
     cb_http_errors:to_response(Reason);
 normalize_reason(_) ->
     cb_http_errors:to_response(internal_error).
+
+violations_to_json(Violations) ->
+    lists:map(fun violation_to_map/1, Violations).
+
+violation_to_map({Table, table_missing}) ->
+    #{table => atom_to_binary(Table, utf8), kind => <<"table_missing">>, removed_fields => []};
+violation_to_map({Table, removed_fields, Fields}) ->
+    #{table => atom_to_binary(Table, utf8),
+      kind => <<"removed_fields">>,
+      removed_fields => [atom_to_binary(F, utf8) || F <- Fields]}.
+
+violation_summary({Table, table_missing}) ->
+    [atom_to_binary(Table, utf8), <<" missing">>];
+violation_summary({Table, removed_fields, Fields}) ->
+    [atom_to_binary(Table, utf8), <<"(">>,
+     iolist_to_binary(lists:join(<<",">>, [atom_to_binary(F, utf8) || F <- Fields])),
+     <<")">>].
 
 json_reply(Status, Body, Req, State) ->
     Headers = maps:merge(#{<<"content-type">> => <<"application/json">>}, cb_cors:headers()),

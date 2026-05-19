@@ -216,6 +216,7 @@ dispatch() ->
             {<<"/api/v1/operations/incidents/templates">>, cb_incident_handler, []},
             {<<"/api/v1/operations/incidents/:incident_id/:action">>, cb_incident_handler, []},
             {<<"/api/v1/operations/schema-migrations">>, cb_schema_migrations_handler, []},
+            {<<"/api/v1/operations/schema-migrations/compat">>, cb_schema_migrations_handler, []},
             {<<"/api/v1/operations/schema-migrations/apply">>, cb_schema_migrations_handler, []},
             {<<"/api/v1/operations/schema-migrations/rollback">>, cb_schema_migrations_handler, []},
 

@@ -1660,6 +1660,43 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/operations/schema-migrations">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"Get schema migration status and recent history">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Schema migration status">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/schema-migrations/apply">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Apply schema migrations up to target version">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Schema migration apply result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response(),
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/schema-migrations/rollback">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Rollback schema to a target version">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Schema migration rollback result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response(),
+                    <<"409">> => error_response(),
+                    <<"422">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/openapi.json">> => #{
             <<"get">> => #{
                 <<"summary">>  => <<"This OpenAPI specification">>,

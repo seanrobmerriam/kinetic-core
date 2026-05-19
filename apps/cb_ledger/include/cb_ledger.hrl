@@ -750,6 +750,26 @@
     resolved_by       :: binary() | undefined
 }).
 
+%% @doc Schema version marker for automated migration tooling.
+%%
+%% id is a singleton key (currently <<"core">>) for platform schema state.
+-record(schema_version, {
+    id          :: binary(),
+    version     :: non_neg_integer(),
+    updated_at  :: timestamp_ms()
+}).
+
+%% @doc Append-only migration event log for schema upgrades and rollbacks.
+-record(schema_migration_event, {
+    event_id      :: uuid(),
+    from_version  :: non_neg_integer(),
+    to_version    :: non_neg_integer(),
+    direction     :: binary(),
+    status        :: binary(),
+    details       :: map(),
+    applied_at    :: timestamp_ms()
+}).
+
 %% =============================================================================
 %% Compliance & AML Records (P2-S1)
 %% =============================================================================

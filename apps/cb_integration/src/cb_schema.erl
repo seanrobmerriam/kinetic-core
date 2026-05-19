@@ -97,6 +97,8 @@ create_tables() ->
               webhook_delivery, report_statement, report_export,
               structured_log,
               incident_response,
+              schema_version,
+              schema_migration_event,
               api_usage_event,
               oauth_client, oauth_token,
               kyc_workflow, kyc_step,
@@ -150,7 +152,8 @@ create_tables() ->
     approval_request | approval_decision | event_outbox |
     audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export | structured_log | incident_response | api_usage_event |
+    report_export | structured_log | incident_response |
+    schema_version | schema_migration_event | api_usage_event |
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
     aml_rule | suspicious_activity | aml_case | sar_report |
@@ -213,7 +216,8 @@ create_if_not_exists(TableName) ->
     approval_request | approval_decision | event_outbox |
     audit_retention_policy |
     webhook_subscription | webhook_delivery | report_statement |
-    report_export | incident_response | api_usage_event |
+    report_export | incident_response |
+    schema_version | schema_migration_event | api_usage_event |
     oauth_client | oauth_token |
     kyc_workflow | kyc_step | idv_check |
     aml_rule | suspicious_activity | aml_case | sar_report |
@@ -508,6 +512,18 @@ table_spec(incident_response) ->
         {ram_copies, [node()]},
         {attributes, record_info(fields, incident_response)},
         {index, [source_alert_id, objective, severity, status, updated_at]}
+    ];
+table_spec(schema_version) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, schema_version)},
+        {index, [updated_at]}
+    ];
+table_spec(schema_migration_event) ->
+    [
+        {ram_copies, [node()]},
+        {attributes, record_info(fields, schema_migration_event)},
+        {index, [from_version, to_version, direction, status, applied_at]}
     ];
 table_spec(key_rotation_events) ->
     [

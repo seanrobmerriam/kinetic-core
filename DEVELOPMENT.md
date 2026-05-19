@@ -263,7 +263,7 @@ This section breaks each phase into smaller execution units that can be schedule
 
 #### P6-S4: Data Governance and Migration
 
-- TASK-105: Implement schema versioning and automated migration tooling with rollback support.
+- TASK-105 [IN PROGRESS 2026-05-19]: Implement schema versioning and automated migration tooling with rollback support — added `schema_version` and `schema_migration_event` persistence records/tables; introduced `cb_schema_migrations` service with version tracking, automated apply, rollback-to-target, and migration history; exposed operations endpoints `/api/v1/operations/schema-migrations*` with OpenAPI entries; wired startup auto-migrate in `cb_integration_app`; added CT coverage in `apps/cb_integration/test/cb_schema_migrations_SUITE.erl`.
 - TASK-106: Enforce backward compatibility policy with contract-test enforcement on schema changes.
 - TASK-107: Build data quality validation checks at all system ingestion boundaries.
 - TASK-108: Implement data lineage tracking across pipeline and analytics modules.

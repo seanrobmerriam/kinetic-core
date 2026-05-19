@@ -728,6 +728,28 @@
     created_at      :: timestamp_ms()
 }).
 
+%% @doc Incident response lifecycle record for operational automation.
+%%
+%% Tracks incident state transitions, escalation tier, and post-mortem draft
+%% generation for SLO-derived incidents.
+-record(incident_response, {
+    incident_id       :: uuid(),
+    source_alert_id   :: binary(),
+    objective         :: binary(),
+    severity          :: binary(),
+    status            :: binary(),
+    escalation_tier   :: non_neg_integer(),
+    template_id       :: binary(),
+    owner             :: binary() | undefined,
+    summary           :: binary() | undefined,
+    postmortem_draft  :: map() | undefined,
+    created_at        :: timestamp_ms(),
+    updated_at        :: timestamp_ms(),
+    last_seen_at      :: timestamp_ms(),
+    resolved_at       :: timestamp_ms() | undefined,
+    resolved_by       :: binary() | undefined
+}).
+
 %% =============================================================================
 %% Compliance & AML Records (P2-S1)
 %% =============================================================================

@@ -211,6 +211,10 @@ dispatch() ->
             {<<"/api/v1/operations/logs/export">>, cb_structured_logs_handler, []},
             {<<"/api/v1/operations/logs/retention">>, cb_structured_logs_handler, []},
             {<<"/api/v1/operations/logs/retention/apply">>, cb_structured_logs_handler, []},
+            {<<"/api/v1/operations/incidents">>, cb_incident_handler, []},
+            {<<"/api/v1/operations/incidents/sync">>, cb_incident_handler, []},
+            {<<"/api/v1/operations/incidents/templates">>, cb_incident_handler, []},
+            {<<"/api/v1/operations/incidents/:incident_id/:action">>, cb_incident_handler, []},
 
             %% Payment orders
             {<<"/api/v1/payment-orders">>, cb_payment_orders_handler, []},

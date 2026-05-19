@@ -1613,6 +1613,53 @@ paths() ->
                 }
             }
         },
+        <<"/api/v1/operations/incidents">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List operational incidents with escalation state">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Incident list">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/incidents/sync">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Sync incidents from current SLO alert state">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Incident sync result">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/incidents/templates">> => #{
+            <<"get">> => #{
+                <<"summary">> => <<"List post-mortem templates by severity">>,
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Post-mortem templates">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response()
+                }
+            }
+        },
+        <<"/api/v1/operations/incidents/{incident_id}/{action}">> => #{
+            <<"post">> => #{
+                <<"summary">> => <<"Acknowledge or resolve an operational incident">>,
+                <<"parameters">> => [path_param(<<"incident_id">>), path_param(<<"action">>)],
+                <<"responses">> => #{
+                    <<"200">> => #{<<"description">> => <<"Updated incident">>,
+                                  <<"content">> => json_content(<<"object">>)},
+                    <<"401">> => error_response(),
+                    <<"403">> => error_response(),
+                    <<"404">> => error_response(),
+                    <<"409">> => error_response()
+                }
+            }
+        },
         <<"/api/v1/openapi.json">> => #{
             <<"get">> => #{
                 <<"summary">>  => <<"This OpenAPI specification">>,

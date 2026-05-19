@@ -32,6 +32,11 @@ Standardized error response formatting.
 ### Operations
 - `GET /api/v1/operations/slo` - SLO/SLA objective status and alert policy snapshot (operations/admin)
 - `GET /api/v1/operations/logs` - Structured log search for on-call investigation (operations/admin)
+- `GET /api/v1/operations/incidents` - List operational incidents with escalation tiers and status
+- `POST /api/v1/operations/incidents/sync` - Sync incidents from current SLO alerts (automation trigger)
+- `GET /api/v1/operations/incidents/templates` - List post-mortem templates by severity
+- `POST /api/v1/operations/incidents/:incident_id/ack` - Acknowledge and assign an incident
+- `POST /api/v1/operations/incidents/:incident_id/resolve` - Resolve an incident and generate post-mortem draft
 
 ## Operational Docs
 
